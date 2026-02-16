@@ -3,35 +3,42 @@
 {% block title %}Dashboard - EmailTools{% endblock %}
 
 {% block content %}
-<!-- Enhanced Header -->
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem 2rem; border-radius: 8px; margin-bottom: 1.5rem;">
+<!-- Compact Metrics Bar -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
     <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h2 style="margin: 0 0 0.5rem 0; color: white; font-size: 1.75rem;">EmailTools Dashboard</h2>
-            <div style="display: flex; gap: 2rem; font-size: 0.9rem; opacity: 0.9;">
-                <div>
-                    <span style="opacity: 0.7;">Last Email:</span>
-                    <strong>{% if time_since_last_email %}{{ time_since_last_email }}{% else %}N/A{% endif %}</strong>
-                </div>
-                <div>
-                    <span style="opacity: 0.7;">Total Unassigned:</span>
-                    <strong>{{ unassigned_actions }}</strong>
-                </div>
-                <div>
-                    <span style="opacity: 0.7;">High Priority:</span>
-                    <strong style="{% if high_priority > 0 %}background: rgba(231, 76, 60, 0.3); padding: 0.1rem 0.4rem; border-radius: 3px;{% endif %}">{{ high_priority }}</strong>
-                </div>
-                <div>
-                    <span style="opacity: 0.7;">Overdue:</span>
-                    <strong style="{% if overdue_actions|length > 0 %}background: rgba(231, 76, 60, 0.3); padding: 0.1rem 0.4rem; border-radius: 3px;{% endif %}">{{ overdue_actions|length }}</strong>
-                </div>
+        <!-- Metrics -->
+        <div style="display: flex; gap: 2rem; align-items: center; font-size: 0.95rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">📧</span>
+                <span><strong>{% if time_since_last_email %}{{ time_since_last_email }}{% else %}N/A{% endif %}</strong> <span style="opacity: 0.7;">ago</span></span>
+            </div>
+            <div style="opacity: 0.4;">|</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">📋</span>
+                <span><strong>{{ unassigned_actions }}</strong> <span style="opacity: 0.7;">unassigned</span></span>
+            </div>
+            <div style="opacity: 0.4;">|</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">🔥</span>
+                <span style="{% if high_priority > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                    <strong>{{ high_priority }}</strong> <span style="opacity: 0.7;">high</span>
+                </span>
+            </div>
+            <div style="opacity: 0.4;">|</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">⚠️</span>
+                <span style="{% if overdue_actions|length > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                    <strong>{{ overdue_actions|length }}</strong> <span style="opacity: 0.7;">overdue</span>
+                </span>
             </div>
         </div>
+
+        <!-- Quick Actions -->
         <div style="display: flex; gap: 0.75rem;">
-            <a href="/actions?assigned=false" class="btn btn-primary" style="font-size: 0.9rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
+            <a href="/actions?assigned=false" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
                 📋 Unassigned ({{ unassigned_actions }})
             </a>
-            <a href="/report" class="btn btn-primary" style="font-size: 0.9rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
+            <a href="/report" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
                 📊 Daily Report
             </a>
         </div>
