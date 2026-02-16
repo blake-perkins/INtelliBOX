@@ -486,8 +486,82 @@ def validate_web_interface():
         print_warning("No actions in database - skipping interactive features tests")
         results["warnings"] += 1
 
+    # Test 6: Regression Tests - Dashboard Logic
+    print_header("6. Regression Tests: Dashboard Logic")
+
+    try:
+        from src.emailtools.database import SessionLocal
+        from src.emailtools.models import Action, Assignment, Email
+        from sqlalchemy import desc
+
+        session = SessionLocal()
+
+        # Test 6a: Recent Assignments should not include completed actions
+        recent_assignments = session.query(Assignment, Action).join(
+            Action
+        ).filter(
+            Assignment.status != "completed"
+        ).order_by(desc(Assignment.assigned_at)).limit(5).all()
+
+        recent_completions = session.query(Assignment, Action).join(
+            Action
+        ).filter(
+            Assignment.status == "completed"
+        ).order_by(desc(Assignment.assigned_at)).limit(5).all()
+
+        # Check for overlap
+        assignment_action_ids = {action.id for _, action in recent_assignments}
+        completion_action_ids = {action.id for _, action in recent_completions}
+        overlap = assignment_action_ids & completion_action_ids
+
+        if len(overlap) == 0:
+            print_success(f"Recent Assignments/Completions separation: No overlap")
+            results["passed"] += 1
+        else:
+            print_error(f"Recent Assignments includes completed actions: {overlap}")
+            results["failed"] += 1
+
+        # Test 6b: Overdue Actions should not include completed actions
+        today = datetime.utcnow().date()
+        overdue_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
+            Action.due_date < today,
+            (Assignment.id.is_(None)) | (Assignment.status != "completed")
+        ).all()
+
+        # Check if any overdue action is completed
+        completed_overdue = [
+            action for action in overdue_actions
+            if action.assignments and action.assignments[0].status == "completed"
+        ]
+
+        if len(completed_overdue) == 0:
+            print_success(f"Overdue Actions exclude completed: {len(overdue_actions)} overdue, 0 completed")
+            results["passed"] += 1
+        else:
+            print_error(f"Overdue Actions includes {len(completed_overdue)} completed actions")
+            results["failed"] += 1
+
+        # Test 6c: Verify Recent Assignments only show non-completed statuses
+        invalid_statuses = [
+            assignment.status for assignment, _ in recent_assignments
+            if assignment.status == "completed"
+        ]
+
+        if len(invalid_statuses) == 0:
+            print_success(f"Recent Assignments status check: All are non-completed")
+            results["passed"] += 1
+        else:
+            print_error(f"Recent Assignments includes {len(invalid_statuses)} completed items")
+            results["failed"] += 1
+
+        session.close()
+
+    except Exception as e:
+        print_error(f"Dashboard logic regression tests failed: {str(e)}")
+        results["failed"] += 3  # Count as 3 failures (one for each test)
+
     # Test 7: 404 Handling
-    print_header("6. Error Handling")
+    print_header("7. Error Handling")
 
     if test_page("Non-existent Action 404", "/actions/999999", check_status=404):
         results["passed"] += 1

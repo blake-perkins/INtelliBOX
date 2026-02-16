@@ -72,10 +72,11 @@ async def dashboard(request: Request):
             Action.created_at >= week_ago
         ).count()
 
-        # Get overdue actions (assigned or unassigned)
+        # Get overdue actions (assigned or unassigned, exclude completed)
         today = datetime.utcnow().date()
         overdue_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
-            Action.due_date < today
+            Action.due_date < today,
+            (Assignment.id.is_(None)) | (Assignment.status != "completed")
         ).order_by(Action.due_date).limit(5).all()
 
         # Get high priority unassigned actions
@@ -84,9 +85,11 @@ async def dashboard(request: Request):
             Action.priority == "high"
         ).order_by(Action.due_date.asc().nullslast()).limit(5).all()
 
-        # Get recent assignments (last 5)
+        # Get recent assignments (last 5, exclude completed)
         recent_assignments = session.query(Assignment, Action).join(
             Action
+        ).filter(
+            Assignment.status != "completed"
         ).order_by(desc(Assignment.assigned_at)).limit(5).all()
 
         # Get recently completed (last 5)
