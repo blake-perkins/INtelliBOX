@@ -5,6 +5,7 @@
 {% block content %}
 <h2 style="margin-bottom: 1.5rem;">Dashboard</h2>
 
+<!-- Key Metrics -->
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-value stat-primary">{{ total_emails }}</div>
@@ -18,31 +19,210 @@
 
     <div class="stat-card">
         <div class="stat-value stat-medium">{{ unassigned_actions }}</div>
-        <div class="stat-label">Unassigned Actions</div>
+        <div class="stat-label">Unassigned</div>
+        <a href="/actions?assigned=unassigned" style="font-size: 0.75rem; color: #3498db; text-decoration: none; margin-top: 0.25rem; display: block;">View all →</a>
     </div>
 
     <div class="stat-card">
-        <div class="stat-value stat-high">{{ high_priority }}</div>
-        <div class="stat-label">High Priority</div>
+        <div class="stat-value stat-low">{{ in_progress_actions }}</div>
+        <div class="stat-label">In Progress</div>
+        <a href="/actions?assigned=assigned" style="font-size: 0.75rem; color: #3498db; text-decoration: none; margin-top: 0.25rem; display: block;">View all →</a>
     </div>
 
     <div class="stat-card">
-        <div class="stat-value stat-low">{{ recent_actions }}</div>
-        <div class="stat-label">Actions (Last 7 Days)</div>
+        <div class="stat-value stat-primary">{{ completed_actions }}</div>
+        <div class="stat-label">Completed</div>
     </div>
 
     <div class="stat-card">
-        <div class="stat-value stat-high">{{ overdue_count }}</div>
-        <div class="stat-label">Overdue Actions</div>
+        <div class="stat-value stat-low">{{ recent_actions_count }}</div>
+        <div class="stat-label">New (Last 7 Days)</div>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header">Quick Actions</div>
-    <div style="display: flex; gap: 1rem;">
-        <a href="/actions?assigned=false" class="btn btn-primary">View Unassigned Actions</a>
-        <a href="/actions?priority=high&assigned=false" class="btn btn-primary">View High Priority</a>
-        <a href="/report" class="btn btn-primary">View Report</a>
+<!-- Priority Breakdown -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">Unassigned Actions by Priority</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; font-weight: bold; color: #e74c3c;">{{ high_priority }}</div>
+            <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">High Priority</div>
+            <a href="/actions?priority=high&assigned=unassigned" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; font-weight: bold; color: #f39c12;">{{ medium_priority }}</div>
+            <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Medium Priority</div>
+            <a href="/actions?priority=medium&assigned=unassigned" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; font-weight: bold; color: #27ae60;">{{ low_priority }}</div>
+            <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Low Priority</div>
+            <a href="/actions?priority=low&assigned=unassigned" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
+        </div>
+    </div>
+</div>
+
+<!-- Critical Actions Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+
+    <!-- Overdue Actions -->
+    <div class="card">
+        <div class="card-header" style="background-color: #e74c3c; color: white;">
+            ⚠️ Overdue Actions ({{ overdue_actions|length }})
+        </div>
+
+        {% if overdue_actions %}
+        <table style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Due Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for action in overdue_actions %}
+                <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+                    <td>
+                        <div style="font-weight: 600;">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</div>
+                        <div style="font-size: 0.85rem; color: #666;">From: {{ action.email.from_address }}</div>
+                    </td>
+                    <td style="color: #e74c3c; font-weight: 600;">
+                        {{ action.due_date.strftime('%Y-%m-%d') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #999;">
+            <p>✓ No overdue actions!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- High Priority Unassigned -->
+    <div class="card">
+        <div class="card-header" style="background-color: #f39c12; color: white;">
+            🔥 High Priority Unassigned ({{ high_priority }})
+        </div>
+
+        {% if high_priority_actions %}
+        <table style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Due Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for action in high_priority_actions %}
+                <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+                    <td>
+                        <div style="font-weight: 600;">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</div>
+                        <div style="font-size: 0.85rem; color: #666;">From: {{ action.email.from_address }}</div>
+                    </td>
+                    <td>
+                        {% if action.due_date %}
+                            {{ action.due_date.strftime('%Y-%m-%d') }}
+                        {% else %}
+                            <span style="color: #999;">No date</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #999;">
+            <p>✓ No high priority actions!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+
+    <!-- Recent Assignments -->
+    <div class="card">
+        <div class="card-header">📋 Recent Assignments</div>
+
+        {% if recent_assignments %}
+        <table style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Assigned To</th>
+                    <th>When</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment, action in recent_assignments %}
+                <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+                    <td>
+                        <div style="font-weight: 600;">{{ action.title[:40] }}{% if action.title|length > 40 %}...{% endif %}</div>
+                        <span class="badge badge-{{ action.priority }}" style="font-size: 0.75rem;">{{ action.priority }}</span>
+                    </td>
+                    <td style="font-size: 0.9rem;">{{ assignment.assigned_to }}</td>
+                    <td style="font-size: 0.85rem; color: #666;">
+                        {{ assignment.assigned_at.strftime('%m/%d %I:%M%p') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #999;">
+            <p>No recent assignments</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Completions -->
+    <div class="card">
+        <div class="card-header">✅ Recent Completions</div>
+
+        {% if recent_completions %}
+        <table style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Completed By</th>
+                    <th>When</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment, action in recent_completions %}
+                <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+                    <td>
+                        <div style="font-weight: 600;">{{ action.title[:40] }}{% if action.title|length > 40 %}...{% endif %}</div>
+                        <span class="badge badge-{{ action.priority }}" style="font-size: 0.75rem;">{{ action.priority }}</span>
+                    </td>
+                    <td style="font-size: 0.9rem;">{{ assignment.assigned_to }}</td>
+                    <td style="font-size: 0.85rem; color: #666;">
+                        {{ assignment.assigned_at.strftime('%m/%d %I:%M%p') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #999;">
+            <p>No recent completions</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">⚡ Quick Actions</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <a href="/actions?assigned=unassigned" class="btn btn-primary">View All Unassigned</a>
+        <a href="/actions?priority=high&assigned=unassigned" class="btn btn-primary">High Priority Tasks</a>
+        <a href="/actions" class="btn btn-primary">Browse All Actions</a>
+        <a href="/emails" class="btn btn-primary">Browse Emails</a>
+        <a href="/report" class="btn btn-primary">View Daily Report</a>
     </div>
 </div>
 {% endblock %}
@@ -50,11 +230,8 @@
 {% block extra_js %}
 <script>
     // Auto-refresh stats every 30 seconds
-    setInterval(async () => {
-        const response = await fetch('/api/stats');
-        const stats = await response.json();
-        // Could update stats without page reload
-        console.log('Stats updated:', stats);
+    setInterval(() => {
+        location.reload();
     }, 30000);
 </script>
 {% endblock %}

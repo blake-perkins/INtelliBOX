@@ -39,32 +39,80 @@ async def dashboard(request: Request):
             Assignment.id.is_(None)
         ).count()
 
+        # Priority breakdown for unassigned actions
         high_priority = session.query(Action).outerjoin(Assignment).filter(
             Assignment.id.is_(None),
             Action.priority == "high"
         ).count()
 
+        medium_priority = session.query(Action).outerjoin(Assignment).filter(
+            Assignment.id.is_(None),
+            Action.priority == "medium"
+        ).count()
+
+        low_priority = session.query(Action).outerjoin(Assignment).filter(
+            Assignment.id.is_(None),
+            Action.priority == "low"
+        ).count()
+
+        # Assignment statistics
+        assigned_actions = session.query(Action).join(Assignment).count()
+
+        completed_actions = session.query(Action).join(Assignment).filter(
+            Assignment.status == "completed"
+        ).count()
+
+        in_progress_actions = session.query(Action).join(Assignment).filter(
+            Assignment.status.in_(["assigned", "in_progress"])
+        ).count()
+
         # Get recent actions (last 7 days)
         week_ago = datetime.utcnow() - timedelta(days=7)
-        recent_actions = session.query(Action).filter(
+        recent_actions_count = session.query(Action).filter(
             Action.created_at >= week_ago
         ).count()
 
-        # Get overdue actions
+        # Get overdue unassigned actions
         today = datetime.utcnow().date()
-        overdue_count = session.query(Action).outerjoin(Assignment).filter(
+        overdue_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
             Assignment.id.is_(None),
             Action.due_date < today
-        ).count()
+        ).order_by(Action.due_date).limit(5).all()
+
+        # Get high priority unassigned actions
+        high_priority_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
+            Assignment.id.is_(None),
+            Action.priority == "high"
+        ).order_by(Action.due_date.asc().nullslast()).limit(5).all()
+
+        # Get recent assignments (last 5)
+        recent_assignments = session.query(Assignment, Action).join(
+            Action
+        ).order_by(desc(Assignment.assigned_at)).limit(5).all()
+
+        # Get recently completed (last 5)
+        recent_completions = session.query(Assignment, Action).join(
+            Action
+        ).filter(
+            Assignment.status == "completed"
+        ).order_by(desc(Assignment.assigned_at)).limit(5).all()
 
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "total_emails": total_emails,
             "total_actions": total_actions,
             "unassigned_actions": unassigned_actions,
+            "assigned_actions": assigned_actions,
+            "completed_actions": completed_actions,
+            "in_progress_actions": in_progress_actions,
             "high_priority": high_priority,
-            "recent_actions": recent_actions,
-            "overdue_count": overdue_count
+            "medium_priority": medium_priority,
+            "low_priority": low_priority,
+            "recent_actions_count": recent_actions_count,
+            "overdue_actions": overdue_actions,
+            "high_priority_actions": high_priority_actions,
+            "recent_assignments": recent_assignments,
+            "recent_completions": recent_completions,
         })
 
 
