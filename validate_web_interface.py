@@ -354,7 +354,97 @@ def validate_web_interface():
                         print_error(f"Mark Complete: {str(e)}")
                         results["failed"] += 1
 
-                    # Test 6d: Unassign Action (cleanup)
+                    # Test 6d: Update Due Date (past date)
+                    try:
+                        due_date_response = requests.post(
+                            f"{BASE_URL}/actions/{test_action_id}/due-date",
+                            data={"due_date": "2024-01-15"},
+                            allow_redirects=False,
+                            timeout=10
+                        )
+
+                        if due_date_response.status_code == 303:
+                            print_success(f"Update Due Date (past): HTTP 303 (redirect)")
+                            results["passed"] += 1
+
+                            # Verify due date was updated
+                            detail_response = requests.get(
+                                f"{BASE_URL}/actions/{test_action_id}",
+                                timeout=5
+                            )
+                            if b"2024-01-15" in detail_response.content:
+                                print_success(f"  Due date update verified (past dates allowed)")
+                            else:
+                                print_error(f"  Due date not found in action detail page")
+                                results["failed"] += 1
+                        else:
+                            print_error(f"Update Due Date: Expected HTTP 303, got {due_date_response.status_code}")
+                            results["failed"] += 1
+                    except Exception as e:
+                        print_error(f"Update Due Date: {str(e)}")
+                        results["failed"] += 1
+
+                    # Test 6e: Update Due Date (future date)
+                    try:
+                        future_date_response = requests.post(
+                            f"{BASE_URL}/actions/{test_action_id}/due-date",
+                            data={"due_date": "2026-12-31"},
+                            allow_redirects=False,
+                            timeout=10
+                        )
+
+                        if future_date_response.status_code == 303:
+                            print_success(f"Update Due Date (future): HTTP 303 (redirect)")
+                            results["passed"] += 1
+
+                            # Verify due date was updated
+                            detail_response = requests.get(
+                                f"{BASE_URL}/actions/{test_action_id}",
+                                timeout=5
+                            )
+                            if b"2026-12-31" in detail_response.content:
+                                print_success(f"  Due date update verified (future dates work)")
+                            else:
+                                print_warning(f"  Could not verify future due date")
+                                results["warnings"] += 1
+                        else:
+                            print_error(f"Update Due Date (future): Expected HTTP 303, got {future_date_response.status_code}")
+                            results["failed"] += 1
+                    except Exception as e:
+                        print_error(f"Update Due Date (future): {str(e)}")
+                        results["failed"] += 1
+
+                    # Test 6f: Clear Due Date
+                    try:
+                        clear_date_response = requests.post(
+                            f"{BASE_URL}/actions/{test_action_id}/due-date",
+                            data={"due_date": ""},
+                            allow_redirects=False,
+                            timeout=10
+                        )
+
+                        if clear_date_response.status_code == 303:
+                            print_success(f"Clear Due Date: HTTP 303 (redirect)")
+                            results["passed"] += 1
+
+                            # Verify due date was cleared
+                            detail_response = requests.get(
+                                f"{BASE_URL}/actions/{test_action_id}",
+                                timeout=5
+                            )
+                            if b'value=""' in detail_response.content or b"No due date" in detail_response.content:
+                                print_success(f"  Due date cleared successfully")
+                            else:
+                                print_warning(f"  Could not verify due date was cleared")
+                                results["warnings"] += 1
+                        else:
+                            print_error(f"Clear Due Date: Expected HTTP 303, got {clear_date_response.status_code}")
+                            results["failed"] += 1
+                    except Exception as e:
+                        print_error(f"Clear Due Date: {str(e)}")
+                        results["failed"] += 1
+
+                    # Test 6g: Unassign Action (cleanup)
                     try:
                         unassign_response = requests.post(
                             f"{BASE_URL}/actions/{test_action_id}/unassign",
