@@ -120,25 +120,25 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 100px;">Priority</th>
+                <th style="width: 90px;">Priority</th>
                 <th>Title</th>
-                <th style="width: 200px;">From</th>
-                <th style="width: 150px;">Assignee</th>
-                <th style="width: 120px;">Due Date</th>
+                <th style="width: 150px;">From</th>
+                <th style="width: 130px;">Assignee</th>
+                <th style="width: 110px;">Due Date</th>
+                <th style="width: 180px;">Quick Assign</th>
             </tr>
         </thead>
         <tbody>
             {% for action in actions %}
             {% set is_overdue = action.due_date and action.due_date < current_time %}
             {% set assignment = action.assignments[0] if action.assignments else None %}
-            <tr style="cursor: pointer; {% if is_overdue and (not assignment or assignment.status != 'completed') %}background-color: #fff5f5;{% endif %}"
-                onclick="window.location='/actions/{{ action.id }}'">
-                <td>
+            <tr style="{% if is_overdue and (not assignment or assignment.status != 'completed') %}background-color: #fff5f5;{% endif %}">
+                <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
                     <span class="badge badge-{{ action.priority }}">
                         {{ action.priority }}
                     </span>
                 </td>
-                <td>
+                <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
                     <div style="font-weight: 600; margin-bottom: 0.25rem;">
                         {{ action.title[:80] }}{% if action.title|length > 80 %}...{% endif %}
                     </div>
@@ -146,17 +146,17 @@
                         {{ action.email.subject[:60] }}{% if action.email.subject|length > 60 %}...{% endif %}
                     </div>
                 </td>
-                <td style="font-size: 0.9rem;">
+                <td style="font-size: 0.9rem; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
                     {{ action.email.from_address.split('@')[0] if '@' in action.email.from_address else action.email.from_address }}
                 </td>
-                <td>
+                <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
                     {% if assignment %}
                         <span style="color: #27ae60; font-weight: 600;">{{ assignment.assigned_to }}</span>
                     {% else %}
                         <span style="color: #f39c12; font-weight: 600;">Unassigned</span>
                     {% endif %}
                 </td>
-                <td>
+                <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
                     {% if action.due_date %}
                         <span style="{% if is_overdue and (not assignment or assignment.status != 'completed') %}color: #e74c3c; font-weight: 600;{% endif %}">
                             {{ action.due_date.strftime('%b %d, %Y') }}
@@ -164,6 +164,23 @@
                         </span>
                     {% else %}
                         <span style="color: #999;">No date</span>
+                    {% endif %}
+                </td>
+                <td onclick="event.stopPropagation();">
+                    {% if not assignment %}
+                    <form method="POST" action="/actions/{{ action.id }}/assign" style="display: flex; gap: 0.25rem;">
+                        <input type="text"
+                               name="assigned_to"
+                               placeholder="Name..."
+                               list="assignees"
+                               style="flex: 1; padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;"
+                               required>
+                        <button type="submit" class="btn btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; white-space: nowrap;">
+                            Assign
+                        </button>
+                    </form>
+                    {% else %}
+                        <span style="color: #999; font-size: 0.85rem;">—</span>
                     {% endif %}
                 </td>
             </tr>
