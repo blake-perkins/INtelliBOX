@@ -12,7 +12,7 @@ from sqlalchemy import desc, func, case
 
 from emailtools.database import get_session
 from emailtools.models import Action, Assignment, Email, ProcessingLog
-from emailtools.reporter.generator import generate_report_data
+from emailtools.reporter.generator import generate_report_data, get_cached_program_news
 from emailtools.config import settings
 
 # Create FastAPI app
@@ -99,6 +99,24 @@ async def dashboard(request: Request):
             Assignment.status == "completed"
         ).order_by(desc(Assignment.assigned_at)).limit(5).all()
 
+        # Get cached program news
+        program_news_data = get_cached_program_news(session)
+
+        # Get latest email date for "last updated" info
+        latest_email = session.query(Email).order_by(desc(Email.received_date)).first()
+        last_email_date = latest_email.received_date if latest_email else None
+
+        # Calculate time since last email
+        time_since_last_email = None
+        if last_email_date:
+            delta = datetime.utcnow() - last_email_date
+            if delta.total_seconds() < 3600:
+                time_since_last_email = f"{int(delta.total_seconds() / 60)}m ago"
+            elif delta.total_seconds() < 86400:
+                time_since_last_email = f"{int(delta.total_seconds() / 3600)}h ago"
+            else:
+                time_since_last_email = f"{int(delta.total_seconds() / 86400)}d ago"
+
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "total_emails": total_emails,
@@ -115,6 +133,10 @@ async def dashboard(request: Request):
             "high_priority_actions": high_priority_actions,
             "recent_assignments": recent_assignments,
             "recent_completions": recent_completions,
+            "program_news": program_news_data,
+            "last_email_date": last_email_date,
+            "time_since_last_email": time_since_last_email,
+            "current_time": datetime.utcnow(),
         })
 
 

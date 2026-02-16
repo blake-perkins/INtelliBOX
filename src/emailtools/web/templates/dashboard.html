@@ -3,11 +3,38 @@
 {% block title %}Dashboard - EmailTools{% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-    <h2 style="margin: 0;">Dashboard</h2>
-    <div style="display: flex; gap: 0.75rem;">
-        <a href="/actions?assigned=false" class="btn btn-primary" style="font-size: 0.9rem;">Unassigned Actions</a>
-        <a href="/report" class="btn btn-primary" style="font-size: 0.9rem;">Daily Report</a>
+<!-- Enhanced Header -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem 2rem; border-radius: 8px; margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 style="margin: 0 0 0.5rem 0; color: white; font-size: 1.75rem;">EmailTools Dashboard</h2>
+            <div style="display: flex; gap: 2rem; font-size: 0.9rem; opacity: 0.9;">
+                <div>
+                    <span style="opacity: 0.7;">Last Email:</span>
+                    <strong>{% if time_since_last_email %}{{ time_since_last_email }}{% else %}N/A{% endif %}</strong>
+                </div>
+                <div>
+                    <span style="opacity: 0.7;">Total Unassigned:</span>
+                    <strong>{{ unassigned_actions }}</strong>
+                </div>
+                <div>
+                    <span style="opacity: 0.7;">High Priority:</span>
+                    <strong style="{% if high_priority > 0 %}background: rgba(231, 76, 60, 0.3); padding: 0.1rem 0.4rem; border-radius: 3px;{% endif %}">{{ high_priority }}</strong>
+                </div>
+                <div>
+                    <span style="opacity: 0.7;">Overdue:</span>
+                    <strong style="{% if overdue_actions|length > 0 %}background: rgba(231, 76, 60, 0.3); padding: 0.1rem 0.4rem; border-radius: 3px;{% endif %}">{{ overdue_actions|length }}</strong>
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <a href="/actions?assigned=false" class="btn btn-primary" style="font-size: 0.9rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
+                📋 Unassigned ({{ unassigned_actions }})
+            </a>
+            <a href="/report" class="btn btn-primary" style="font-size: 0.9rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
+                📊 Daily Report
+            </a>
+        </div>
     </div>
 </div>
 
@@ -150,6 +177,25 @@
             <div style="color: #7f8c8d; font-size: 0.85rem; margin-bottom: 0.5rem;">Low</div>
             <a href="/actions?priority=low&assigned=false" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">View</a>
         </div>
+    </div>
+</div>
+
+<!-- Program News Summary -->
+<div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>📰 Program News (Last {{ program_news['email_count'] }} emails, 7 days)</span>
+            <span style="font-size: 0.75rem; opacity: 0.9;">
+                {% if program_news['is_cached'] %}
+                    💾 Cached {{ ((current_time - program_news['generated_at']).total_seconds() / 3600)|round(1) }}h ago
+                {% else %}
+                    ✨ Just generated
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    <div style="padding: 1.5rem; background: white; border-radius: 0 0 8px 8px;">
+        <div style="line-height: 1.8; color: #2c3e50; white-space: pre-wrap;">{{ program_news['summary'] }}</div>
     </div>
 </div>
 

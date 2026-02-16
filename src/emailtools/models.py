@@ -169,3 +169,24 @@ class ProcessingLog(Base):
 
     def __repr__(self) -> str:
         return f"<ProcessingLog(id={self.id}, event='{self.event_type}', status='{self.status}')>"
+
+
+class ProgramNewsCache(Base):
+    """Cached program news summary to avoid excessive AI API calls."""
+
+    __tablename__ = "program_news_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    days_covered: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
+    email_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    latest_email_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+
+    def __repr__(self) -> str:
+        return f"<ProgramNewsCache(id={self.id}, generated_at='{self.generated_at}')>"
