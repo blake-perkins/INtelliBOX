@@ -14,7 +14,10 @@
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pytest tests/test_web_interface.py::TestWebInterface::test_api_stats -v)",
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pip install colorama requests -q)",
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/emailtools.exe\" web --host 127.0.0.1 --port 8000)",
-      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" validate_web_interface.py)"
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" validate_web_interface.py)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/emailtools.exe\" --version)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -c:*)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" validate_templates.py)"
     ]
   }
 }
