@@ -46,7 +46,7 @@
 <!-- Search and Filters -->
 <div class="card" style="margin-bottom: 1.5rem;">
     <form method="get" style="display: grid; gap: 1rem;">
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
             <!-- Search -->
             <div>
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">🔍 Search</label>
@@ -66,12 +66,24 @@
                     <option value="false" {% if processed == 'false' %}selected{% endif %}>Unprocessed</option>
                 </select>
             </div>
+
+            <!-- Date Range -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Date Range</label>
+                <select name="days" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">All Time</option>
+                    <option value="1" {% if days == 1 %}selected{% endif %}>Last 24 Hours</option>
+                    <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 Days</option>
+                    <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 Days</option>
+                    <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 Days</option>
+                </select>
+            </div>
         </div>
 
         <!-- Action Buttons -->
         <div style="display: flex; gap: 0.75rem;">
             <button type="submit" class="btn btn-primary">Apply Filters</button>
-            {% if search or processed %}
+            {% if search or processed or days %}
             <a href="/emails" class="btn" style="background: #95a5a6; color: white;">Clear All</a>
             {% endif %}
         </div>

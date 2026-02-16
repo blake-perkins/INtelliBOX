@@ -284,6 +284,7 @@ async def list_emails(
     request: Request,
     search: Optional[str] = None,
     processed: Optional[str] = None,
+    days: Optional[int] = None,
     page: int = Query(1, ge=1)
 ):
     """List all emails."""
@@ -317,6 +318,11 @@ async def list_emails(
         elif processed == "false":
             query = query.filter(Email.processed == False)
 
+        # Date range filter
+        if days:
+            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            query = query.filter(Email.received_date >= cutoff_date)
+
         # Order by received date
         query = query.order_by(desc(Email.received_date))
 
@@ -332,6 +338,7 @@ async def list_emails(
             "emails": emails,
             "search": search,
             "processed": processed,
+            "days": days,
             "page": page,
             "total_pages": total_pages,
             "total_count": total_count,
