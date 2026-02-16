@@ -18,7 +18,7 @@
                 <span class="badge badge-{{ action.priority }}" style="font-size: 0.85rem; padding: 0.4rem 0.9rem;">
                     {{ action.priority.upper() }} PRIORITY
                 </span>
-                {% set is_overdue = action.due_date and action.due_date < current_time.date() %}
+                {% set is_overdue = action.due_date and action.due_date < current_time %}
                 {% if is_overdue and (not assignment or assignment.status != 'completed') %}
                 <span style="background: #fee; color: #e74c3c; padding: 0.4rem 0.9rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
                     ⚠️ OVERDUE
