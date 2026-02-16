@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Action - EmailTools{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="/emails/{{ email.id }}" style="color: #3498db; text-decoration: none; font-weight: 600;">&larr; Back to Email</a>
+</div>
+
+<!-- Page Header -->
+<div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 1.5rem;">
+    <h2 style="font-size: 1.75rem; margin-bottom: 0.5rem;">Create New Action</h2>
+    <p style="margin: 0; opacity: 0.9; font-size: 0.95rem;">Manually add an action item to this email</p>
+</div>
+
+<!-- Email Context -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">Email Context</div>
+
+    <div style="background: #f8f9fa; padding: 1.25rem; border-radius: 4px;">
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.75rem 1.5rem;">
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">From:</div>
+            <div style="font-size: 0.95rem;">{{ email.from_address }}</div>
+
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">Subject:</div>
+            <div style="font-size: 0.95rem;">{{ email.subject }}</div>
+
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">Received:</div>
+            <div style="font-size: 0.95rem;">{{ email.received_date.strftime('%B %d, %Y at %I:%M %p') }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Action Form -->
+<div class="card">
+    <div class="card-header">Action Details</div>
+
+    <form method="POST" action="/emails/{{ email.id }}/actions/new">
+        <div style="display: grid; gap: 1.5rem;">
+            <!-- Title -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">
+                    Action Title <span style="color: #e74c3c;">*</span>
+                </label>
+                <input type="text"
+                       name="title"
+                       placeholder="e.g., Respond to budget inquiry by Friday"
+                       style="width: 100%; max-width: 700px; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem;"
+                       required>
+                <p style="margin-top: 0.25rem; font-size: 0.85rem; color: #666;">A clear, concise summary of what needs to be done</p>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">
+                    Description (optional)
+                </label>
+                <textarea name="description"
+                          rows="4"
+                          placeholder="Add any additional context or details about this action..."
+                          style="width: 100%; max-width: 700px; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+
+            <!-- Priority and Due Date Row -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                <!-- Priority -->
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">
+                        Priority
+                    </label>
+                    <select name="priority" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem;">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+
+                <!-- Due Date -->
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">
+                        Due Date (optional)
+                    </label>
+                    <input type="date"
+                           name="due_date"
+                           style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem;">
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">
+                        Category (optional)
+                    </label>
+                    <input type="text"
+                           name="category"
+                           placeholder="e.g., RFI, Data Call"
+                           style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem;">
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div style="display: flex; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #ecf0f1;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 0.95rem;">
+                    ✓ Create Action
+                </button>
+                <a href="/emails/{{ email.id }}" class="btn" style="background: #95a5a6; color: white; padding: 0.75rem 2rem; font-size: 0.95rem; text-decoration: none;">
+                    Cancel
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

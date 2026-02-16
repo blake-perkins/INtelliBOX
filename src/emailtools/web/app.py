@@ -518,6 +518,111 @@ async def unassign_action(action_id: int):
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
+@app.post("/actions/{action_id}/title")
+async def update_action_title(
+    action_id: int,
+    title: str = Form(...)
+):
+    """Update action title."""
+    with get_session() as session:
+        action = session.query(Action).filter_by(id=action_id).first()
+        if not action:
+            raise HTTPException(status_code=404, detail="Action not found")
+
+        action.title = title
+        session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
+@app.post("/actions/{action_id}/description")
+async def update_action_description(
+    action_id: int,
+    description: str = Form(...)
+):
+    """Update action description."""
+    with get_session() as session:
+        action = session.query(Action).filter_by(id=action_id).first()
+        if not action:
+            raise HTTPException(status_code=404, detail="Action not found")
+
+        action.description = description if description.strip() else None
+        session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
+@app.post("/actions/{action_id}/delete")
+async def delete_action(action_id: int):
+    """Delete an action."""
+    with get_session() as session:
+        action = session.query(Action).filter_by(id=action_id).first()
+        if not action:
+            raise HTTPException(status_code=404, detail="Action not found")
+
+        email_id = action.email_id
+        session.delete(action)
+        session.commit()
+
+    return RedirectResponse(url=f"/emails/{email_id}", status_code=303)
+
+
+@app.get("/emails/{email_id}/actions/new", response_class=HTMLResponse)
+async def new_action_form(request: Request, email_id: int):
+    """Show form to create a new action for an email."""
+    with get_session() as session:
+        email = session.query(Email).filter_by(id=email_id).first()
+        if not email:
+            raise HTTPException(status_code=404, detail="Email not found")
+
+        return templates.TemplateResponse("action_new.html", {
+            "request": request,
+            "email": email
+        })
+
+
+@app.post("/emails/{email_id}/actions/new")
+async def create_action(
+    email_id: int,
+    title: str = Form(...),
+    description: str = Form(""),
+    priority: str = Form("medium"),
+    due_date: Optional[str] = Form(None),
+    category: str = Form("")
+):
+    """Create a new action for an email."""
+    with get_session() as session:
+        email = session.query(Email).filter_by(id=email_id).first()
+        if not email:
+            raise HTTPException(status_code=404, detail="Email not found")
+
+        # Parse due date if provided
+        parsed_due_date = None
+        if due_date and due_date.strip():
+            try:
+                from datetime import datetime as dt
+                parsed_due_date = dt.strptime(due_date, '%Y-%m-%d')
+            except ValueError:
+                pass
+
+        # Create new action
+        action = Action(
+            email_id=email_id,
+            title=title,
+            description=description if description.strip() else None,
+            priority=priority,
+            due_date=parsed_due_date,
+            category=category if category.strip() else None,
+            confidence_score=1.0  # Manual actions are 100% confident
+        )
+
+        session.add(action)
+        session.commit()
+        session.refresh(action)
+
+    return RedirectResponse(url=f"/actions/{action.id}", status_code=303)
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""

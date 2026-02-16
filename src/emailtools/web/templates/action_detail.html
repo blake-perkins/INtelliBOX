@@ -95,6 +95,51 @@
     {% endif %}
 </div>
 
+<!-- Edit Action Details -->
+<div class="card">
+    <div class="card-header">Edit Action Details</div>
+
+    <div style="display: grid; gap: 1.5rem;">
+        <!-- Edit Title -->
+        <form method="POST" action="/actions/{{ action.id }}/title">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Action Title</label>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="text"
+                       name="title"
+                       value="{{ action.title }}"
+                       style="flex: 1; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem;"
+                       required>
+                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 0.95rem;">Update Title</button>
+            </div>
+        </form>
+
+        <!-- Edit Description -->
+        <form method="POST" action="/actions/{{ action.id }}/description" style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Action Description</label>
+            <textarea name="description"
+                      rows="4"
+                      style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem; font-family: inherit; resize: vertical;">{{ action.description or '' }}</textarea>
+            <div style="margin-top: 0.75rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 0.95rem;">Update Description</button>
+            </div>
+        </form>
+
+        <!-- Delete Action -->
+        <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem; color: #e74c3c; font-weight: 600;">Danger Zone</h4>
+            <form method="POST" action="/actions/{{ action.id }}/delete">
+                <button type="submit"
+                        class="btn"
+                        style="background: #e74c3c; color: white; padding: 0.75rem 1.5rem; font-size: 0.95rem;"
+                        onclick="return confirm('Are you sure you want to delete this action? This cannot be undone.')">
+                    🗑️ Delete Action
+                </button>
+            </form>
+            <p style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">This will permanently delete the action and all its assignments.</p>
+        </div>
+    </div>
+</div>
+
 <!-- Quick Assignment Form -->
 <div class="card">
     <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; margin: -1.5rem -1.5rem 1.5rem -1.5rem; padding: 1rem 1.5rem;">
