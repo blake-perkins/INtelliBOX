@@ -18,6 +18,6 @@
 
   <!-- Text -->
   <text x="32" y="175" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#00a8e8">IN</text>
-  <text x="88" y="175" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="white">telli</text>
-  <text x="200" y="175" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#00a8e8">BOX</text>
+  <text x="80" y="175" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="white">telli</text>
+  <text x="205" y="175" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#00a8e8">BOX</text>
 </svg>
