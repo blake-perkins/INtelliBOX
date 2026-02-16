@@ -15,14 +15,14 @@ RUN apt-get update && apt-get install -y \
 # Copy dependency files
 COPY pyproject.toml /app/
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -e .
-
-# Copy application code
+# Copy application code (needed before install)
 COPY src/ /app/src/
 COPY alembic/ /app/alembic/
 COPY alembic.ini /app/
+
+# Install Python dependencies and application
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -e .
 
 # Create data directories
 RUN mkdir -p /app/data/inbox /app/data/emails
