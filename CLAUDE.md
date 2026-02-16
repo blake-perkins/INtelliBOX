@@ -2,20 +2,41 @@
 
 ## Project Overview
 
-EmailTools is a new repository in its initial setup phase. The project is intended to provide email-related tooling. No source code, build system, or dependencies have been added yet.
+EmailTools is an automated email action tracking system for fast-paced software teams. It parses emails using AI (GPT-4) to extract actionable items, stores them in a database, and generates nightly reports showing unassigned actions.
 
 ## Repository Structure
 
 ```
 EmailTools/
-├── CLAUDE.md        # AI assistant guidance (this file)
-└── test.md          # Placeholder file
+├── src/emailtools/          # Main application code
+│   ├── ingestion/          # Email parsing and file watching
+│   ├── ai/                 # GPT-4 integration (Phase 2)
+│   ├── reporter/           # Report generation (Phase 3)
+│   ├── utils/              # Shared utilities
+│   ├── config.py           # Pydantic settings
+│   ├── models.py           # SQLAlchemy ORM models
+│   ├── database.py         # Database initialization
+│   └── cli.py              # Click CLI commands
+├── tests/                  # Test suite
+│   └── fixtures/
+│       └── sample_emails/  # .eml files for testing
+├── data/                   # Local data (gitignored)
+│   ├── inbox/             # Drop .eml files here
+│   ├── emails/            # Archived emails
+│   └── emailtools.db      # SQLite database
+├── alembic/               # Database migrations
+├── pyproject.toml         # Dependencies and config
+└── .env                   # Environment variables (create from .env.example)
 ```
 
 ## Current State
 
-- **Status**: Pre-development — no source code, dependencies, or build configuration exist yet.
-- **Primary branch**: `master`
+- **Status**: MVP Complete — All 3 phases implemented and tested
+  - ✅ Phase 1: Email ingestion and parsing
+  - ✅ Phase 2: AI action extraction (demo mode)
+  - ✅ Phase 3: Nightly reporting with email summaries
+- **Primary branch**: `main`
+- **Next Steps**: Production deployment (OpenAI API key, SMTP config, AWS migration)
 
 ## Development Workflow
 

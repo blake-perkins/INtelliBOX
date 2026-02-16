@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmailTools Daily Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+        }
+        .summary {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .summary-item {
+            display: inline-block;
+            margin-right: 25px;
+            font-weight: bold;
+        }
+        .action-item {
+            background-color: #ffffff;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .action-item.high {
+            border-left-color: #e74c3c;
+            background-color: #fef5f5;
+        }
+        .action-item.medium {
+            border-left-color: #f39c12;
+            background-color: #fef9f3;
+        }
+        .action-item.low {
+            border-left-color: #27ae60;
+            background-color: #f4fef5;
+        }
+        .action-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        .action-meta {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+        .action-description {
+            font-size: 14px;
+            color: #555;
+            margin-top: 8px;
+        }
+        .priority-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .priority-high {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .priority-medium {
+            background-color: #f39c12;
+            color: white;
+        }
+        .priority-low {
+            background-color: #27ae60;
+            color: white;
+        }
+        .program-news {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+            font-size: 12px;
+            color: #95a5a6;
+            text-align: center;
+        }
+        .no-actions {
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>EmailTools Daily Report</h1>
+        <p style="color: #7f8c8d;">{{ generated_at.strftime('%A, %B %d, %Y at %I:%M %p') }}</p>
+
+        <div class="summary">
+            <span class="summary-item">Total Actions: {{ total_actions }}</span>
+            <span class="summary-item" style="color: #e74c3c;">High: {{ high_priority_count }}</span>
+            <span class="summary-item" style="color: #f39c12;">Medium: {{ medium_priority_count }}</span>
+            <span class="summary-item" style="color: #27ae60;">Low: {{ low_priority_count }}</span>
+        </div>
+
+        <h2>Unassigned Actions</h2>
+        {% if unassigned_actions %}
+            {% for action in unassigned_actions %}
+            <div class="action-item {{ action.priority or 'low' }}">
+                <div class="action-title">
+                    <span class="priority-badge priority-{{ action.priority or 'low' }}">
+                        {{ (action.priority or 'none').upper() }}
+                    </span>
+                    {{ action.title }}
+                </div>
+                <div class="action-meta">
+                    From: <strong>{{ action.email.from_address }}</strong> |
+                    Subject: {{ action.email.subject[:50] }}{% if action.email.subject|length > 50 %}...{% endif %}
+                    {% if action.due_date %}
+                    | Due: <strong>{{ action.due_date.strftime('%Y-%m-%d') }}</strong>
+                    {% endif %}
+                    {% if action.confidence_score %}
+                    | Confidence: {{ "%.0f"|format(action.confidence_score * 100) }}%
+                    {% endif %}
+                </div>
+                {% if action.description %}
+                <div class="action-description">
+                    {{ action.description[:200] }}{% if action.description|length > 200 %}...{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-actions">
+                No unassigned actions. Great work team!
+            </div>
+        {% endif %}
+
+        <h2>Program News (Last 7 Days)</h2>
+        <div class="program-news">
+            {{ program_news|safe }}
+        </div>
+
+        <div class="footer">
+            Generated by <strong>EmailTools</strong> |
+            Emails processed today: {{ emails_today }} |
+            <a href="https://github.com/anthropics/claude-code" style="color: #3498db;">Powered by Claude Code</a>
+        </div>
+    </div>
+</body>
+</html>

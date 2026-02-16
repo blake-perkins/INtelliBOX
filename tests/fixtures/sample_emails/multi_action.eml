@@ -1,0 +1,25 @@
+From: Sarah Chen <sarah.chen@stakeholder.com>
+To: dev-team@example.com
+Cc: ProgramTracker@example.com
+Subject: Multiple Action Items from Stakeholder Meeting
+Date: Tue, 16 Feb 2026 09:15:00 -0500
+Message-ID: <multi-action-001@example.com>
+Content-Type: text/plain; charset="UTF-8"
+
+Team,
+
+Following up from yesterday's stakeholder meeting, we have several critical action items:
+
+1. **Security Audit Report** - Need the Q1 security audit findings by end of week (Feb 20). This is high priority for compliance.
+
+2. **API Documentation Update** - Update the API docs to reflect the new v2.1 endpoints. Target completion: Feb 25.
+
+3. **Database Migration Plan** - Provide a detailed migration plan for the PostgreSQL upgrade. This is medium priority, needed by March 1st.
+
+4. **User Feedback Analysis** - Analyze the user feedback from the beta release and summarize key themes.
+
+Let me know if you have any questions on these items.
+
+Best regards,
+Sarah Chen
+Senior Product Manager

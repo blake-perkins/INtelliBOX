@@ -1,0 +1,22 @@
+From: John Doe <john.doe@example.com>
+To: program-team@example.com
+Cc: ProgramTracker@example.com
+Subject: RFI: System Performance Metrics Request
+Date: Mon, 15 Feb 2026 14:30:00 -0500
+Message-ID: <simple-rfi-001@example.com>
+Content-Type: text/plain; charset="UTF-8"
+
+Hi Team,
+
+I need system performance metrics for the last quarter. This is for an executive briefing scheduled for Friday, February 20th.
+
+Please include:
+- System uptime percentages
+- Response time averages
+- Error rates by module
+
+This is high priority as the executive review is coming up soon.
+
+Thanks,
+John Doe
+Director of Operations
