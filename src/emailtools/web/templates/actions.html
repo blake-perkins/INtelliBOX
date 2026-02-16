@@ -3,71 +3,167 @@
 {% block title %}Actions - EmailTools{% endblock %}
 
 {% block content %}
-<div class="card-header" style="font-size: 1.75rem; margin-bottom: 1.5rem;">
-    Actions
+<!-- Compact Metrics Bar -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <!-- Metrics -->
+        <div style="display: flex; gap: 2rem; align-items: center; font-size: 0.95rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">📋</span>
+                <span><strong>{{ total_actions }}</strong> <span style="opacity: 0.7;">total</span></span>
+            </div>
+            <div style="opacity: 0.4;">|</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">📝</span>
+                <span><strong>{{ unassigned_actions }}</strong> <span style="opacity: 0.7;">unassigned</span></span>
+            </div>
+            <div style="opacity: 0.4;">|</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">🔥</span>
+                <span style="{% if high_priority > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                    <strong>{{ high_priority }}</strong> <span style="opacity: 0.7;">high</span>
+                </span>
+            </div>
+            <div style="opacity: 0.4;">|</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">⚠️</span>
+                <span style="{% if overdue_count > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                    <strong>{{ overdue_count }}</strong> <span style="opacity: 0.7;">overdue</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Quick filters -->
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="/actions?assigned=false" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,{% if assigned == 'false' %}0.4{% else %}0.2{% endif %}); border: 1px solid rgba(255,255,255,0.3);">
+                Unassigned
+            </a>
+            <a href="/actions?priority=high" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,{% if priority == 'high' %}0.4{% else %}0.2{% endif %}); border: 1px solid rgba(255,255,255,0.3);">
+                High Priority
+            </a>
+        </div>
+    </div>
 </div>
 
-<div class="filter-bar">
-    <form method="get" style="display: flex; gap: 1rem; flex-wrap: wrap; width: 100%;">
-        <div>
-            <label for="priority" style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">Priority:</label>
-            <select name="priority" id="priority" onchange="this.form.submit()">
-                <option value="">All</option>
-                <option value="high" {% if priority == 'high' %}selected{% endif %}>High</option>
-                <option value="medium" {% if priority == 'medium' %}selected{% endif %}>Medium</option>
-                <option value="low" {% if priority == 'low' %}selected{% endif %}>Low</option>
-            </select>
+<!-- Search and Filters -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <form method="get" style="display: grid; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <!-- Search -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">🔍 Search</label>
+                <input type="text"
+                       name="search"
+                       value="{{ search or '' }}"
+                       placeholder="Search title, description, subject..."
+                       style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+            </div>
+
+            <!-- Priority Filter -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Priority</label>
+                <select name="priority" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">All Priorities</option>
+                    <option value="high" {% if priority == 'high' %}selected{% endif %}>High</option>
+                    <option value="medium" {% if priority == 'medium' %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if priority == 'low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+
+            <!-- Assignment Status -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Status</label>
+                <select name="assigned" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">All Actions</option>
+                    <option value="false" {% if assigned == 'false' %}selected{% endif %}>Unassigned</option>
+                    <option value="true" {% if assigned == 'true' %}selected{% endif %}>Assigned</option>
+                </select>
+            </div>
+
+            <!-- Assignee Filter -->
+            {% if assignee_list %}
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Assignee</label>
+                <select name="assignee" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">All Assignees</option>
+                    {% for person in assignee_list %}
+                    <option value="{{ person }}" {% if assignee == person %}selected{% endif %}>{{ person }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
         </div>
-        <div>
-            <label for="assigned" style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">Status:</label>
-            <select name="assigned" id="assigned" onchange="this.form.submit()">
-                <option value="">All</option>
-                <option value="unassigned" {% if assigned == 'unassigned' %}selected{% endif %}>Unassigned</option>
-                <option value="assigned" {% if assigned == 'assigned' %}selected{% endif %}>Assigned</option>
-            </select>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            {% if priority or assigned or assignee or search %}
+            <a href="/actions" class="btn" style="background: #95a5a6; color: white;">Clear All</a>
+            {% endif %}
         </div>
-        {% if priority or assigned %}
-        <div style="display: flex; align-items: flex-end;">
-            <a href="/actions" class="btn btn-primary" style="background-color: #95a5a6;">Clear Filters</a>
-        </div>
-        {% endif %}
     </form>
 </div>
 
+<!-- Results -->
 <div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>
+            {% if total_count > 0 %}
+                Showing {{ ((page - 1) * 50) + 1 }}-{{ [page * 50, total_count]|min }} of {{ total_count }} action(s)
+            {% else %}
+                No actions found
+            {% endif %}
+        </span>
+    </div>
+
     {% if actions %}
     <table>
         <thead>
             <tr>
-                <th>Priority</th>
+                <th style="width: 100px;">Priority</th>
                 <th>Title</th>
-                <th>From</th>
-                <th>Due Date</th>
-                <th>Confidence</th>
+                <th style="width: 200px;">From</th>
+                <th style="width: 150px;">Assignee</th>
+                <th style="width: 120px;">Due Date</th>
             </tr>
         </thead>
         <tbody>
             {% for action in actions %}
-            <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+            {% set is_overdue = action.due_date and action.due_date < current_time.date() %}
+            {% set assignment = action.assignments[0] if action.assignments else None %}
+            <tr style="cursor: pointer; {% if is_overdue and (not assignment or assignment.status != 'completed') %}background-color: #fff5f5;{% endif %}"
+                onclick="window.location='/actions/{{ action.id }}'">
                 <td>
                     <span class="badge badge-{{ action.priority }}">
                         {{ action.priority }}
                     </span>
                 </td>
-                <td>{{ action.title }}</td>
-                <td>{{ action.email.from_address }}</td>
                 <td>
-                    {% if action.due_date %}
-                        {{ action.due_date.strftime('%Y-%m-%d') }}
+                    <div style="font-weight: 600; margin-bottom: 0.25rem;">
+                        {{ action.title[:80] }}{% if action.title|length > 80 %}...{% endif %}
+                    </div>
+                    <div style="font-size: 0.85rem; color: #666;">
+                        {{ action.email.subject[:60] }}{% if action.email.subject|length > 60 %}...{% endif %}
+                    </div>
+                </td>
+                <td style="font-size: 0.9rem;">
+                    {{ action.email.from_address.split('@')[0] if '@' in action.email.from_address else action.email.from_address }}
+                </td>
+                <td>
+                    {% if assignment %}
+                        <span style="color: #27ae60; font-weight: 600;">{{ assignment.assigned_to }}</span>
                     {% else %}
-                        <span style="color: #999;">No due date</span>
+                        <span style="color: #f39c12; font-weight: 600;">Unassigned</span>
                     {% endif %}
                 </td>
                 <td>
-                    {% if action.confidence_score %}
-                        {{ (action.confidence_score * 100)|round|int }}%
+                    {% if action.due_date %}
+                        <span style="{% if is_overdue and (not assignment or assignment.status != 'completed') %}color: #e74c3c; font-weight: 600;{% endif %}">
+                            {{ action.due_date.strftime('%b %d, %Y') }}
+                            {% if is_overdue and (not assignment or assignment.status != 'completed') %}⚠️{% endif %}
+                        </span>
                     {% else %}
-                        <span style="color: #999;">N/A</span>
+                        <span style="color: #999;">No date</span>
                     {% endif %}
                 </td>
             </tr>
@@ -76,28 +172,29 @@
     </table>
     {% else %}
     <div style="text-align: center; padding: 3rem; color: #999;">
-        <p style="font-size: 1.1rem;">No actions found</p>
-        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Try adjusting your filters</p>
+        <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No actions found</p>
+        <p style="font-size: 0.9rem;">Try adjusting your filters or search terms</p>
     </div>
     {% endif %}
 </div>
 
+<!-- Pagination -->
 {% if total_pages > 1 %}
 <div class="pagination">
     {% if page > 1 %}
-        <a href="?page={{ page - 1 }}{% if priority %}&priority={{ priority }}{% endif %}{% if assigned %}&assigned={{ assigned }}{% endif %}">&laquo; Previous</a>
+        <a href="?page={{ page - 1 }}{% if priority %}&priority={{ priority }}{% endif %}{% if assigned %}&assigned={{ assigned }}{% endif %}{% if assignee %}&assignee={{ assignee }}{% endif %}{% if search %}&search={{ search }}{% endif %}">&laquo; Previous</a>
     {% endif %}
 
     {% for p in range(1, total_pages + 1) %}
         {% if p == page %}
             <a href="#" class="active">{{ p }}</a>
         {% else %}
-            <a href="?page={{ p }}{% if priority %}&priority={{ priority }}{% endif %}{% if assigned %}&assigned={{ assigned }}{% endif %}">{{ p }}</a>
+            <a href="?page={{ p }}{% if priority %}&priority={{ priority }}{% endif %}{% if assigned %}&assigned={{ assigned }}{% endif %}{% if assignee %}&assignee={{ assignee }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ p }}</a>
         {% endif %}
     {% endfor %}
 
     {% if page < total_pages %}
-        <a href="?page={{ page + 1 }}{% if priority %}&priority={{ priority }}{% endif %}{% if assigned %}&assigned={{ assigned }}{% endif %}">Next &raquo;</a>
+        <a href="?page={{ page + 1 }}{% if priority %}&priority={{ priority }}{% endif %}{% if assigned %}&assigned={{ assigned }}{% endif %}{% if assignee %}&assignee={{ assignee }}{% endif %}{% if search %}&search={{ search }}{% endif %}">Next &raquo;</a>
     {% endif %}
 </div>
 {% endif %}

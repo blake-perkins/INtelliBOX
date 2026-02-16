@@ -3,32 +3,158 @@
 {% block title %}Emails - EmailTools{% endblock %}
 
 {% block content %}
-<div class="card-header" style="font-size: 1.75rem; margin-bottom: 1.5rem;">
-    Emails
+<!-- Compact Metrics Bar -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <!-- Metrics -->
+        <div style="display: flex; gap: 2rem; align-items: center; font-size: 0.95rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">📧</span>
+                <span><strong>{{ total_emails }}</strong> <span style="opacity: 0.7;">total</span></span>
+            </div>
+            <div style="opacity: 0.4;">|</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">✓</span>
+                <span><strong>{{ processed_emails }}</strong> <span style="opacity: 0.7;">processed</span></span>
+            </div>
+            <div style="opacity: 0.4;">|</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">⏳</span>
+                <span style="{% if unprocessed_emails > 0 %}background: rgba(241, 196, 15, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                    <strong>{{ unprocessed_emails }}</strong> <span style="opacity: 0.7;">pending</span>
+                </span>
+            </div>
+            <div style="opacity: 0.4;">|</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="opacity: 0.8;">🔥</span>
+                <span><strong>{{ emails_with_high_priority }}</strong> <span style="opacity: 0.7;">high priority</span></span>
+            </div>
+        </div>
+
+        <!-- Quick filters -->
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="/emails?processed=false" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,{% if processed == 'false' %}0.4{% else %}0.2{% endif %}); border: 1px solid rgba(255,255,255,0.3);">
+                Unprocessed
+            </a>
+            <a href="/emails?processed=true" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,{% if processed == 'true' %}0.4{% else %}0.2{% endif %}); border: 1px solid rgba(255,255,255,0.3);">
+                Processed
+            </a>
+        </div>
+    </div>
 </div>
 
+<!-- Search and Filters -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <form method="get" style="display: grid; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+            <!-- Search -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">🔍 Search</label>
+                <input type="text"
+                       name="search"
+                       value="{{ search or '' }}"
+                       placeholder="Search subject, sender, or content..."
+                       style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+            </div>
+
+            <!-- Processing Status -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Processing Status</label>
+                <select name="processed" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">All Emails</option>
+                    <option value="true" {% if processed == 'true' %}selected{% endif %}>Processed</option>
+                    <option value="false" {% if processed == 'false' %}selected{% endif %}>Unprocessed</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            {% if search or processed %}
+            <a href="/emails" class="btn" style="background: #95a5a6; color: white;">Clear All</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Results -->
 <div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>
+            {% if total_count > 0 %}
+                Showing {{ ((page - 1) * 50) + 1 }}-{{ [page * 50, total_count]|min }} of {{ total_count }} email(s)
+            {% else %}
+                No emails found
+            {% endif %}
+        </span>
+    </div>
+
     {% if emails %}
     <table>
         <thead>
             <tr>
                 <th>Subject</th>
-                <th>From</th>
-                <th>Received Date</th>
-                <th>Processed</th>
+                <th style="width: 200px;">From</th>
+                <th style="width: 150px;">Received</th>
+                <th style="width: 120px;">Actions</th>
+                <th style="width: 100px;">Status</th>
             </tr>
         </thead>
         <tbody>
             {% for email in emails %}
-            <tr style="cursor: pointer;" onclick="window.location='/emails/{{ email.id }}'">
-                <td style="font-weight: 500;">{{ email.subject }}</td>
-                <td>{{ email.from_address }}</td>
-                <td>{{ email.received_date.strftime('%Y-%m-%d %I:%M %p') }}</td>
+            {% set action_count = email.actions|length %}
+            {% set high_priority_count = email.actions|selectattr('priority', 'equalto', 'high')|list|length %}
+            {% set time_diff = (current_time - email.received_date).total_seconds() %}
+            <tr style="cursor: pointer; {% if not email.processed %}background-color: #fffbf0;{% endif %}"
+                onclick="window.location='/emails/{{ email.id }}'">
+                <td>
+                    <div style="font-weight: 600; margin-bottom: 0.25rem;">
+                        {{ email.subject[:80] }}{% if email.subject|length > 80 %}...{% endif %}
+                    </div>
+                    {% if action_count > 0 %}
+                    <div style="font-size: 0.85rem; color: #666; display: flex; gap: 0.5rem; align-items: center;">
+                        <span style="background: #e8f5e9; color: #27ae60; padding: 0.15rem 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.75rem;">
+                            📋 {{ action_count }} action{{ 's' if action_count != 1 else '' }}
+                        </span>
+                        {% if high_priority_count > 0 %}
+                        <span style="background: #fee; color: #e74c3c; padding: 0.15rem 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.75rem;">
+                            🔥 {{ high_priority_count }} high
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.9rem;">
+                    {{ email.from_address.split('@')[0] if '@' in email.from_address else email.from_address }}
+                </td>
+                <td style="font-size: 0.9rem; color: #666;">
+                    {% if time_diff < 3600 %}
+                        {{ (time_diff / 60)|int }}m ago
+                    {% elif time_diff < 86400 %}
+                        {{ (time_diff / 3600)|int }}h ago
+                    {% elif time_diff < 604800 %}
+                        {{ (time_diff / 86400)|int }}d ago
+                    {% else %}
+                        {{ email.received_date.strftime('%b %d') }}
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if action_count > 0 %}
+                        <a href="/emails/{{ email.id }}"
+                           onclick="event.stopPropagation();"
+                           style="color: #3498db; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+                            View →
+                        </a>
+                    {% else %}
+                        <span style="color: #999; font-size: 0.85rem;">None</span>
+                    {% endif %}
+                </td>
                 <td>
                     {% if email.processed %}
-                        <span style="color: #27ae60; font-weight: 600;">✓ Yes</span>
+                        <span style="color: #27ae60; font-weight: 600; font-size: 0.9rem;">✓ Done</span>
                     {% else %}
-                        <span style="color: #e74c3c; font-weight: 600;">✗ No</span>
+                        <span style="color: #f39c12; font-weight: 600; font-size: 0.9rem;">⏳ Pending</span>
                     {% endif %}
                 </td>
             </tr>
@@ -37,27 +163,29 @@
     </table>
     {% else %}
     <div style="text-align: center; padding: 3rem; color: #999;">
-        <p style="font-size: 1.1rem;">No emails found</p>
+        <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No emails found</p>
+        <p style="font-size: 0.9rem;">Try adjusting your search or filters</p>
     </div>
     {% endif %}
 </div>
 
+<!-- Pagination -->
 {% if total_pages > 1 %}
 <div class="pagination">
     {% if page > 1 %}
-        <a href="?page={{ page - 1 }}">&laquo; Previous</a>
+        <a href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}{% if processed %}&processed={{ processed }}{% endif %}">&laquo; Previous</a>
     {% endif %}
 
     {% for p in range(1, total_pages + 1) %}
         {% if p == page %}
             <a href="#" class="active">{{ p }}</a>
         {% else %}
-            <a href="?page={{ p }}">{{ p }}</a>
+            <a href="?page={{ p }}{% if search %}&search={{ search }}{% endif %}{% if processed %}&processed={{ processed }}{% endif %}">{{ p }}</a>
         {% endif %}
     {% endfor %}
 
     {% if page < total_pages %}
-        <a href="?page={{ page + 1 }}">Next &raquo;</a>
+        <a href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}{% if processed %}&processed={{ processed }}{% endif %}">Next &raquo;</a>
     {% endif %}
 </div>
 {% endif %}

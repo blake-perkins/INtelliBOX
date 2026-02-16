@@ -4,198 +4,257 @@
 
 {% block content %}
 <div style="margin-bottom: 1rem;">
-    <a href="/actions" style="color: #3498db; text-decoration: none;">&larr; Back to Actions</a>
+    <a href="/actions" style="color: #3498db; text-decoration: none; font-weight: 600;">&larr; Back to Actions</a>
 </div>
 
+<!-- Action Overview -->
 <div class="card">
-    <div class="card-header">
-        Action Details
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div style="flex: 1; min-width: 300px;">
+            <h2 style="font-size: 1.75rem; margin-bottom: 1rem; color: #2c3e50; line-height: 1.3;">
+                {{ action.title }}
+            </h2>
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                <span class="badge badge-{{ action.priority }}" style="font-size: 0.85rem; padding: 0.4rem 0.9rem;">
+                    {{ action.priority.upper() }} PRIORITY
+                </span>
+                {% set is_overdue = action.due_date and action.due_date < current_time.date() %}
+                {% if is_overdue and (not assignment or assignment.status != 'completed') %}
+                <span style="background: #fee; color: #e74c3c; padding: 0.4rem 0.9rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                    ⚠️ OVERDUE
+                </span>
+                {% endif %}
+                {% if assignment and assignment.status == 'completed' %}
+                <span style="background: #d4edda; color: #155724; padding: 0.4rem 0.9rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                    ✓ COMPLETED
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Assignment Status Card -->
+        <div style="background: {% if assignment %}#e8f5e9{% else %}#fff3cd{% endif %}; padding: 1rem 1.5rem; border-radius: 8px; border-left: 4px solid {% if assignment %}#27ae60{% else %}#f39c12{% endif %}; min-width: 250px;">
+            <div style="font-weight: 600; color: {% if assignment %}#27ae60{% else %}#f39c12{% endif %}; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                {% if assignment %}ASSIGNED{% else %}UNASSIGNED{% endif %}
+            </div>
+            {% if assignment %}
+            <div style="color: #555; font-size: 0.95rem;">
+                <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">{{ assignment.assigned_to }}</div>
+                <div style="font-size: 0.85rem; opacity: 0.8;">{{ assignment.assigned_at.strftime('%b %d, %I:%M %p') }}</div>
+            </div>
+            {% else %}
+            <div style="color: #666; font-size: 0.9rem;">This action needs to be assigned</div>
+            {% endif %}
+        </div>
     </div>
 
-    <div style="display: grid; gap: 1.5rem;">
+    <!-- Metadata Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
         <div>
-            <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">{{ action.title }}</h3>
-            <span class="badge badge-{{ action.priority }}" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
-                {{ action.priority }} Priority
-            </span>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-            <div>
-                <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Due Date</div>
-                <div style="font-size: 1.1rem;">
-                    {% if action.due_date %}
-                        {{ action.due_date.strftime('%B %d, %Y') }}
-                    {% else %}
-                        <span style="color: #999;">No due date</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div>
-                <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Confidence</div>
-                <div style="font-size: 1.1rem;">
-                    {% if action.confidence_score %}
-                        {{ (action.confidence_score * 100)|round|int }}%
-                    {% else %}
-                        <span style="color: #999;">N/A</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div>
-                <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Created At</div>
-                <div style="font-size: 1.1rem;">{{ action.created_at.strftime('%B %d, %Y %I:%M %p') }}</div>
+            <div style="color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; font-weight: 600;">📅 DUE DATE</div>
+            <div style="font-size: 1.05rem; font-weight: 500;">
+                {% if action.due_date %}
+                    {{ action.due_date.strftime('%B %d, %Y') }}
+                {% else %}
+                    <span style="color: #999;">No due date set</span>
+                {% endif %}
             </div>
         </div>
 
-        {% if action.description %}
         <div>
-            <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Description</div>
-            <div style="background: #f8f9fa; padding: 1rem; border-radius: 4px; line-height: 1.6;">
-                {{ action.description }}
+            <div style="color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; font-weight: 600;">🎯 CONFIDENCE</div>
+            <div style="font-size: 1.05rem; font-weight: 500;">
+                {% if action.confidence_score %}
+                    {{ (action.confidence_score * 100)|round|int }}%
+                {% else %}
+                    <span style="color: #999;">N/A</span>
+                {% endif %}
             </div>
         </div>
-        {% endif %}
 
-        {% if assignment %}
-        <div style="background: #e8f5e9; padding: 1rem; border-radius: 4px; border-left: 4px solid #27ae60;">
-            <div style="font-weight: 600; color: #27ae60; margin-bottom: 0.5rem;">
-                Assignment Status: Assigned
-            </div>
-            <div style="color: #555; font-size: 0.9rem;">
-                <strong>Assigned To:</strong> {{ assignment.assigned_to }}<br>
-                <strong>Status:</strong> {{ assignment.status }}<br>
-                <strong>Assigned At:</strong> {{ assignment.assigned_at.strftime('%B %d, %Y %I:%M %p') }}
-                {% if assignment.notes %}<br><strong>Notes:</strong> {{ assignment.notes }}{% endif %}
-            </div>
+        <div>
+            <div style="color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; font-weight: 600;">📌 CREATED</div>
+            <div style="font-size: 1.05rem; font-weight: 500;">{{ action.created_at.strftime('%b %d, %Y') }}</div>
         </div>
-        {% else %}
-        <div style="background: #fff3cd; padding: 1rem; border-radius: 4px; border-left: 4px solid #f39c12;">
-            <div style="font-weight: 600; color: #f39c12;">
-                Assignment Status: Unassigned
-            </div>
+
+        {% if action.category %}
+        <div>
+            <div style="color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; font-weight: 600;">🏷️ CATEGORY</div>
+            <div style="font-size: 1.05rem; font-weight: 500;">{{ action.category }}</div>
         </div>
         {% endif %}
     </div>
+
+    {% if action.description %}
+    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #ecf0f1;">
+        <div style="color: #555; font-weight: 600; margin-bottom: 0.75rem; font-size: 0.9rem;">DESCRIPTION</div>
+        <div style="background: white; padding: 1.25rem; border-radius: 4px; line-height: 1.7; color: #2c3e50; border: 1px solid #e1e8ed;">
+            {{ action.description }}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
+<!-- Quick Assignment Form -->
 <div class="card">
-    <div class="card-header">
-        Action Management
+    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; margin: -1.5rem -1.5rem 1.5rem -1.5rem; padding: 1rem 1.5rem;">
+        {% if assignment %}Update Assignment{% else %}Assign Action{% endif %}
     </div>
 
-    <div style="display: grid; gap: 1.5rem;">
-        <!-- Priority Update Form -->
-        <div>
-            <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: #333;">Change Priority</h4>
-            <form method="POST" action="/actions/{{ action.id }}/priority" style="display: flex; gap: 0.5rem; align-items: center;">
-                <select name="priority" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
-                    <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High Priority</option>
-                    <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium Priority</option>
-                    <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low Priority</option>
-                </select>
-                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Update Priority</button>
+    <form method="POST" action="/actions/{{ action.id }}/assign">
+        <div style="display: grid; gap: 1.25rem;">
+            <!-- Assignee Selection -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Assign To</label>
+                <input type="text"
+                       name="assigned_to"
+                       value="{% if assignment %}{{ assignment.assigned_to }}{% endif %}"
+                       placeholder="Enter name or email..."
+                       list="assignees"
+                       style="width: 100%; max-width: 500px; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem; transition: border-color 0.2s;"
+                       onfocus="this.style.borderColor='#667eea'"
+                       onblur="this.style.borderColor='#ddd'"
+                       required>
+
+                {% if recent_assignees %}
+                <datalist id="assignees">
+                    {% for assignee in recent_assignees %}
+                    <option value="{{ assignee }}">
+                    {% endfor %}
+                </datalist>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
+                    Recent: {% for assignee in recent_assignees[:5] %}
+                        <a href="#" onclick="document.querySelector('input[name=assigned_to]').value='{{ assignee }}'; return false;" style="color: #3498db; text-decoration: none; margin-right: 0.75rem;">{{ assignee }}</a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Notes (optional)</label>
+                <textarea name="notes"
+                          rows="3"
+                          placeholder="Add any context or instructions..."
+                          style="width: 100%; max-width: 700px; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem; font-family: inherit; resize: vertical;"
+                          onfocus="this.style.borderColor='#667eea'"
+                          onblur="this.style.borderColor='#ddd'">{% if assignment and assignment.notes %}{{ assignment.notes }}{% endif %}</textarea>
+            </div>
+
+            <!-- Actions -->
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 0.95rem;">
+                    {% if assignment %}Update Assignment{% else %}Assign Action{% endif %}
+                </button>
+
+                {% if assignment and assignment.status != 'completed' %}
+                <form method="POST" action="/actions/{{ action.id }}/complete" style="display: inline;">
+                    <button type="submit" class="btn" style="background: #27ae60; color: white; padding: 0.75rem 1.5rem; font-size: 0.95rem;" onclick="return confirm('Mark this action as completed?')">
+                        ✓ Mark Complete
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if assignment %}
+                <form method="POST" action="/actions/{{ action.id }}/unassign" style="display: inline;">
+                    <button type="submit" class="btn" style="background: #e74c3c; color: white; padding: 0.75rem 1.5rem; font-size: 0.95rem;" onclick="return confirm('Remove assignment from this action?')">
+                        Unassign
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Action Management -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+    <!-- Update Priority/Due Date -->
+    <div class="card">
+        <div class="card-header">Quick Updates</div>
+
+        <div style="display: grid; gap: 1.5rem;">
+            <!-- Priority -->
+            <form method="POST" action="/actions/{{ action.id }}/priority">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Priority</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <select name="priority" style="flex: 1; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                        <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
+                        <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">Update</button>
+                </div>
             </form>
-        </div>
 
-        <!-- Due Date Form -->
-        <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
-            <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: #333;">Set Due Date</h4>
-            <form method="POST" action="/actions/{{ action.id }}/due-date" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                    <label style="font-size: 0.85rem; color: #666;">Due Date:</label>
+            <!-- Due Date -->
+            <form method="POST" action="/actions/{{ action.id }}/due-date">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Due Date</label>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <input type="date"
                            name="due_date"
                            value="{% if action.due_date %}{{ action.due_date.strftime('%Y-%m-%d') }}{% endif %}"
-                           style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
-                </div>
-                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem; align-self: flex-end;">Update Due Date</button>
-                {% if action.due_date %}
-                <form method="POST" action="/actions/{{ action.id }}/due-date" style="display: inline; align-self: flex-end;">
-                    <input type="hidden" name="due_date" value="">
-                    <button type="submit" class="btn" style="background: #95a5a6; color: white; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Remove due date from this action?')">Clear Date</button>
-                </form>
-                {% endif %}
-            </form>
-        </div>
-
-        <!-- Assignment Form -->
-        <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
-            <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: #333;">Assign Action</h4>
-            <form method="POST" action="/actions/{{ action.id }}/assign" style="display: grid; gap: 0.75rem;">
-                <div>
-                    <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">Assign To (email or name):</label>
-                    <input type="text" name="assigned_to"
-                           value="{% if assignment %}{{ assignment.assigned_to }}{% endif %}"
-                           placeholder="john@example.com or John Doe"
-                           list="team-members"
-                           style="width: 100%; max-width: 400px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
-                           required>
-                    {% if team_members %}
-                    <datalist id="team-members">
-                        {% for member in team_members %}
-                        <option value="{{ member }}">
-                        {% endfor %}
-                    </datalist>
-                    {% endif %}
-                </div>
-                <div>
-                    <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">Notes (optional):</label>
-                    <textarea name="notes" rows="3"
-                              placeholder="Add any notes about this assignment..."
-                              style="width: 100%; max-width: 600px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; font-family: inherit;">{% if assignment and assignment.notes %}{{ assignment.notes }}{% endif %}</textarea>
-                </div>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button type="submit" class="btn btn-primary">{% if assignment %}Update Assignment{% else %}Assign Action{% endif %}</button>
-                    {% if assignment %}
-                    <form method="POST" action="/actions/{{ action.id }}/unassign" style="display: inline;">
-                        <button type="submit" class="btn" style="background: #e74c3c; color: white;" onclick="return confirm('Remove assignment from this action?')">Unassign</button>
-                    </form>
+                           style="flex: 1; min-width: 150px; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">Update</button>
+                    {% if action.due_date %}
+                    <button type="submit" onclick="this.form.elements.due_date.value=''; return confirm('Remove due date?');" class="btn" style="background: #95a5a6; color: white; padding: 0.6rem 1.2rem; font-size: 0.9rem;">Clear</button>
                     {% endif %}
                 </div>
             </form>
         </div>
-
-        <!-- Mark Complete -->
-        {% if assignment and assignment.status != 'completed' %}
-        <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
-            <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: #333;">Mark as Complete</h4>
-            <form method="POST" action="/actions/{{ action.id }}/complete">
-                <button type="submit" class="btn" style="background: #27ae60; color: white;" onclick="return confirm('Mark this action as completed?')">
-                    Mark Complete
-                </button>
-            </form>
-        </div>
-        {% elif assignment and assignment.status == 'completed' %}
-        <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
-            <div style="background: #d4edda; color: #155724; padding: 1rem; border-radius: 4px; font-weight: 600;">
-                ✓ This action has been marked as completed
-            </div>
-        </div>
-        {% endif %}
     </div>
+
+    <!-- Related Actions -->
+    {% if related_actions %}
+    <div class="card">
+        <div class="card-header">Other Actions from This Email ({{ related_actions|length }})</div>
+
+        <div style="display: grid; gap: 0.75rem;">
+            {% for related in related_actions %}
+            <div style="padding: 0.75rem; background: #f8f9fa; border-radius: 4px; cursor: pointer; transition: background 0.2s;"
+                 onclick="window.location='/actions/{{ related.id }}'"
+                 onmouseover="this.style.background='#ecf0f1'"
+                 onmouseout="this.style.background='#f8f9fa'">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                            {{ related.title[:50] }}{% if related.title|length > 50 %}...{% endif %}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #666;">
+                            {% if related.assignments %}
+                                Assigned to {{ related.assignments[0].assigned_to }}
+                            {% else %}
+                                Unassigned
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span class="badge badge-{{ related.priority }}" style="font-size: 0.7rem;">{{ related.priority }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
+<!-- Source Email -->
 <div class="card">
-    <div class="card-header">
-        Associated Email
-    </div>
+    <div class="card-header">Source Email</div>
 
     <div style="display: grid; gap: 1rem;">
-        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem;">
-            <div style="color: #666; font-weight: 600;">From:</div>
-            <div>{{ action.email.from_address }}</div>
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.75rem 1.5rem; background: #f8f9fa; padding: 1.25rem; border-radius: 4px;">
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">From:</div>
+            <div style="font-size: 0.95rem;">{{ action.email.from_address }}</div>
 
-            <div style="color: #666; font-weight: 600;">Subject:</div>
-            <div>{{ action.email.subject }}</div>
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">Subject:</div>
+            <div style="font-size: 0.95rem;">{{ action.email.subject }}</div>
 
-            <div style="color: #666; font-weight: 600;">Received:</div>
-            <div>{{ action.email.received_date.strftime('%B %d, %Y %I:%M %p') }}</div>
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">Received:</div>
+            <div style="font-size: 0.95rem;">{{ action.email.received_date.strftime('%B %d, %Y at %I:%M %p') }}</div>
         </div>
 
-        <div style="margin-top: 1rem;">
-            <a href="/emails/{{ action.email.id }}" class="btn btn-primary">View Full Email</a>
+        <div>
+            <a href="/emails/{{ action.email.id }}" class="btn btn-primary" style="padding: 0.75rem 1.5rem;">View Full Email →</a>
         </div>
     </div>
 </div>

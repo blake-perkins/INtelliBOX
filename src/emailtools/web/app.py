@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request, HTTPException, Query, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import desc, func, case
+from sqlalchemy import desc, func, case, or_
 
 from emailtools.database import get_session
 from emailtools.models import Action, Assignment, Email, ProcessingLog
@@ -144,11 +144,38 @@ async def dashboard(request: Request):
 async def list_actions(
     request: Request,
     priority: Optional[str] = None,
-    assigned: Optional[bool] = None,
+    assigned: Optional[str] = None,
+    assignee: Optional[str] = None,
+    search: Optional[str] = None,
     page: int = Query(1, ge=1)
 ):
     """List all actions with filtering."""
     with get_session() as session:
+        # Get stats for header
+        total_actions = session.query(Action).count()
+        unassigned_actions = session.query(Action).outerjoin(Assignment).filter(
+            Assignment.id.is_(None)
+        ).count()
+        high_priority = session.query(Action).outerjoin(Assignment).filter(
+            Action.priority == "high",
+            Assignment.id.is_(None)
+        ).count()
+        medium_priority = session.query(Action).outerjoin(Assignment).filter(
+            Action.priority == "medium",
+            Assignment.id.is_(None)
+        ).count()
+        low_priority = session.query(Action).outerjoin(Assignment).filter(
+            Action.priority == "low",
+            Assignment.id.is_(None)
+        ).count()
+
+        # Get overdue count
+        today = datetime.utcnow().date()
+        overdue_count = session.query(Action).outerjoin(Assignment).filter(
+            Action.due_date < today,
+            (Assignment.id.is_(None)) | (Assignment.status != "completed")
+        ).count()
+
         # Base query
         query = session.query(Action).outerjoin(Assignment).join(Email)
 
@@ -156,11 +183,23 @@ async def list_actions(
         if priority:
             query = query.filter(Action.priority == priority)
 
-        if assigned is not None:
-            if assigned:
-                query = query.filter(Assignment.id.isnot(None))
-            else:
-                query = query.filter(Assignment.id.is_(None))
+        if assigned == "true":
+            query = query.filter(Assignment.id.isnot(None))
+        elif assigned == "false":
+            query = query.filter(Assignment.id.is_(None))
+
+        if assignee:
+            query = query.filter(Assignment.assigned_to == assignee)
+
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Action.title.ilike(search_term),
+                    Action.description.ilike(search_term),
+                    Email.subject.ilike(search_term)
+                )
+            )
 
         # Order by priority and due date
         priority_order = case(
@@ -178,14 +217,28 @@ async def list_actions(
 
         actions = query.offset((page - 1) * per_page).limit(per_page).all()
 
+        # Get list of assignees for filter dropdown
+        assignees = session.query(Assignment.assigned_to).distinct().order_by(Assignment.assigned_to).all()
+        assignee_list = [a[0] for a in assignees if a[0]]
+
         return templates.TemplateResponse("actions.html", {
             "request": request,
             "actions": actions,
-            "priority_filter": priority,
-            "assigned_filter": assigned,
+            "priority": priority,
+            "assigned": assigned,
+            "assignee": assignee,
+            "search": search,
             "page": page,
             "total_pages": total_pages,
-            "total_count": total_count
+            "total_count": total_count,
+            "total_actions": total_actions,
+            "unassigned_actions": unassigned_actions,
+            "high_priority": high_priority,
+            "medium_priority": medium_priority,
+            "low_priority": low_priority,
+            "overdue_count": overdue_count,
+            "assignee_list": assignee_list,
+            "current_time": datetime.utcnow()
         })
 
 
@@ -201,33 +254,90 @@ async def view_action(request: Request, action_id: int):
         # Get assignment if exists
         assignment = session.query(Assignment).filter_by(action_id=action_id).first()
 
+        # Get other actions from the same email
+        related_actions = session.query(Action).filter(
+            Action.email_id == action.email_id,
+            Action.id != action_id
+        ).all()
+
+        # Get recent assignees for quick selection
+        recent_assignees = session.query(Assignment.assigned_to).distinct().order_by(
+            desc(Assignment.assigned_at)
+        ).limit(10).all()
+        recent_assignee_list = [a[0] for a in recent_assignees if a[0]]
+
         return templates.TemplateResponse("action_detail.html", {
             "request": request,
             "action": action,
             "assignment": assignment,
-            "team_members": settings.get_team_members()
+            "related_actions": related_actions,
+            "recent_assignees": recent_assignee_list,
+            "team_members": settings.get_team_members(),
+            "current_time": datetime.utcnow()
         })
 
 
 @app.get("/emails", response_class=HTMLResponse)
-async def list_emails(request: Request, page: int = Query(1, ge=1)):
+async def list_emails(
+    request: Request,
+    search: Optional[str] = None,
+    processed: Optional[str] = None,
+    page: int = Query(1, ge=1)
+):
     """List all emails."""
     with get_session() as session:
+        # Get stats
+        total_emails = session.query(Email).count()
+        processed_emails = session.query(Email).filter(Email.processed == True).count()
+        unprocessed_emails = total_emails - processed_emails
+
+        # Count emails with high priority actions
+        emails_with_high_priority = session.query(Email).join(Action).filter(
+            Action.priority == "high"
+        ).distinct().count()
+
+        # Base query
+        query = session.query(Email)
+
+        # Apply filters
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Email.subject.ilike(search_term),
+                    Email.from_address.ilike(search_term),
+                    Email.body_text.ilike(search_term)
+                )
+            )
+
+        if processed == "true":
+            query = query.filter(Email.processed == True)
+        elif processed == "false":
+            query = query.filter(Email.processed == False)
+
+        # Order by received date
+        query = query.order_by(desc(Email.received_date))
+
         # Pagination
         per_page = 50
-        total_count = session.query(Email).count()
+        total_count = query.count()
         total_pages = (total_count + per_page - 1) // per_page
 
-        emails = session.query(Email).order_by(
-            desc(Email.received_date)
-        ).offset((page - 1) * per_page).limit(per_page).all()
+        emails = query.offset((page - 1) * per_page).limit(per_page).all()
 
         return templates.TemplateResponse("emails.html", {
             "request": request,
             "emails": emails,
+            "search": search,
+            "processed": processed,
             "page": page,
             "total_pages": total_pages,
-            "total_count": total_count
+            "total_count": total_count,
+            "total_emails": total_emails,
+            "processed_emails": processed_emails,
+            "unprocessed_emails": unprocessed_emails,
+            "emails_with_high_priority": emails_with_high_priority,
+            "current_time": datetime.utcnow()
         })
 
 
@@ -243,10 +353,23 @@ async def view_email(request: Request, email_id: int):
         # Get associated actions
         actions = session.query(Action).filter_by(email_id=email_id).all()
 
+        # Count actions by status
+        assigned_count = sum(1 for action in actions if action.assignments)
+        unassigned_count = len(actions) - assigned_count
+        completed_count = sum(1 for action in actions if action.assignments and action.assignments[0].status == 'completed')
+
+        # Count by priority
+        high_priority_count = sum(1 for action in actions if action.priority == 'high')
+
         return templates.TemplateResponse("email_detail.html", {
             "request": request,
             "email": email,
-            "actions": actions
+            "actions": actions,
+            "assigned_count": assigned_count,
+            "unassigned_count": unassigned_count,
+            "completed_count": completed_count,
+            "high_priority_count": high_priority_count,
+            "current_time": datetime.utcnow()
         })
 
 

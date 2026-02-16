@@ -4,118 +4,181 @@
 
 {% block content %}
 <div style="margin-bottom: 1rem;">
-    <a href="/emails" style="color: #3498db; text-decoration: none;">&larr; Back to Emails</a>
+    <a href="/emails" style="color: #3498db; text-decoration: none; font-weight: 600;">&larr; Back to Emails</a>
 </div>
 
+<!-- Email Header -->
 <div class="card">
-    <div class="card-header">
-        Email Details
-    </div>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px;">
+            <h2 style="font-size: 1.75rem; margin-bottom: 1rem; color: #2c3e50; line-height: 1.3;">
+                {{ email.subject }}
+            </h2>
 
-    <div style="display: grid; gap: 1rem;">
-        <div>
-            <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Subject</div>
-            <div style="font-size: 1.25rem; font-weight: 600;">{{ email.subject }}</div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; background: #f8f9fa; padding: 1rem; border-radius: 4px;">
-            <div style="color: #666; font-weight: 600;">From:</div>
-            <div>{{ email.from_address }}</div>
-
-            <div style="color: #666; font-weight: 600;">To:</div>
-            <div>{{ email.to_addresses }}</div>
-
-            <div style="color: #666; font-weight: 600;">Received:</div>
-            <div>{{ email.received_date.strftime('%B %d, %Y %I:%M %p') }}</div>
-
-            <div style="color: #666; font-weight: 600;">Processed:</div>
-            <div>
+            <!-- Processing Status Badge -->
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                 {% if email.processed %}
-                    <span style="color: #27ae60; font-weight: 600;">Yes</span>
-                    {% if email.processed_at %}
-                        ({{ email.processed_at.strftime('%B %d, %Y %I:%M %p') }})
-                    {% endif %}
+                <span style="background: #d4edda; color: #155724; padding: 0.4rem 0.9rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                    ✓ PROCESSED
+                </span>
                 {% else %}
-                    <span style="color: #e74c3c; font-weight: 600;">No</span>
+                <span style="background: #fff3cd; color: #856404; padding: 0.4rem 0.9rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                    ⏳ PENDING PROCESSING
+                </span>
+                {% endif %}
+
+                {% if actions|length > 0 %}
+                <span style="background: #e8f5e9; color: #27ae60; padding: 0.4rem 0.9rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                    📋 {{ actions|length }} ACTION{{ 'S' if actions|length != 1 else '' }}
+                </span>
+                {% endif %}
+
+                {% if high_priority_count > 0 %}
+                <span style="background: #fee; color: #e74c3c; padding: 0.4rem 0.9rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                    🔥 {{ high_priority_count }} HIGH PRIORITY
+                </span>
                 {% endif %}
             </div>
         </div>
+
+        <!-- Actions Summary Card -->
+        {% if actions|length > 0 %}
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 1.5rem; border-radius: 8px; min-width: 200px;">
+            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">Actions Summary</div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; font-size: 0.9rem;">
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 600;">{{ unassigned_count }}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.8;">Unassigned</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 600;">{{ completed_count }}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.8;">Completed</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Email Metadata -->
+    <div style="margin-top: 1.5rem; padding: 1.25rem; background: #f8f9fa; border-radius: 8px;">
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.75rem 1.5rem;">
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">From:</div>
+            <div style="font-size: 0.95rem;">{{ email.from_address }}</div>
+
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">To:</div>
+            <div style="font-size: 0.95rem;">{{ email.to_addresses }}</div>
+
+            {% if email.cc_addresses %}
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">Cc:</div>
+            <div style="font-size: 0.95rem;">{{ email.cc_addresses }}</div>
+            {% endif %}
+
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">Received:</div>
+            <div style="font-size: 0.95rem;">
+                {% set time_diff = (current_time - email.received_date).total_seconds() %}
+                {{ email.received_date.strftime('%B %d, %Y at %I:%M %p') }}
+                <span style="color: #999; font-size: 0.85rem;">
+                    ({% if time_diff < 3600 %}{{ (time_diff / 60)|int }}m ago{% elif time_diff < 86400 %}{{ (time_diff / 3600)|int }}h ago{% else %}{{ (time_diff / 86400)|int }}d ago{% endif %})
+                </span>
+            </div>
+
+            {% if email.processed_at %}
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">Processed:</div>
+            <div style="font-size: 0.95rem;">{{ email.processed_at.strftime('%B %d, %Y at %I:%M %p') }}</div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
+<!-- Email Body -->
 <div class="card">
-    <div class="card-header">
-        Email Body
-    </div>
-
-    {% if email.body_html %}
-    <div style="margin-bottom: 1rem;">
-        <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid #ecf0f1; margin-bottom: 1rem;">
-            <button onclick="showTab('text')" id="tab-text" class="tab-btn" style="padding: 0.5rem 1rem; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>Email Content</span>
+        {% if email.body_html %}
+        <div style="display: flex; gap: 0.5rem;">
+            <button onclick="showTab('html')" id="tab-html" class="tab-btn" style="padding: 0.5rem 1rem; border: none; background: #3498db; color: white; cursor: pointer; border-radius: 4px; font-weight: 600; font-size: 0.85rem;">
+                HTML View
+            </button>
+            <button onclick="showTab('text')" id="tab-text" class="tab-btn" style="padding: 0.5rem 1rem; border: none; background: #ecf0f1; color: #666; cursor: pointer; border-radius: 4px; font-size: 0.85rem;">
                 Plain Text
             </button>
-            <button onclick="showTab('html')" id="tab-html" class="tab-btn active" style="padding: 0.5rem 1rem; border: none; background: none; cursor: pointer; border-bottom: 2px solid #3498db; margin-bottom: -2px; color: #3498db; font-weight: 600;">
-                HTML
-            </button>
         </div>
+        {% endif %}
     </div>
-    {% endif %}
 
     <div id="text-body" {% if email.body_html %}style="display: none;"{% endif %}>
-        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 4px; white-space: pre-wrap; font-family: monospace; line-height: 1.6;">{{ email.body_text or 'No text body' }}</div>
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 4px; white-space: pre-wrap; font-family: 'Courier New', monospace; line-height: 1.6; font-size: 0.9rem; max-height: 600px; overflow-y: auto;">{{ email.body_text or 'No text body available' }}</div>
     </div>
 
     {% if email.body_html %}
     <div id="html-body">
-        <iframe srcdoc="{{ email.body_html | escape }}" style="width: 100%; min-height: 500px; border: 1px solid #ecf0f1; border-radius: 4px;" sandbox=""></iframe>
+        <iframe srcdoc="{{ email.body_html | escape }}" style="width: 100%; min-height: 500px; border: 1px solid #ecf0f1; border-radius: 4px; background: white;" sandbox=""></iframe>
     </div>
     {% endif %}
 </div>
 
+<!-- Associated Actions -->
 <div class="card">
-    <div class="card-header">
-        Associated Actions ({{ actions|length }})
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>Extracted Actions ({{ actions|length }})</span>
     </div>
 
     {% if actions %}
     <table>
         <thead>
             <tr>
-                <th>Priority</th>
-                <th>Title</th>
-                <th>Due Date</th>
-                <th>Confidence</th>
-                <th>Status</th>
+                <th style="width: 100px;">Priority</th>
+                <th>Action Title</th>
+                <th style="width: 150px;">Assignee</th>
+                <th style="width: 120px;">Due Date</th>
+                <th style="width: 100px;">Status</th>
             </tr>
         </thead>
         <tbody>
             {% for action in actions %}
-            <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+            {% set assignment = action.assignments[0] if action.assignments else None %}
+            {% set is_overdue = action.due_date and action.due_date < current_time.date() %}
+            <tr style="cursor: pointer; {% if is_overdue and (not assignment or assignment.status != 'completed') %}background-color: #fff5f5;{% endif %}"
+                onclick="window.location='/actions/{{ action.id }}'">
                 <td>
                     <span class="badge badge-{{ action.priority }}">
                         {{ action.priority }}
                     </span>
                 </td>
-                <td>{{ action.title }}</td>
                 <td>
-                    {% if action.due_date %}
-                        {{ action.due_date.strftime('%Y-%m-%d') }}
-                    {% else %}
-                        <span style="color: #999;">No due date</span>
+                    <div style="font-weight: 600; margin-bottom: 0.25rem;">{{ action.title }}</div>
+                    {% if action.description %}
+                    <div style="font-size: 0.85rem; color: #666;">
+                        {{ action.description[:80] }}{% if action.description|length > 80 %}...{% endif %}
+                    </div>
                     {% endif %}
                 </td>
                 <td>
-                    {% if action.confidence_score %}
-                        {{ (action.confidence_score * 100)|round|int }}%
-                    {% else %}
-                        <span style="color: #999;">N/A</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if action.assignments %}
-                        <span style="color: #27ae60; font-weight: 600;">Assigned</span>
+                    {% if assignment %}
+                        <span style="color: #27ae60; font-weight: 600;">{{ assignment.assigned_to }}</span>
                     {% else %}
                         <span style="color: #f39c12; font-weight: 600;">Unassigned</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if action.due_date %}
+                        <span style="{% if is_overdue and (not assignment or assignment.status != 'completed') %}color: #e74c3c; font-weight: 600;{% endif %}">
+                            {{ action.due_date.strftime('%b %d, %Y') }}
+                            {% if is_overdue and (not assignment or assignment.status != 'completed') %}⚠️{% endif %}
+                        </span>
+                    {% else %}
+                        <span style="color: #999;">No date</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if assignment %}
+                        {% if assignment.status == 'completed' %}
+                            <span style="color: #27ae60; font-weight: 600; font-size: 0.9rem;">✓ Done</span>
+                        {% else %}
+                            <span style="color: #3498db; font-weight: 600; font-size: 0.9rem;">In Progress</span>
+                        {% endif %}
+                    {% else %}
+                        <span style="color: #f39c12; font-weight: 600; font-size: 0.9rem;">Pending</span>
                     {% endif %}
                 </td>
             </tr>
@@ -123,12 +186,12 @@
         </tbody>
     </table>
     {% else %}
-    <div style="text-align: center; padding: 2rem; color: #999;">
-        No actions extracted from this email
+    <div style="text-align: center; padding: 2.5rem; color: #999;">
+        <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No actions extracted</p>
+        <p style="font-size: 0.9rem;">This email did not contain any actionable items</p>
     </div>
     {% endif %}
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
@@ -142,20 +205,20 @@ function showTab(tab) {
     if (tab === 'text') {
         textBody.style.display = 'block';
         htmlBody.style.display = 'none';
-        textTab.style.borderBottom = '2px solid #3498db';
-        textTab.style.color = '#3498db';
+        textTab.style.background = '#3498db';
+        textTab.style.color = 'white';
         textTab.style.fontWeight = '600';
-        htmlTab.style.borderBottom = '2px solid transparent';
-        htmlTab.style.color = 'inherit';
+        htmlTab.style.background = '#ecf0f1';
+        htmlTab.style.color = '#666';
         htmlTab.style.fontWeight = 'normal';
     } else {
         textBody.style.display = 'none';
         htmlBody.style.display = 'block';
-        htmlTab.style.borderBottom = '2px solid #3498db';
-        htmlTab.style.color = '#3498db';
+        htmlTab.style.background = '#3498db';
+        htmlTab.style.color = 'white';
         htmlTab.style.fontWeight = '600';
-        textTab.style.borderBottom = '2px solid transparent';
-        textTab.style.color = 'inherit';
+        textTab.style.background = '#ecf0f1';
+        textTab.style.color = '#666';
         textTab.style.fontWeight = 'normal';
     }
 }
