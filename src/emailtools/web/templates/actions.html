@@ -55,7 +55,7 @@
                     </span>
                 </td>
                 <td>{{ action.title }}</td>
-                <td>{{ action.from_address }}</td>
+                <td>{{ action.email.from_address }}</td>
                 <td>
                     {% if action.due_date %}
                         {{ action.due_date.strftime('%Y-%m-%d') }}
