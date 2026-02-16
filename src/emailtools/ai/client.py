@@ -13,6 +13,37 @@ from emailtools.models import Action, Email
 from emailtools.utils.logging import logger
 
 
+def strip_markdown_json(text: str) -> str:
+    """
+    Strip markdown code fences from JSON response.
+
+    GPT-4 sometimes wraps JSON in ```json ... ``` blocks.
+    This function removes those fences to get clean JSON.
+
+    Args:
+        text: Raw response text that may contain markdown
+
+    Returns:
+        Clean JSON string
+    """
+    text = text.strip()
+
+    # Check if wrapped in markdown code fences
+    if text.startswith("```"):
+        # Remove opening fence (```json or just ```)
+        lines = text.split('\n')
+        if lines[0].startswith("```"):
+            lines = lines[1:]  # Remove first line
+
+        # Remove closing fence
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]  # Remove last line
+
+        text = '\n'.join(lines).strip()
+
+    return text
+
+
 class AIClient:
     """Client for interacting with OpenAI GPT-4 API."""
 
@@ -74,9 +105,10 @@ class AIClient:
             raw_response = response.choices[0].message.content
             logger.debug(f"GPT-4 response: {raw_response[:200]}...")
 
-            # Parse JSON response
+            # Parse JSON response (strip markdown code fences if present)
             try:
-                parsed = json.loads(raw_response)
+                clean_json = strip_markdown_json(raw_response)
+                parsed = json.loads(clean_json)
                 actions = parsed.get("actions", [])
 
                 logger.info(f"Extracted {len(actions)} action(s) from email ID {email.id}")
