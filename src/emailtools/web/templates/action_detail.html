@@ -88,17 +88,17 @@
     <div style="display: grid; gap: 1rem;">
         <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem;">
             <div style="color: #666; font-weight: 600;">From:</div>
-            <div>{{ action.from_address }}</div>
+            <div>{{ action.email.from_address }}</div>
 
             <div style="color: #666; font-weight: 600;">Subject:</div>
-            <div>{{ email.subject }}</div>
+            <div>{{ action.email.subject }}</div>
 
             <div style="color: #666; font-weight: 600;">Received:</div>
-            <div>{{ email.received_date.strftime('%B %d, %Y %I:%M %p') }}</div>
+            <div>{{ action.email.received_date.strftime('%B %d, %Y %I:%M %p') }}</div>
         </div>
 
         <div style="margin-top: 1rem;">
-            <a href="/emails/{{ email.id }}" class="btn btn-primary">View Full Email</a>
+            <a href="/emails/{{ action.email.id }}" class="btn btn-primary">View Full Email</a>
         </div>
     </div>
 </div>
