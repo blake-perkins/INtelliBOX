@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  emailtools:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: emailtools
+    env_file:
+      - .env
+    volumes:
+      # Mount data directory for persistence
+      - ./data:/app/data
+      # Optional: mount source for development
+      # - ./src:/app/src
+    environment:
+      - DATABASE_URL=sqlite:///./data/emailtools.db
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    command: emailtools report schedule
+
+  # Optional: PostgreSQL for production-like setup
+  postgres:
+    image: postgres:16-alpine
+    container_name: emailtools-db
+    environment:
+      - POSTGRES_DB=emailtools
+      - POSTGRES_USER=emailtools
+      - POSTGRES_PASSWORD=changeme
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # Email processor (one-time or cron)
+  processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: emailtools-processor
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    command: emailtools process
+    profiles:
+      - manual
+
+volumes:
+  postgres_data:

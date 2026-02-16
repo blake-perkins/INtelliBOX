@@ -1,0 +1,69 @@
+{
+  "family": "emailtools-scheduler",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/emailtoolsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "emailtools",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/emailtools:latest",
+      "essential": true,
+      "command": ["emailtools", "report", "schedule"],
+      "environment": [
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql://emailtools:PASSWORD@emailtools-db.xxxxx.us-east-1.rds.amazonaws.com:5432/emailtools"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "value": "INFO"
+        },
+        {
+          "name": "TIMEZONE",
+          "value": "America/New_York"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:emailtools/openai-api-key"
+        },
+        {
+          "name": "SMTP_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:emailtools/smtp-password"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/emailtools",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "mountPoints": [
+        {
+          "sourceVolume": "efs-storage",
+          "containerPath": "/app/data",
+          "readOnly": false
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "efs-storage",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-XXXXXXXX",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-XXXXXXXX",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ]
+}

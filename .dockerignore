@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+ENV/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Data directories (will be mounted as volumes)
+data/
+*.db
+*.db-journal
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Tests
+tests/
+pytest.ini
+.coverage
+htmlcov/
+
+# Scripts (not needed in production)
+scripts/
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
