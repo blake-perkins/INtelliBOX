@@ -142,7 +142,6 @@ def validate_web_interface():
         ("Dashboard", "/", "Dashboard"),
         ("Actions List", "/actions", "Actions"),
         ("Emails List", "/emails", "Emails"),
-        ("Daily Report", "/report", "Daily Report"),
     ]
 
     for name, url, expected in pages:
@@ -150,6 +149,22 @@ def validate_web_interface():
             results["passed"] += 1
         else:
             results["failed"] += 1
+
+    # Test report with longer timeout (AI processing takes time)
+    try:
+        response = requests.get(f"{BASE_URL}/report", timeout=30)
+        if response.status_code == 200 and b"Daily Report" in response.content:
+            print_success("Daily Report: HTTP 200 (AI processing)")
+            results["passed"] += 1
+        else:
+            print_error(f"Daily Report: HTTP {response.status_code}")
+            results["failed"] += 1
+    except requests.exceptions.Timeout:
+        print_error("Daily Report: Request timeout (>30s)")
+        results["failed"] += 1
+    except Exception as e:
+        print_error(f"Daily Report: {str(e)}")
+        results["failed"] += 1
 
     # Test 4: Filtering & Pagination
     print_header("3. Filtering & Pagination")
