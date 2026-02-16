@@ -1,4 +1,4 @@
-"""FastAPI web application for EmailTools."""
+"""FastAPI web application for INtelliBOX."""
 
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -17,14 +17,16 @@ from emailtools.config import settings
 
 # Create FastAPI app
 app = FastAPI(
-    title="EmailTools",
+    title="INtelliBOX",
     description="AI-Powered Email Action Tracking System",
     version="1.0.0"
 )
 
-# Setup templates
+# Setup templates and static files
 template_dir = Path(__file__).parent / "templates"
+static_dir = Path(__file__).parent / "static"
 templates = Jinja2Templates(directory=str(template_dir))
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 @app.get("/", response_class=HTMLResponse)

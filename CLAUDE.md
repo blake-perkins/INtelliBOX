@@ -1,14 +1,14 @@
-# CLAUDE.md — EmailTools
+# CLAUDE.md — INtelliBOX
 
 ## Project Overview
 
-EmailTools is an automated email action tracking system for fast-paced software teams. It parses emails using AI (GPT-4) to extract actionable items, stores them in a database, and generates nightly reports showing unassigned actions.
+INtelliBOX is an automated email action tracking system for fast-paced software teams. It parses emails using AI (GPT-4) to extract actionable items, stores them in a database, and generates nightly reports showing unassigned actions.
 
 ## Repository Structure
 
 ```
-EmailTools/
-├── src/emailtools/          # Main application code
+INtelliBOX/
+├── src/intellibox/          # Main application code
 │   ├── ingestion/          # Email parsing and file watching
 │   ├── ai/                 # GPT-4 integration (Phase 2)
 │   ├── reporter/           # Report generation (Phase 3)
@@ -23,7 +23,7 @@ EmailTools/
 ├── data/                   # Local data (gitignored)
 │   ├── inbox/             # Drop .eml files here
 │   ├── emails/            # Archived emails
-│   └── emailtools.db      # SQLite database
+│   └── intellibox.db      # SQLite database
 ├── alembic/               # Database migrations
 ├── pyproject.toml         # Dependencies and config
 └── .env                   # Environment variables (create from .env.example)

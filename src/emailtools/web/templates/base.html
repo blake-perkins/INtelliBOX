@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}EmailTools{% endblock %}</title>
+    <title>{% block title %}INtelliBOX{% endblock %}</title>
     <style>
         * {
             margin: 0;
@@ -36,6 +36,42 @@
         .navbar h1 {
             font-size: 1.5rem;
             font-weight: 600;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        .navbar-brand:hover {
+            opacity: 0.9;
+        }
+
+        .navbar-logo {
+            height: 40px;
+            width: auto;
+        }
+
+        .navbar-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .navbar-title .in {
+            color: #00a8e8;
+        }
+
+        .navbar-title .telli {
+            color: white;
+        }
+
+        .navbar-title .box {
+            color: #00a8e8;
         }
 
         .nav-links {
@@ -212,7 +248,12 @@
 <body>
     <nav class="navbar">
         <div class="navbar-content">
-            <h1>📧 EmailTools</h1>
+            <a href="/" class="navbar-brand">
+                <img src="/static/logo.svg" alt="INtelliBOX Logo" class="navbar-logo">
+                <h1 class="navbar-title">
+                    <span class="in">IN</span><span class="telli">telli</span><span class="box">BOX</span>
+                </h1>
+            </a>
             <ul class="nav-links">
                 <li><a href="/">Dashboard</a></li>
                 <li><a href="/actions">Actions</a></li>
