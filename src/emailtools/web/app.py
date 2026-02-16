@@ -310,6 +310,32 @@ async def update_priority(
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
+@app.post("/actions/{action_id}/due-date")
+async def update_due_date(
+    action_id: int,
+    due_date: str = Form(""),
+):
+    """Update action due date."""
+    with get_session() as session:
+        action = session.query(Action).filter_by(id=action_id).first()
+        if not action:
+            raise HTTPException(status_code=404, detail="Action not found")
+
+        # Parse date or clear if empty
+        if due_date:
+            from datetime import datetime as dt
+            try:
+                action.due_date = dt.strptime(due_date, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date format")
+        else:
+            action.due_date = None
+
+        session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
 @app.post("/actions/{action_id}/complete")
 async def complete_action(action_id: int):
     """Mark an action as completed."""

@@ -99,6 +99,27 @@
             </form>
         </div>
 
+        <!-- Due Date Form -->
+        <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
+            <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: #333;">Set Due Date</h4>
+            <form method="POST" action="/actions/{{ action.id }}/due-date" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.85rem; color: #666;">Due Date:</label>
+                    <input type="date"
+                           name="due_date"
+                           value="{% if action.due_date %}{{ action.due_date.strftime('%Y-%m-%d') }}{% endif %}"
+                           style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem; align-self: flex-end;">Update Due Date</button>
+                {% if action.due_date %}
+                <form method="POST" action="/actions/{{ action.id }}/due-date" style="display: inline; align-self: flex-end;">
+                    <input type="hidden" name="due_date" value="">
+                    <button type="submit" class="btn" style="background: #95a5a6; color: white; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Remove due date from this action?')">Clear Date</button>
+                </form>
+                {% endif %}
+            </form>
+        </div>
+
         <!-- Assignment Form -->
         <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
             <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: #333;">Assign Action</h4>
