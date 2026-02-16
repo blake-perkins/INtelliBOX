@@ -233,8 +233,156 @@ def validate_web_interface():
         print_warning("No emails in database - skipping email detail test")
         results["warnings"] += 1
 
-    # Test 6: 404 Handling
-    print_header("5. Error Handling")
+    # Test 6: Interactive Features (POST endpoints)
+    print_header("5. Interactive Features (Action Management)")
+
+    if stats and stats.get('total_actions', 0) > 0:
+        try:
+            import re
+            # Get an action ID to test with
+            response = requests.get(f"{BASE_URL}/actions", timeout=10)
+            if response.status_code == 200 and b'/actions/' in response.content:
+                match = re.search(rb'/actions/(\d+)', response.content)
+                if match:
+                    test_action_id = int(match.group(1))
+                    print_info(f"Using action ID {test_action_id} for testing")
+
+                    # Test 6a: Assign Action
+                    try:
+                        assign_response = requests.post(
+                            f"{BASE_URL}/actions/{test_action_id}/assign",
+                            data={
+                                "assigned_to": "test@example.com",
+                                "notes": "Automated test assignment"
+                            },
+                            allow_redirects=False,
+                            timeout=10
+                        )
+
+                        if assign_response.status_code == 303:
+                            print_success(f"Assign Action: HTTP 303 (redirect)")
+                            results["passed"] += 1
+
+                            # Verify assignment was created
+                            detail_response = requests.get(
+                                f"{BASE_URL}/actions/{test_action_id}",
+                                timeout=5
+                            )
+                            if b"test@example.com" in detail_response.content:
+                                print_success(f"  Assignment verified in database")
+                            else:
+                                print_error(f"  Assignment not found in action detail page")
+                                results["failed"] += 1
+                        else:
+                            print_error(f"Assign Action: Expected HTTP 303, got {assign_response.status_code}")
+                            results["failed"] += 1
+                    except Exception as e:
+                        print_error(f"Assign Action: {str(e)}")
+                        results["failed"] += 1
+
+                    # Test 6b: Change Priority
+                    try:
+                        priority_response = requests.post(
+                            f"{BASE_URL}/actions/{test_action_id}/priority",
+                            data={"priority": "high"},
+                            allow_redirects=False,
+                            timeout=10
+                        )
+
+                        if priority_response.status_code == 303:
+                            print_success(f"Change Priority: HTTP 303 (redirect)")
+                            results["passed"] += 1
+
+                            # Verify priority was changed
+                            detail_response = requests.get(
+                                f"{BASE_URL}/actions/{test_action_id}",
+                                timeout=5
+                            )
+                            if b"high Priority" in detail_response.content or b"badge-high" in detail_response.content:
+                                print_success(f"  Priority change verified in database")
+                            else:
+                                print_warning(f"  Could not verify priority change (may already be high)")
+                                results["warnings"] += 1
+                        else:
+                            print_error(f"Change Priority: Expected HTTP 303, got {priority_response.status_code}")
+                            results["failed"] += 1
+                    except Exception as e:
+                        print_error(f"Change Priority: {str(e)}")
+                        results["failed"] += 1
+
+                    # Test 6c: Mark Complete
+                    try:
+                        complete_response = requests.post(
+                            f"{BASE_URL}/actions/{test_action_id}/complete",
+                            allow_redirects=False,
+                            timeout=10
+                        )
+
+                        if complete_response.status_code == 303:
+                            print_success(f"Mark Complete: HTTP 303 (redirect)")
+                            results["passed"] += 1
+
+                            # Verify completion status
+                            detail_response = requests.get(
+                                f"{BASE_URL}/actions/{test_action_id}",
+                                timeout=5
+                            )
+                            if b"completed" in detail_response.content.lower():
+                                print_success(f"  Completion status verified in database")
+                            else:
+                                print_warning(f"  Could not verify completion status")
+                                results["warnings"] += 1
+                        else:
+                            print_error(f"Mark Complete: Expected HTTP 303, got {complete_response.status_code}")
+                            results["failed"] += 1
+                    except Exception as e:
+                        print_error(f"Mark Complete: {str(e)}")
+                        results["failed"] += 1
+
+                    # Test 6d: Unassign Action (cleanup)
+                    try:
+                        unassign_response = requests.post(
+                            f"{BASE_URL}/actions/{test_action_id}/unassign",
+                            allow_redirects=False,
+                            timeout=10
+                        )
+
+                        if unassign_response.status_code == 303:
+                            print_success(f"Unassign Action: HTTP 303 (redirect)")
+                            results["passed"] += 1
+
+                            # Verify assignment was removed
+                            detail_response = requests.get(
+                                f"{BASE_URL}/actions/{test_action_id}",
+                                timeout=5
+                            )
+                            if b"Unassigned" in detail_response.content:
+                                print_success(f"  Unassignment verified (test cleanup successful)")
+                            else:
+                                print_warning(f"  Could not verify unassignment")
+                                results["warnings"] += 1
+                        else:
+                            print_error(f"Unassign Action: Expected HTTP 303, got {unassign_response.status_code}")
+                            results["failed"] += 1
+                    except Exception as e:
+                        print_error(f"Unassign Action: {str(e)}")
+                        results["failed"] += 1
+
+                else:
+                    print_warning("Could not extract action ID - skipping interactive tests")
+                    results["warnings"] += 1
+            else:
+                print_warning("Could not load actions page - skipping interactive tests")
+                results["warnings"] += 1
+        except Exception as e:
+            print_error(f"Interactive features test setup failed: {str(e)}")
+            results["failed"] += 1
+    else:
+        print_warning("No actions in database - skipping interactive features tests")
+        results["warnings"] += 1
+
+    # Test 7: 404 Handling
+    print_header("6. Error Handling")
 
     if test_page("Non-existent Action 404", "/actions/999999", check_status=404):
         results["passed"] += 1
