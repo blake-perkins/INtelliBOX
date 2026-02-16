@@ -129,7 +129,7 @@
         </thead>
         <tbody>
             {% for action in actions %}
-            {% set is_overdue = action.due_date and action.due_date < current_time.date() %}
+            {% set is_overdue = action.due_date and action.due_date < current_time %}
             {% set assignment = action.assignments[0] if action.assignments else None %}
             <tr style="cursor: pointer; {% if is_overdue and (not assignment or assignment.status != 'completed') %}background-color: #fff5f5;{% endif %}"
                 onclick="window.location='/actions/{{ action.id }}'">
