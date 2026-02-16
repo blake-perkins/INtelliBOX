@@ -20,13 +20,13 @@
     <div class="stat-card">
         <div class="stat-value stat-medium">{{ unassigned_actions }}</div>
         <div class="stat-label">Unassigned</div>
-        <a href="/actions?assigned=unassigned" style="font-size: 0.75rem; color: #3498db; text-decoration: none; margin-top: 0.25rem; display: block;">View all →</a>
+        <a href="/actions?assigned=false" style="font-size: 0.75rem; color: #3498db; text-decoration: none; margin-top: 0.25rem; display: block;">View all →</a>
     </div>
 
     <div class="stat-card">
         <div class="stat-value stat-low">{{ in_progress_actions }}</div>
         <div class="stat-label">In Progress</div>
-        <a href="/actions?assigned=assigned" style="font-size: 0.75rem; color: #3498db; text-decoration: none; margin-top: 0.25rem; display: block;">View all →</a>
+        <a href="/actions?assigned=true" style="font-size: 0.75rem; color: #3498db; text-decoration: none; margin-top: 0.25rem; display: block;">View all →</a>
     </div>
 
     <div class="stat-card">
@@ -47,17 +47,17 @@
         <div style="text-align: center; padding: 1rem;">
             <div style="font-size: 2rem; font-weight: bold; color: #e74c3c;">{{ high_priority }}</div>
             <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">High Priority</div>
-            <a href="/actions?priority=high&assigned=unassigned" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
+            <a href="/actions?priority=high&assigned=false" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
         </div>
         <div style="text-align: center; padding: 1rem;">
             <div style="font-size: 2rem; font-weight: bold; color: #f39c12;">{{ medium_priority }}</div>
             <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Medium Priority</div>
-            <a href="/actions?priority=medium&assigned=unassigned" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
+            <a href="/actions?priority=medium&assigned=false" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
         </div>
         <div style="text-align: center; padding: 1rem;">
             <div style="font-size: 2rem; font-weight: bold; color: #27ae60;">{{ low_priority }}</div>
             <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Low Priority</div>
-            <a href="/actions?priority=low&assigned=unassigned" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
+            <a href="/actions?priority=low&assigned=false" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
         </div>
     </div>
 </div>
@@ -218,8 +218,8 @@
 <div class="card" style="margin-top: 1.5rem;">
     <div class="card-header">⚡ Quick Actions</div>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-        <a href="/actions?assigned=unassigned" class="btn btn-primary">View All Unassigned</a>
-        <a href="/actions?priority=high&assigned=unassigned" class="btn btn-primary">High Priority Tasks</a>
+        <a href="/actions?assigned=false" class="btn btn-primary">View All Unassigned</a>
+        <a href="/actions?priority=high&assigned=false" class="btn btn-primary">High Priority Tasks</a>
         <a href="/actions" class="btn btn-primary">Browse All Actions</a>
         <a href="/emails" class="btn btn-primary">Browse Emails</a>
         <a href="/report" class="btn btn-primary">View Daily Report</a>
