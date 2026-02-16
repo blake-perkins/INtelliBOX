@@ -3,7 +3,18 @@
     "allow": [
       "Bash(curl:*)",
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/emailtools.exe\" actions list)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pip install httpx pytest-asyncio -q)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pytest tests/test_web_interface.py -v --tb=short)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pip install pytest-cov -q)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pytest tests/test_web_interface.py -v)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pytest tests/test_web_interface.py -v --tb=line)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pytest tests/test_web_interface.py::TestWebInterface::test_api_stats -v)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pip install colorama requests -q)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/emailtools.exe\" web --host 127.0.0.1 --port 8000)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" validate_web_interface.py)"
     ]
   }
 }

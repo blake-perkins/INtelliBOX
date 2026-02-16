@@ -104,9 +104,15 @@
                         <span style="color: #999;">No due date</span>
                     {% endif %}
                 </td>
-                <td>{{ (action.confidence * 100)|round|int }}%</td>
                 <td>
-                    {% if action.assigned_task %}
+                    {% if action.confidence_score %}
+                        {{ (action.confidence_score * 100)|round|int }}%
+                    {% else %}
+                        <span style="color: #999;">N/A</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if action.assignments %}
                         <span style="color: #27ae60; font-weight: 600;">Assigned</span>
                     {% else %}
                         <span style="color: #f39c12; font-weight: 600;">Unassigned</span>

@@ -34,12 +34,18 @@
 
             <div>
                 <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Confidence</div>
-                <div style="font-size: 1.1rem;">{{ (action.confidence * 100)|round|int }}%</div>
+                <div style="font-size: 1.1rem;">
+                    {% if action.confidence_score %}
+                        {{ (action.confidence_score * 100)|round|int }}%
+                    {% else %}
+                        <span style="color: #999;">N/A</span>
+                    {% endif %}
+                </div>
             </div>
 
             <div>
-                <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Extracted At</div>
-                <div style="font-size: 1.1rem;">{{ action.extracted_at.strftime('%B %d, %Y %I:%M %p') }}</div>
+                <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Created At</div>
+                <div style="font-size: 1.1rem;">{{ action.created_at.strftime('%B %d, %Y %I:%M %p') }}</div>
             </div>
         </div>
 
@@ -52,14 +58,16 @@
         </div>
         {% endif %}
 
-        {% if action.assigned_task %}
+        {% if assignment %}
         <div style="background: #e8f5e9; padding: 1rem; border-radius: 4px; border-left: 4px solid #27ae60;">
             <div style="font-weight: 600; color: #27ae60; margin-bottom: 0.5rem;">
                 Assignment Status: Assigned
             </div>
             <div style="color: #555; font-size: 0.9rem;">
-                <strong>Task:</strong> {{ action.assigned_task.title }}<br>
-                <strong>Assigned:</strong> {{ action.assigned_task.created_at.strftime('%B %d, %Y %I:%M %p') }}
+                <strong>Assigned To:</strong> {{ assignment.assigned_to }}<br>
+                <strong>Status:</strong> {{ assignment.status }}<br>
+                <strong>Assigned At:</strong> {{ assignment.assigned_at.strftime('%B %d, %Y %I:%M %p') }}
+                {% if assignment.notes %}<br><strong>Notes:</strong> {{ assignment.notes }}{% endif %}
             </div>
         </div>
         {% else %}

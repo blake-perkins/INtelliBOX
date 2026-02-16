@@ -116,7 +116,7 @@ async def list_actions(
         })
 
 
-@app.get("/action/{action_id}", response_class=HTMLResponse)
+@app.get("/actions/{action_id}", response_class=HTMLResponse)
 async def view_action(request: Request, action_id: int):
     """View details of a specific action."""
     with get_session() as session:
@@ -157,7 +157,7 @@ async def list_emails(request: Request, page: int = Query(1, ge=1)):
         })
 
 
-@app.get("/email/{email_id}", response_class=HTMLResponse)
+@app.get("/emails/{email_id}", response_class=HTMLResponse)
 async def view_email(request: Request, email_id: int):
     """View details of a specific email."""
     with get_session() as session:
