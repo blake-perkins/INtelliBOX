@@ -36,6 +36,15 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # Team members (comma-separated list for assignment dropdown)
+    team_members: str = ""
+
+    def get_team_members(self) -> list[str]:
+        """Get list of team members from config."""
+        if not self.team_members:
+            return []
+        return [member.strip() for member in self.team_members.split(",") if member.strip()]
+
     @field_validator("report_recipients")
     @classmethod
     def parse_recipients(cls, v: str) -> str:

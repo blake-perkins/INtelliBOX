@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, Request, HTTPException, Query
+from fastapi import FastAPI, Request, HTTPException, Query, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -13,6 +13,7 @@ from sqlalchemy import desc, func, case
 from emailtools.database import get_session
 from emailtools.models import Action, Assignment, Email, ProcessingLog
 from emailtools.reporter.generator import generate_report_data
+from emailtools.config import settings
 
 # Create FastAPI app
 app = FastAPI(
@@ -131,7 +132,8 @@ async def view_action(request: Request, action_id: int):
         return templates.TemplateResponse("action_detail.html", {
             "request": request,
             "action": action,
-            "assignment": assignment
+            "assignment": assignment,
+            "team_members": settings.get_team_members()
         })
 
 
@@ -203,6 +205,96 @@ async def get_stats():
                 Action.priority == "high"
             ).count()
         }
+
+
+@app.post("/actions/{action_id}/assign")
+async def assign_action(
+    action_id: int,
+    assigned_to: str = Form(...),
+    notes: str = Form(""),
+):
+    """Assign an action to someone."""
+    with get_session() as session:
+        action = session.query(Action).filter_by(id=action_id).first()
+        if not action:
+            raise HTTPException(status_code=404, detail="Action not found")
+
+        # Check if already assigned
+        existing = session.query(Assignment).filter_by(action_id=action_id).first()
+
+        if existing:
+            # Update existing assignment
+            existing.assigned_to = assigned_to
+            existing.notes = notes
+            existing.assigned_at = datetime.utcnow()
+        else:
+            # Create new assignment
+            assignment = Assignment(
+                action_id=action_id,
+                assigned_to=assigned_to,
+                notes=notes,
+                status="assigned"
+            )
+            session.add(assignment)
+
+        session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
+@app.post("/actions/{action_id}/priority")
+async def update_priority(
+    action_id: int,
+    priority: str = Form(...),
+):
+    """Update action priority."""
+    with get_session() as session:
+        action = session.query(Action).filter_by(id=action_id).first()
+        if not action:
+            raise HTTPException(status_code=404, detail="Action not found")
+
+        if priority not in ["high", "medium", "low"]:
+            raise HTTPException(status_code=400, detail="Invalid priority")
+
+        action.priority = priority
+        session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
+@app.post("/actions/{action_id}/complete")
+async def complete_action(action_id: int):
+    """Mark an action as completed."""
+    with get_session() as session:
+        assignment = session.query(Assignment).filter_by(action_id=action_id).first()
+
+        if not assignment:
+            # Create assignment with completed status
+            assignment = Assignment(
+                action_id=action_id,
+                assigned_to="Unknown",
+                status="completed"
+            )
+            session.add(assignment)
+        else:
+            assignment.status = "completed"
+
+        session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
+@app.post("/actions/{action_id}/unassign")
+async def unassign_action(action_id: int):
+    """Remove assignment from an action."""
+    with get_session() as session:
+        assignment = session.query(Assignment).filter_by(action_id=action_id).first()
+
+        if assignment:
+            session.delete(assignment)
+            session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
 @app.get("/health")

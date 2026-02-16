@@ -82,6 +82,82 @@
 
 <div class="card">
     <div class="card-header">
+        Action Management
+    </div>
+
+    <div style="display: grid; gap: 1.5rem;">
+        <!-- Priority Update Form -->
+        <div>
+            <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: #333;">Change Priority</h4>
+            <form method="POST" action="/actions/{{ action.id }}/priority" style="display: flex; gap: 0.5rem; align-items: center;">
+                <select name="priority" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High Priority</option>
+                    <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium Priority</option>
+                    <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low Priority</option>
+                </select>
+                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Update Priority</button>
+            </form>
+        </div>
+
+        <!-- Assignment Form -->
+        <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
+            <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: #333;">Assign Action</h4>
+            <form method="POST" action="/actions/{{ action.id }}/assign" style="display: grid; gap: 0.75rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">Assign To (email or name):</label>
+                    <input type="text" name="assigned_to"
+                           value="{% if assignment %}{{ assignment.assigned_to }}{% endif %}"
+                           placeholder="john@example.com or John Doe"
+                           list="team-members"
+                           style="width: 100%; max-width: 400px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
+                           required>
+                    {% if team_members %}
+                    <datalist id="team-members">
+                        {% for member in team_members %}
+                        <option value="{{ member }}">
+                        {% endfor %}
+                    </datalist>
+                    {% endif %}
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">Notes (optional):</label>
+                    <textarea name="notes" rows="3"
+                              placeholder="Add any notes about this assignment..."
+                              style="width: 100%; max-width: 600px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; font-family: inherit;">{% if assignment and assignment.notes %}{{ assignment.notes }}{% endif %}</textarea>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="submit" class="btn btn-primary">{% if assignment %}Update Assignment{% else %}Assign Action{% endif %}</button>
+                    {% if assignment %}
+                    <form method="POST" action="/actions/{{ action.id }}/unassign" style="display: inline;">
+                        <button type="submit" class="btn" style="background: #e74c3c; color: white;" onclick="return confirm('Remove assignment from this action?')">Unassign</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- Mark Complete -->
+        {% if assignment and assignment.status != 'completed' %}
+        <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
+            <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: #333;">Mark as Complete</h4>
+            <form method="POST" action="/actions/{{ action.id }}/complete">
+                <button type="submit" class="btn" style="background: #27ae60; color: white;" onclick="return confirm('Mark this action as completed?')">
+                    Mark Complete
+                </button>
+            </form>
+        </div>
+        {% elif assignment and assignment.status == 'completed' %}
+        <div style="border-top: 1px solid #ecf0f1; padding-top: 1.5rem;">
+            <div style="background: #d4edda; color: #155724; padding: 1rem; border-radius: 4px; font-weight: 600;">
+                ✓ This action has been marked as completed
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
         Associated Email
     </div>
 
