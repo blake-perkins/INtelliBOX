@@ -76,6 +76,7 @@
             <thead>
                 <tr>
                     <th>Action</th>
+                    <th>Assigned To</th>
                     <th>Due Date</th>
                 </tr>
             </thead>
@@ -85,6 +86,13 @@
                     <td>
                         <div style="font-weight: 600;">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</div>
                         <div style="font-size: 0.85rem; color: #666;">From: {{ action.email.from_address }}</div>
+                    </td>
+                    <td style="font-size: 0.9rem;">
+                        {% if action.assignments %}
+                            {{ action.assignments[0].assigned_to }}
+                        {% else %}
+                            <span style="color: #999;">Unassigned</span>
+                        {% endif %}
                     </td>
                     <td style="color: #e74c3c; font-weight: 600;">
                         {{ action.due_date.strftime('%Y-%m-%d') }}

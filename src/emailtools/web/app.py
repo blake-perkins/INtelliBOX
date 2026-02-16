@@ -72,10 +72,9 @@ async def dashboard(request: Request):
             Action.created_at >= week_ago
         ).count()
 
-        # Get overdue unassigned actions
+        # Get overdue actions (assigned or unassigned)
         today = datetime.utcnow().date()
         overdue_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
-            Assignment.id.is_(None),
             Action.due_date < today
         ).order_by(Action.due_date).limit(5).all()
 
