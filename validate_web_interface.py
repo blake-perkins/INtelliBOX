@@ -188,8 +188,8 @@ def validate_web_interface():
                         print_success(f"Action Detail (ID {action_id}): HTTP 200")
                         results["passed"] += 1
                     else:
-                        print_warning("Action detail page returned non-200 status")
-                        results["warnings"] += 1
+                        print_error(f"Action detail page returned HTTP {response.status_code}")
+                        results["failed"] += 1
                 else:
                     print_warning("Could not extract action ID from actions page")
                     results["warnings"] += 1
@@ -218,8 +218,8 @@ def validate_web_interface():
                         print_success(f"Email Detail (ID {email_id}): HTTP 200")
                         results["passed"] += 1
                     else:
-                        print_warning("Email detail page returned non-200 status")
-                        results["warnings"] += 1
+                        print_error(f"Email detail page returned HTTP {response.status_code}")
+                        results["failed"] += 1
                 else:
                     print_warning("Could not extract email ID from emails page")
                     results["warnings"] += 1
