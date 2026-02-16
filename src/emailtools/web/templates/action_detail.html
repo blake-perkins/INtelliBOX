@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action.title }} - EmailTools{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="/actions" style="color: #3498db; text-decoration: none;">&larr; Back to Actions</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        Action Details
+    </div>
+
+    <div style="display: grid; gap: 1.5rem;">
+        <div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">{{ action.title }}</h3>
+            <span class="badge badge-{{ action.priority }}" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+                {{ action.priority }} Priority
+            </span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+            <div>
+                <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Due Date</div>
+                <div style="font-size: 1.1rem;">
+                    {% if action.due_date %}
+                        {{ action.due_date.strftime('%B %d, %Y') }}
+                    {% else %}
+                        <span style="color: #999;">No due date</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Confidence</div>
+                <div style="font-size: 1.1rem;">{{ (action.confidence * 100)|round|int }}%</div>
+            </div>
+
+            <div>
+                <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Extracted At</div>
+                <div style="font-size: 1.1rem;">{{ action.extracted_at.strftime('%B %d, %Y %I:%M %p') }}</div>
+            </div>
+        </div>
+
+        {% if action.description %}
+        <div>
+            <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Description</div>
+            <div style="background: #f8f9fa; padding: 1rem; border-radius: 4px; line-height: 1.6;">
+                {{ action.description }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if action.assigned_task %}
+        <div style="background: #e8f5e9; padding: 1rem; border-radius: 4px; border-left: 4px solid #27ae60;">
+            <div style="font-weight: 600; color: #27ae60; margin-bottom: 0.5rem;">
+                Assignment Status: Assigned
+            </div>
+            <div style="color: #555; font-size: 0.9rem;">
+                <strong>Task:</strong> {{ action.assigned_task.title }}<br>
+                <strong>Assigned:</strong> {{ action.assigned_task.created_at.strftime('%B %d, %Y %I:%M %p') }}
+            </div>
+        </div>
+        {% else %}
+        <div style="background: #fff3cd; padding: 1rem; border-radius: 4px; border-left: 4px solid #f39c12;">
+            <div style="font-weight: 600; color: #f39c12;">
+                Assignment Status: Unassigned
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        Associated Email
+    </div>
+
+    <div style="display: grid; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem;">
+            <div style="color: #666; font-weight: 600;">From:</div>
+            <div>{{ action.from_address }}</div>
+
+            <div style="color: #666; font-weight: 600;">Subject:</div>
+            <div>{{ email.subject }}</div>
+
+            <div style="color: #666; font-weight: 600;">Received:</div>
+            <div>{{ email.received_date.strftime('%B %d, %Y %I:%M %p') }}</div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+            <a href="/emails/{{ email.id }}" class="btn btn-primary">View Full Email</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

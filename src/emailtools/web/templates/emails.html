@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Emails - EmailTools{% endblock %}
+
+{% block content %}
+<div class="card-header" style="font-size: 1.75rem; margin-bottom: 1.5rem;">
+    Emails
+</div>
+
+<div class="card">
+    {% if emails %}
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>From</th>
+                <th>Received Date</th>
+                <th>Processed</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for email in emails %}
+            <tr style="cursor: pointer;" onclick="window.location='/emails/{{ email.id }}'">
+                <td style="font-weight: 500;">{{ email.subject }}</td>
+                <td>{{ email.from_address }}</td>
+                <td>{{ email.received_date.strftime('%Y-%m-%d %I:%M %p') }}</td>
+                <td>
+                    {% if email.processed %}
+                        <span style="color: #27ae60; font-weight: 600;">✓ Yes</span>
+                    {% else %}
+                        <span style="color: #e74c3c; font-weight: 600;">✗ No</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #999;">
+        <p style="font-size: 1.1rem;">No emails found</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+        <a href="?page={{ page - 1 }}">&laquo; Previous</a>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}
+            <a href="#" class="active">{{ p }}</a>
+        {% else %}
+            <a href="?page={{ p }}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+        <a href="?page={{ page + 1 }}">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -31,6 +31,9 @@ RUN mkdir -p /app/data/inbox /app/data/emails
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Expose web interface port
+EXPOSE 8000
+
 # Create non-root user for security
 RUN useradd -m -u 1000 emailtools && \
     chown -R emailtools:emailtools /app

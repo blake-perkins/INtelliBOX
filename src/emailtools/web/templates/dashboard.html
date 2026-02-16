@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - EmailTools{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom: 1.5rem;">Dashboard</h2>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value stat-primary">{{ total_emails }}</div>
+        <div class="stat-label">Total Emails</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-value stat-primary">{{ total_actions }}</div>
+        <div class="stat-label">Total Actions</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-value stat-medium">{{ unassigned_actions }}</div>
+        <div class="stat-label">Unassigned Actions</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-value stat-high">{{ high_priority }}</div>
+        <div class="stat-label">High Priority</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-value stat-low">{{ recent_actions }}</div>
+        <div class="stat-label">Actions (Last 7 Days)</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-value stat-high">{{ overdue_count }}</div>
+        <div class="stat-label">Overdue Actions</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Quick Actions</div>
+    <div style="display: flex; gap: 1rem;">
+        <a href="/actions?assigned=false" class="btn btn-primary">View Unassigned Actions</a>
+        <a href="/actions?priority=high&assigned=false" class="btn btn-primary">View High Priority</a>
+        <a href="/report" class="btn btn-primary">View Report</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh stats every 30 seconds
+    setInterval(async () => {
+        const response = await fetch('/api/stats');
+        const stats = await response.json();
+        // Could update stats without page reload
+        console.log('Stats updated:', stats);
+    }, 30000);
+</script>
+{% endblock %}

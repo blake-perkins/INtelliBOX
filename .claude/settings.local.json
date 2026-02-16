@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/emailtools.exe\" actions list)",
+      "Bash(git add:*)"
+    ]
+  }
+}

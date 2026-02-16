@@ -403,5 +403,40 @@ def report_schedule():
     start_scheduler()
 
 
+@cli.command(name="web")
+@click.option(
+    "--host",
+    default="0.0.0.0",
+    help="Host to bind to"
+)
+@click.option(
+    "--port",
+    default=8000,
+    type=int,
+    help="Port to bind to"
+)
+@click.option(
+    "--reload",
+    is_flag=True,
+    help="Enable auto-reload for development"
+)
+def web(host: str, port: int, reload: bool):
+    """Start the web interface server."""
+    import uvicorn
+    from emailtools.web.app import app
+
+    click.echo(f"Starting EmailTools web interface...")
+    click.echo(f"  URL: http://{host if host != '0.0.0.0' else 'localhost'}:{port}")
+    click.echo(f"  Press Ctrl+C to stop")
+
+    uvicorn.run(
+        "emailtools.web.app:app",
+        host=host,
+        port=port,
+        reload=reload,
+        log_level="info"
+    )
+
+
 if __name__ == "__main__":
     cli()

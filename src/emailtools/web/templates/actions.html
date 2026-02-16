@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Actions - EmailTools{% endblock %}
+
+{% block content %}
+<div class="card-header" style="font-size: 1.75rem; margin-bottom: 1.5rem;">
+    Actions
+</div>
+
+<div class="filter-bar">
+    <form method="get" style="display: flex; gap: 1rem; flex-wrap: wrap; width: 100%;">
+        <div>
+            <label for="priority" style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">Priority:</label>
+            <select name="priority" id="priority" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="high" {% if priority == 'high' %}selected{% endif %}>High</option>
+                <option value="medium" {% if priority == 'medium' %}selected{% endif %}>Medium</option>
+                <option value="low" {% if priority == 'low' %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+        <div>
+            <label for="assigned" style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">Status:</label>
+            <select name="assigned" id="assigned" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="unassigned" {% if assigned == 'unassigned' %}selected{% endif %}>Unassigned</option>
+                <option value="assigned" {% if assigned == 'assigned' %}selected{% endif %}>Assigned</option>
+            </select>
+        </div>
+        {% if priority or assigned %}
+        <div style="display: flex; align-items: flex-end;">
+            <a href="/actions" class="btn btn-primary" style="background-color: #95a5a6;">Clear Filters</a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    {% if actions %}
+    <table>
+        <thead>
+            <tr>
+                <th>Priority</th>
+                <th>Title</th>
+                <th>From</th>
+                <th>Due Date</th>
+                <th>Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for action in actions %}
+            <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+                <td>
+                    <span class="badge badge-{{ action.priority }}">
+                        {{ action.priority }}
+                    </span>
+                </td>
+                <td>{{ action.title }}</td>
+                <td>{{ action.from_address }}</td>
+                <td>
+                    {% if action.due_date %}
+                        {{ action.due_date.strftime('%Y-%m-%d') }}
+                    {% else %}
+                        <span style="color: #999;">No due date</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if action.confidence_score %}
+                        {{ (action.confidence_score * 100)|round|int }}%
+                    {% else %}
+                        <span style="color: #999;">N/A</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #999;">
+        <p style="font-size: 1.1rem;">No actions found</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Try adjusting your filters</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+        <a href="?page={{ page - 1 }}{% if priority %}&priority={{ priority }}{% endif %}{% if assigned %}&assigned={{ assigned }}{% endif %}">&laquo; Previous</a>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}
+            <a href="#" class="active">{{ p }}</a>
+        {% else %}
+            <a href="?page={{ p }}{% if priority %}&priority={{ priority }}{% endif %}{% if assigned %}&assigned={{ assigned }}{% endif %}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+        <a href="?page={{ page + 1 }}{% if priority %}&priority={{ priority }}{% endif %}{% if assigned %}&assigned={{ assigned }}{% endif %}">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Report - EmailTools{% endblock %}
+
+{% block content %}
+<div class="card-header" style="font-size: 1.75rem; margin-bottom: 1.5rem;">
+    Daily Report
+    <span style="font-size: 1rem; color: #666; font-weight: normal;">
+        {{ report.generated_at.strftime('%B %d, %Y') }}
+    </span>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value stat-high">{{ report.high_priority_count }}</div>
+        <div class="stat-label">High Priority Unassigned</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value stat-medium">{{ report.medium_priority_count }}</div>
+        <div class="stat-label">Medium Priority Unassigned</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value stat-low">{{ report.low_priority_count }}</div>
+        <div class="stat-label">Low Priority Unassigned</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value stat-primary">{{ report.total_actions }}</div>
+        <div class="stat-label">Total Unassigned Actions</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        Unassigned Actions
+    </div>
+
+    {% if report.unassigned_actions %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Priority</th>
+                    <th>Title</th>
+                    <th>From</th>
+                    <th>Due Date</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for action in report.unassigned_actions %}
+                <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+                    <td>
+                        <span class="badge badge-{{ action.priority or 'medium' }}">
+                            {{ (action.priority or 'medium').upper() }}
+                        </span>
+                    </td>
+                    <td>{{ action.title }}</td>
+                    <td>{{ action.email.from_address }}</td>
+                    <td>
+                        {% if action.due_date %}
+                            {{ action.due_date.strftime('%Y-%m-%d') }}
+                        {% else %}
+                            <span style="color: #999;">No due date</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if action.confidence_score %}
+                            {{ (action.confidence_score * 100)|round|int }}%
+                        {% else %}
+                            <span style="color: #999;">N/A</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #999;">
+        <p style="font-size: 1.1rem;">No unassigned actions</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">All actions have been assigned</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if report.program_news %}
+<div class="card">
+    <div class="card-header">
+        Program News Summary
+    </div>
+
+    <div style="padding: 1.5rem; line-height: 1.7;">
+        {{ report.program_news }}
+    </div>
+</div>
+{% endif %}
+
+<div style="text-align: center; margin-top: 2rem; color: #999; font-size: 0.9rem;">
+    Report generated at {{ report.generated_at.strftime('%B %d, %Y %I:%M %p') }}
+</div>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}{{ email.subject }} - EmailTools{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="/emails" style="color: #3498db; text-decoration: none;">&larr; Back to Emails</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        Email Details
+    </div>
+
+    <div style="display: grid; gap: 1rem;">
+        <div>
+            <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">Subject</div>
+            <div style="font-size: 1.25rem; font-weight: 600;">{{ email.subject }}</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; background: #f8f9fa; padding: 1rem; border-radius: 4px;">
+            <div style="color: #666; font-weight: 600;">From:</div>
+            <div>{{ email.from_address }}</div>
+
+            <div style="color: #666; font-weight: 600;">To:</div>
+            <div>{{ email.to_address }}</div>
+
+            <div style="color: #666; font-weight: 600;">Received:</div>
+            <div>{{ email.received_date.strftime('%B %d, %Y %I:%M %p') }}</div>
+
+            <div style="color: #666; font-weight: 600;">Processed:</div>
+            <div>
+                {% if email.processed %}
+                    <span style="color: #27ae60; font-weight: 600;">Yes</span>
+                    {% if email.processed_at %}
+                        ({{ email.processed_at.strftime('%B %d, %Y %I:%M %p') }})
+                    {% endif %}
+                {% else %}
+                    <span style="color: #e74c3c; font-weight: 600;">No</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        Email Body
+    </div>
+
+    {% if email.html_body %}
+    <div style="margin-bottom: 1rem;">
+        <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid #ecf0f1; margin-bottom: 1rem;">
+            <button onclick="showTab('text')" id="tab-text" class="tab-btn" style="padding: 0.5rem 1rem; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;">
+                Plain Text
+            </button>
+            <button onclick="showTab('html')" id="tab-html" class="tab-btn active" style="padding: 0.5rem 1rem; border: none; background: none; cursor: pointer; border-bottom: 2px solid #3498db; margin-bottom: -2px; color: #3498db; font-weight: 600;">
+                HTML
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="text-body" {% if email.html_body %}style="display: none;"{% endif %}>
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 4px; white-space: pre-wrap; font-family: monospace; line-height: 1.6;">{{ email.text_body or 'No text body' }}</div>
+    </div>
+
+    {% if email.html_body %}
+    <div id="html-body">
+        <iframe srcdoc="{{ email.html_body | escape }}" style="width: 100%; min-height: 500px; border: 1px solid #ecf0f1; border-radius: 4px;" sandbox=""></iframe>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        Associated Actions ({{ actions|length }})
+    </div>
+
+    {% if actions %}
+    <table>
+        <thead>
+            <tr>
+                <th>Priority</th>
+                <th>Title</th>
+                <th>Due Date</th>
+                <th>Confidence</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for action in actions %}
+            <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+                <td>
+                    <span class="badge badge-{{ action.priority }}">
+                        {{ action.priority }}
+                    </span>
+                </td>
+                <td>{{ action.title }}</td>
+                <td>
+                    {% if action.due_date %}
+                        {{ action.due_date.strftime('%Y-%m-%d') }}
+                    {% else %}
+                        <span style="color: #999;">No due date</span>
+                    {% endif %}
+                </td>
+                <td>{{ (action.confidence * 100)|round|int }}%</td>
+                <td>
+                    {% if action.assigned_task %}
+                        <span style="color: #27ae60; font-weight: 600;">Assigned</span>
+                    {% else %}
+                        <span style="color: #f39c12; font-weight: 600;">Unassigned</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 2rem; color: #999;">
+        No actions extracted from this email
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showTab(tab) {
+    const textBody = document.getElementById('text-body');
+    const htmlBody = document.getElementById('html-body');
+    const textTab = document.getElementById('tab-text');
+    const htmlTab = document.getElementById('tab-html');
+
+    if (tab === 'text') {
+        textBody.style.display = 'block';
+        htmlBody.style.display = 'none';
+        textTab.style.borderBottom = '2px solid #3498db';
+        textTab.style.color = '#3498db';
+        textTab.style.fontWeight = '600';
+        htmlTab.style.borderBottom = '2px solid transparent';
+        htmlTab.style.color = 'inherit';
+        htmlTab.style.fontWeight = 'normal';
+    } else {
+        textBody.style.display = 'none';
+        htmlBody.style.display = 'block';
+        htmlTab.style.borderBottom = '2px solid #3498db';
+        htmlTab.style.color = '#3498db';
+        htmlTab.style.fontWeight = '600';
+        textTab.style.borderBottom = '2px solid transparent';
+        textTab.style.color = 'inherit';
+        textTab.style.fontWeight = 'normal';
+    }
+}
+</script>
+{% endblock %}
