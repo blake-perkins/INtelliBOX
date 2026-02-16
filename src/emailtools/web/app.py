@@ -520,6 +520,27 @@ async def unassign_action(action_id: int):
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
+@app.post("/actions/{action_id}/status")
+async def update_assignment_status(
+    action_id: int,
+    status: str = Form(...)
+):
+    """Update assignment status (in_progress, completed)."""
+    with get_session() as session:
+        assignment = session.query(Assignment).filter_by(action_id=action_id).first()
+
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Action not assigned")
+
+        if status not in ["assigned", "in_progress", "completed"]:
+            raise HTTPException(status_code=400, detail="Invalid status")
+
+        assignment.status = status
+        session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
 @app.post("/actions/{action_id}/title")
 async def update_action_title(
     action_id: int,
