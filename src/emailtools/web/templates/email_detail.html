@@ -48,7 +48,7 @@
         Email Body
     </div>
 
-    {% if email.html_body %}
+    {% if email.body_html %}
     <div style="margin-bottom: 1rem;">
         <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid #ecf0f1; margin-bottom: 1rem;">
             <button onclick="showTab('text')" id="tab-text" class="tab-btn" style="padding: 0.5rem 1rem; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;">
@@ -61,13 +61,13 @@
     </div>
     {% endif %}
 
-    <div id="text-body" {% if email.html_body %}style="display: none;"{% endif %}>
-        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 4px; white-space: pre-wrap; font-family: monospace; line-height: 1.6;">{{ email.text_body or 'No text body' }}</div>
+    <div id="text-body" {% if email.body_html %}style="display: none;"{% endif %}>
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 4px; white-space: pre-wrap; font-family: monospace; line-height: 1.6;">{{ email.body_text or 'No text body' }}</div>
     </div>
 
-    {% if email.html_body %}
+    {% if email.body_html %}
     <div id="html-body">
-        <iframe srcdoc="{{ email.html_body | escape }}" style="width: 100%; min-height: 500px; border: 1px solid #ecf0f1; border-radius: 4px;" sandbox=""></iframe>
+        <iframe srcdoc="{{ email.body_html | escape }}" style="width: 100%; min-height: 500px; border: 1px solid #ecf0f1; border-radius: 4px;" sandbox=""></iframe>
     </div>
     {% endif %}
 </div>
