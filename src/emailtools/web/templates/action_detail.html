@@ -191,37 +191,29 @@
                 <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 0.95rem;">
                     {% if assignment %}Update Assignment{% else %}Assign Action{% endif %}
                 </button>
-
-                {% if assignment %}
-                    <!-- Status Update Buttons -->
-                    {% if assignment.status != 'in_progress' %}
-                    <form method="POST" action="/actions/{{ action.id }}/status" style="display: inline;">
-                        <input type="hidden" name="status" value="in_progress">
-                        <button type="submit" class="btn" style="background: #3498db; color: white; padding: 0.75rem 1.5rem; font-size: 0.95rem;">
-                            🔄 Start Progress
-                        </button>
-                    </form>
-                    {% endif %}
-
-                    {% if assignment.status != 'completed' %}
-                    <form method="POST" action="/actions/{{ action.id }}/status" style="display: inline;">
-                        <input type="hidden" name="status" value="completed">
-                        <button type="submit" class="btn" style="background: #27ae60; color: white; padding: 0.75rem 1.5rem; font-size: 0.95rem;" onclick="return confirm('Mark this action as completed?')">
-                            ✓ Mark Complete
-                        </button>
-                    </form>
-                    {% endif %}
-
-                    <!-- Unassign Button -->
-                    <form method="POST" action="/actions/{{ action.id }}/unassign" style="display: inline;">
-                        <button type="submit" class="btn" style="background: #e74c3c; color: white; padding: 0.75rem 1.5rem; font-size: 0.95rem;" onclick="return confirm('Remove assignment from this action?')">
-                            Unassign
-                        </button>
-                    </form>
-                {% endif %}
             </div>
         </div>
     </form>
+
+    {% if assignment %}
+    <!-- Status/unassign forms must live outside the assign form (nested forms are invalid HTML) -->
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-top: 0.75rem;">
+        {% if assignment.status != 'completed' %}
+        <form method="POST" action="/actions/{{ action.id }}/status" style="display: inline;">
+            <input type="hidden" name="status" value="completed">
+            <button type="submit" class="btn" style="background: #27ae60; color: white; padding: 0.75rem 1.5rem; font-size: 0.95rem;" onclick="return confirm('Mark this action as completed?')">
+                ✓ Mark Complete
+            </button>
+        </form>
+        {% endif %}
+
+        <form method="POST" action="/actions/{{ action.id }}/unassign" style="display: inline;">
+            <button type="submit" class="btn" style="background: #e74c3c; color: white; padding: 0.75rem 1.5rem; font-size: 0.95rem;" onclick="return confirm('Remove assignment from this action?')">
+                Unassign
+            </button>
+        </form>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Action Management -->

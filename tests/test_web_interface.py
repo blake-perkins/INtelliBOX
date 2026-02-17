@@ -144,7 +144,7 @@ def setup_database():
     assignment1 = Assignment(
         action_id=action1.id,
         assigned_to="john@example.com",
-        status="in_progress",
+        status="assigned",
         notes="Working on it"
     )
 

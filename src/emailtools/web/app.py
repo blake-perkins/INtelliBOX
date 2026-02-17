@@ -65,16 +65,6 @@ async def dashboard(request: Request):
             Assignment.status == "completed"
         ).count()
 
-        in_progress_actions = session.query(Action).join(Assignment).filter(
-            Assignment.status.in_(["assigned", "in_progress"])
-        ).count()
-
-        # Get recent actions (last 7 days)
-        week_ago = datetime.utcnow() - timedelta(days=7)
-        recent_actions_count = session.query(Action).filter(
-            Action.created_at >= week_ago
-        ).count()
-
         # Get overdue actions (assigned or unassigned, exclude completed)
         today = datetime.utcnow().date()
         overdue_count = session.query(Action).outerjoin(Assignment).filter(
@@ -96,7 +86,7 @@ async def dashboard(request: Request):
         recent_assignments = session.query(Assignment, Action).join(
             Action
         ).filter(
-            Assignment.status != "completed"
+            Assignment.status == "assigned"
         ).order_by(desc(Assignment.assigned_at)).limit(5).all()
 
         # Get recently completed (last 5)
@@ -131,11 +121,9 @@ async def dashboard(request: Request):
             "unassigned_actions": unassigned_actions,
             "assigned_actions": assigned_actions,
             "completed_actions": completed_actions,
-            "in_progress_actions": in_progress_actions,
             "high_priority": high_priority,
             "medium_priority": medium_priority,
             "low_priority": low_priority,
-            "recent_actions_count": recent_actions_count,
             "overdue_count": overdue_count,
             "overdue_actions": overdue_actions,
             "high_priority_actions": high_priority_actions,
@@ -587,14 +575,14 @@ async def update_assignment_status(
     action_id: int,
     status: str = Form(...)
 ):
-    """Update assignment status (in_progress, completed)."""
+    """Update assignment status (assigned, completed)."""
     with get_session() as session:
         assignment = session.query(Assignment).filter_by(action_id=action_id).first()
 
         if not assignment:
             raise HTTPException(status_code=404, detail="Action not assigned")
 
-        if status not in ["assigned", "in_progress", "completed"]:
+        if status not in ["assigned", "completed"]:
             raise HTTPException(status_code=400, detail="Invalid status")
 
         assignment.status = status
