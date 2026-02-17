@@ -7,7 +7,9 @@
     <div>
         Insights
         <span style="font-size: 1rem; color: #666; font-weight: normal;">
-            {{ report.generated_at.strftime('%B %d, %Y at %I:%M %p') if report.generated_at else '' }}
+            {% if report.generated_at %}
+            <time class="local-time" datetime="{{ report.generated_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"></time>
+            {% endif %}
         </span>
     </div>
     <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; flex-wrap: wrap;">
@@ -293,7 +295,7 @@
 </div>
 
 <div style="text-align: center; margin-top: 2rem; color: #999; font-size: 0.9rem;">
-    {% if report.generated_at %}Report generated at {{ report.generated_at.strftime('%B %d, %Y %I:%M %p') }}{% endif %}
+    {% if report.generated_at %}Report generated at <time class="local-time" datetime="{{ report.generated_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"></time>{% endif %}
 </div>
 
 <!-- Loading Overlay -->
@@ -337,5 +339,16 @@ function startRefresh(btn) {
     document.getElementById('loadingOverlay').style.display = 'flex';
     return true;
 }
+
+// Convert all UTC <time class="local-time"> elements to the browser's local timezone
+document.querySelectorAll('time.local-time').forEach(el => {
+    const utc = el.getAttribute('datetime');
+    if (!utc) return;
+    const d = new Date(utc);
+    el.textContent = d.toLocaleString(undefined, {
+        month: 'long', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit'
+    });
+});
 </script>
 {% endblock %}
