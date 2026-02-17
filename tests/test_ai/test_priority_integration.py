@@ -8,11 +8,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 
-from emailtools.ai.mock_client import MockAIClient
+# Import models first to ensure they're registered with Base
 from emailtools.models import Email, Base, Settings
-from emailtools.settings_service import SettingsService
-from emailtools import database
-
+from emailtools import database as database_module
+import emailtools.settings_service as settings_service_module
 
 # Create a unique temporary database file for this test module
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_priority_integration.db', prefix='test_emailtools_')
@@ -31,8 +30,13 @@ def override_get_session():
         session.close()
 
 
-# Patch the get_session function
-database.get_session = override_get_session
+# Patch get_session in both modules BEFORE importing anything that uses them
+database_module.get_session = override_get_session
+settings_service_module.get_session = override_get_session
+
+# Now safe to import these
+from emailtools.ai.mock_client import MockAIClient
+from emailtools.settings_service import SettingsService
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -164,7 +168,7 @@ def test_multiple_actions_same_priority_rules(setup_database, mock_client, sampl
     sample_email.from_address = 'vip@company.com'
     sample_email.subject = 'Multiple requests'
     sample_email.body_text = '''
-    I need help with three things:
+    Following up with action items from our meeting:
     1. Update the documentation
     2. Fix the login bug
     3. Review the security audit
