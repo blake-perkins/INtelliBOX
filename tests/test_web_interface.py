@@ -303,8 +303,7 @@ class TestWebInterface:
         response = client.get("/report")
         assert response.status_code == 200
         assert b"Insights" in response.content
-        # Should show unassigned actions
-        assert b"Investigate production error" in response.content
+        assert b"Awaiting Assignment" in response.content
 
     def test_pagination_actions(self, setup_database):
         """Test pagination on actions page."""

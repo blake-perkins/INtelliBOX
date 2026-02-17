@@ -357,15 +357,17 @@ class AIClient:
         self,
         actions: List,
         emails: List[Email],
-        days: int = 7
+        days: int = 7,
+        program_stats: Dict = None
     ) -> Dict:
         """
-        Generate comprehensive insights for the report dashboard.
+        Generate executive-level insights for the report dashboard.
 
         Args:
-            actions: List of Action objects to analyze
+            actions: List of unassigned Action objects
             emails: List of recent Email objects
             days: Number of days covered
+            program_stats: Full program metrics (total, unassigned, assigned, completed, overdue)
 
         Returns:
             Dictionary with structured insights
@@ -380,21 +382,32 @@ class AIClient:
                 "recommendations": []
             }
 
-        # Calculate metrics
         from datetime import datetime, timedelta
         now = datetime.utcnow()
         week_from_now = now + timedelta(days=7)
 
-        total_actions = len(actions)
+        # Unassigned breakdown (what the team still needs to pick up)
+        unassigned_count = len(actions)
         high_priority_count = sum(1 for a in actions if a.priority == "high")
         medium_priority_count = sum(1 for a in actions if a.priority == "medium")
         low_priority_count = sum(1 for a in actions if a.priority == "low")
 
-        overdue_count = sum(1 for a in actions if a.due_date and a.due_date < now)
         due_this_week_count = sum(
             1 for a in actions
             if a.due_date and now <= a.due_date <= week_from_now
         )
+
+        # Use full program stats if available, otherwise fall back to unassigned-only
+        if program_stats:
+            total_actions = program_stats["total_actions"]
+            overdue_count = program_stats["overdue"]
+            assigned_in_progress = program_stats["assigned_in_progress"]
+            completed_count = program_stats["completed"]
+        else:
+            total_actions = unassigned_count
+            overdue_count = sum(1 for a in actions if a.due_date and a.due_date < now)
+            assigned_in_progress = 0
+            completed_count = 0
 
         # Category breakdown
         category_counts = {}
@@ -420,6 +433,9 @@ class AIClient:
         # Format the prompt
         prompt = REPORT_INSIGHTS_PROMPT.format(
             total_actions=total_actions,
+            unassigned_count=unassigned_count,
+            assigned_in_progress=assigned_in_progress,
+            completed_count=completed_count,
             high_priority_count=high_priority_count,
             medium_priority_count=medium_priority_count,
             low_priority_count=low_priority_count,
@@ -431,7 +447,7 @@ class AIClient:
         )
 
         try:
-            logger.info(f"Generating report insights from {total_actions} actions and {len(emails)} emails")
+            logger.info(f"Generating report insights from {unassigned_count} unassigned actions, {len(emails)} emails, {overdue_count} overdue")
 
             response = self.client.chat.completions.create(
                 model=self.model,

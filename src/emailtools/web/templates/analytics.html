@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - INtelliBOX{% endblock %}
+
+{% block content %}
+<div class="card-header" style="font-size: 1.75rem; margin-bottom: 1.5rem;">
+    System Analytics
+</div>
+
+<!-- System Summary -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: baseline;">
+        System Totals
+        <span style="font-weight: 400; color: #999; font-size: 0.8rem;">all time</span>
+    </div>
+    <div style="padding: 0 1.5rem 1.25rem;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+            <div style="padding: 0.75rem 0;">
+                <div style="font-size: 2rem; font-weight: 700; color: #3498db; line-height: 1;">{{ total_emails }}</div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 0.3rem;">Emails Ingested</div>
+            </div>
+            <div style="padding: 0.75rem 0; border-left: 1px solid #eee; border-right: 1px solid #eee;">
+                <div style="font-size: 2rem; font-weight: 700; color: #2c3e50; line-height: 1;">{{ total_actions }}</div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 0.3rem;">Actions Created</div>
+            </div>
+            <div style="padding: 0.75rem 0;">
+                <div style="font-size: 2rem; font-weight: 700; color: #8e44ad; line-height: 1;">{{ total_members }}</div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 0.3rem;">Team Members</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Pipeline -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: baseline;">
+        Action Pipeline
+        <span style="font-weight: 400; color: #999; font-size: 0.8rem;">current state</span>
+    </div>
+    <div style="padding: 0 1.5rem 1.25rem;">
+        <div style="display: flex; align-items: stretch; gap: 2px;">
+            <div style="flex: 1; background: #eef2f7; padding: 0.85rem 0.5rem; border-radius: 6px 0 0 6px; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #2c3e50; line-height: 1;">{{ unassigned }}</div>
+                <div style="font-size: 0.75rem; color: #666; margin-top: 0.3rem;">Unassigned</div>
+            </div>
+            <div style="flex: 1; background: #f3e8ff; padding: 0.85rem 0.5rem; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #8e44ad; line-height: 1;">{{ in_progress }}</div>
+                <div style="font-size: 0.75rem; color: #666; margin-top: 0.3rem;">In Progress</div>
+            </div>
+            <div style="flex: 1; background: #e8f5e9; padding: 0.85rem 0.5rem; {% if overdue == 0 %}border-radius: 0 6px 6px 0;{% endif %} text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #28a745; line-height: 1;">{{ completed_all }}</div>
+                <div style="font-size: 0.75rem; color: #666; margin-top: 0.3rem;">Completed</div>
+            </div>
+            {% if overdue > 0 %}
+            <div style="flex: 0 0 auto; background: #fef5e7; padding: 0.85rem 1.25rem; border-radius: 0 6px 6px 0; border-left: 2px solid #f0c040; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #e67e22; line-height: 1;">{{ overdue }}</div>
+                <div style="font-size: 0.75rem; color: #b7770d; margin-top: 0.3rem;">Overdue</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Activity -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">Weekly Activity <span style="font-weight: 400; color: #999; font-size: 0.8rem; margin-left: 0.5rem;">last 4 weeks</span></div>
+    <div style="padding: 1.5rem;">
+        {% if weeks and max_weekly > 0 %}
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <th style="text-align: left; padding: 0.5rem 0.75rem; width: 160px;">Week</th>
+                    <th style="text-align: left; padding: 0.5rem 0.75rem;">Emails</th>
+                    <th style="text-align: left; padding: 0.5rem 0.75rem;">Actions Created</th>
+                    <th style="text-align: left; padding: 0.5rem 0.75rem;">Completed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for w in weeks %}
+                <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 0.75rem; white-space: nowrap; color: #444; font-weight: 500;">{{ w.label }}</td>
+                    <td style="padding: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="background: #3498db; height: 18px; border-radius: 3px; min-width: 2px; width: {{ (w.emails / max_weekly * 100)|int }}%;"></div>
+                            <span style="color: #555; font-size: 0.85rem;">{{ w.emails }}</span>
+                        </div>
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="background: #2c3e50; height: 18px; border-radius: 3px; min-width: 2px; width: {{ (w.actions / max_weekly * 100)|int }}%;"></div>
+                            <span style="color: #555; font-size: 0.85rem;">{{ w.actions }}</span>
+                        </div>
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="background: #28a745; height: 18px; border-radius: 3px; min-width: 2px; width: {{ (w.completed / max_weekly * 100)|int }}%;"></div>
+                            <span style="color: #555; font-size: 0.85rem;">{{ w.completed }}</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; color: #999; padding: 2rem;">No activity in the last 4 weeks.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Two-column: Categories + Team -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Top Categories -->
+    <div class="card">
+        <div class="card-header">Top Categories <span style="font-weight: 400; color: #999; font-size: 0.8rem; margin-left: 0.5rem;">all time</span></div>
+        <div style="padding: 1.5rem;">
+            {% if top_categories %}
+            {% set max_cat = top_categories[0].count if top_categories else 1 %}
+            {% for cat in top_categories %}
+            <div style="margin-bottom: {% if not loop.last %}1rem{% else %}0{% endif %};">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                    <span style="color: #2c3e50; font-weight: 500;">{{ cat.name }}</span>
+                    <span style="color: #666;">{{ cat.count }}</span>
+                </div>
+                <div style="background: #f0f0f0; border-radius: 3px; height: 8px; overflow: hidden;">
+                    <div style="background: #667eea; height: 100%; width: {{ (cat.count / max_cat * 100)|int }}%; border-radius: 3px;"></div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="text-align: center; color: #999; padding: 1rem;">No categorized actions yet.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Team Activity -->
+    <div class="card">
+        <div class="card-header">Team Activity <span style="font-weight: 400; color: #999; font-size: 0.8rem; margin-left: 0.5rem;">all time</span></div>
+        <div style="padding: 1.5rem;">
+            {% if team_activity %}
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                        <th style="text-align: left; padding: 0.4rem 0;">Assignee</th>
+                        <th style="text-align: center; padding: 0.4rem 0;">Active</th>
+                        <th style="text-align: center; padding: 0.4rem 0;">Completed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for person in team_activity %}
+                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                        <td style="padding: 0.6rem 0; color: #2c3e50; font-weight: 500;">{{ person.name }}</td>
+                        <td style="text-align: center; padding: 0.6rem 0;">
+                            {% if person.active > 0 %}
+                            <span style="background: #f3e8ff; color: #8e44ad; padding: 0.15rem 0.6rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">{{ person.active }}</span>
+                            {% else %}
+                            <span style="color: #ccc;">0</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center; padding: 0.6rem 0;">
+                            {% if person.completed > 0 %}
+                            <span style="background: #e8f5e9; color: #28a745; padding: 0.15rem 0.6rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">{{ person.completed }}</span>
+                            {% else %}
+                            <span style="color: #ccc;">0</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="text-align: center; color: #999; padding: 1rem;">No assignments yet.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

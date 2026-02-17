@@ -309,6 +309,10 @@ def step_post_with_table(context, path):
     context.response = context.client.post(path, data=data, follow_redirects=False)
 
 
+@when('I POST to "{path}"')
+def step_post_to(context, path):
+    context.response = context.client.post(path, follow_redirects=False)
+
 
 # ---------------------------------------------------------------------------
 # Assertion steps (Then)

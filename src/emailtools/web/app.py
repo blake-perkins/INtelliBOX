@@ -7,14 +7,14 @@ from pathlib import Path
 from typing import List, Optional
 
 from fastapi import FastAPI, Request, HTTPException, Query, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc, func, case, or_
 
 from emailtools.database import get_session
 from emailtools.models import Action, Assignment, Email, ProcessingLog, RosterMember
-from emailtools.reporter.generator import generate_report_data, get_cached_program_news, get_cached_structured_program_news, generate_enhanced_report
+from emailtools.reporter.generator import generate_report_data, get_cached_structured_program_news, generate_enhanced_report
 from emailtools.config import settings
 from emailtools.settings_service import SettingsService
 
@@ -479,14 +479,14 @@ async def view_email(request: Request, email_id: int):
 
 
 @app.get("/report", response_class=HTMLResponse)
-async def view_report(request: Request, refresh: bool = False):
-    """View AI-powered insights dashboard."""
+async def view_report(request: Request):
+    """View AI-powered insights dashboard. Always loads instantly using cached data."""
     with get_session() as session:
-        # Use enhanced report with caching
-        report_data = generate_enhanced_report(session, days=7, force_refresh=refresh)
+        # Always use cached data — never block page load with AI calls
+        report_data = generate_enhanced_report(session, days=7, force_refresh=False)
 
         # Calculate cache age in minutes for display
-        if report_data.get("is_cached"):
+        if report_data.get("is_cached") and report_data.get("generated_at"):
             cache_age_minutes = int((datetime.utcnow() - report_data["generated_at"]).total_seconds() / 60)
         else:
             cache_age_minutes = 0
@@ -501,6 +501,15 @@ async def view_report(request: Request, refresh: bool = False):
             "current_time": datetime.utcnow(),
             "datetime": datetime
         })
+
+
+@app.post("/api/report-refresh")
+async def refresh_report():
+    """Regenerate AI insights and program news. Called via AJAX from the Insights page."""
+    with get_session() as session:
+        generate_enhanced_report(session, days=7, force_refresh=True)
+        get_cached_structured_program_news(session, force_refresh=True)
+    return JSONResponse({"status": "ok"})
 
 
 @app.get("/api/stats")
@@ -882,6 +891,98 @@ async def delete_category(name: str = Form(...)):
     categories = [c for c in categories if c['name'] != name]
     SettingsService.set_setting('ai_categories', categories)
     return RedirectResponse(url=f"/settings?tab=categories&cat_deleted={name}", status_code=303)
+
+
+@app.get("/analytics", response_class=HTMLResponse)
+async def view_analytics(request: Request):
+    """System analytics dashboard — all-time stats and activity trends."""
+    with get_session() as session:
+        now = datetime.utcnow()
+        today = now.date()
+
+        # --- All-time counters ---
+        total_emails = session.query(Email).count()
+        total_actions = session.query(Action).count()
+        total_completed = session.query(Assignment).filter(
+            Assignment.status == "completed"
+        ).count()
+        total_members = session.query(RosterMember).count()
+
+        # --- Current pipeline ---
+        unassigned = session.query(Action).outerjoin(Assignment).filter(
+            Assignment.id.is_(None)
+        ).count()
+        in_progress = session.query(Assignment).filter(
+            Assignment.status != "completed"
+        ).count()
+        overdue = session.query(Action).outerjoin(Assignment).filter(
+            Action.due_date < today,
+            (Assignment.id.is_(None)) | (Assignment.status != "completed")
+        ).count()
+
+        # --- Weekly activity (last 4 weeks) ---
+        weeks = []
+        for i in range(4):
+            week_end = now - timedelta(days=i * 7)
+            week_start = week_end - timedelta(days=7)
+            emails_count = session.query(Email).filter(
+                Email.created_at >= week_start,
+                Email.created_at < week_end
+            ).count()
+            actions_count = session.query(Action).filter(
+                Action.created_at >= week_start,
+                Action.created_at < week_end
+            ).count()
+            completed_count = session.query(Assignment).filter(
+                Assignment.status == "completed",
+                Assignment.completed_at >= week_start,
+                Assignment.completed_at < week_end
+            ).count()
+            weeks.append({
+                "label": week_start.strftime("%b %d") + " – " + (week_end - timedelta(days=1)).strftime("%b %d"),
+                "emails": emails_count,
+                "actions": actions_count,
+                "completed": completed_count,
+            })
+        weeks.reverse()  # oldest first
+
+        # --- Top categories (top 5) ---
+        category_rows = session.query(
+            Action.category, func.count(Action.id).label("cnt")
+        ).filter(Action.category.isnot(None), Action.category != "").group_by(
+            Action.category
+        ).order_by(desc("cnt")).limit(5).all()
+        top_categories = [{"name": r[0], "count": r[1]} for r in category_rows]
+
+        # --- Team activity ---
+        team_rows = session.query(
+            Assignment.assigned_to,
+            func.count(case((Assignment.status == "completed", 1))).label("done"),
+            func.count(case((Assignment.status != "completed", 1))).label("active"),
+        ).group_by(Assignment.assigned_to).order_by(desc("done")).all()
+        team_activity = [{"name": r[0], "completed": r[1], "active": r[2]} for r in team_rows]
+
+        # Max values for bar scaling
+        max_weekly = max(
+            (max(w["emails"], w["actions"], w["completed"]) for w in weeks),
+            default=0
+        )
+
+        return templates.TemplateResponse("analytics.html", {
+            "request": request,
+            "total_emails": total_emails,
+            "total_actions": total_actions,
+            "total_completed": total_completed,
+            "total_members": total_members,
+            "unassigned": unassigned,
+            "in_progress": in_progress,
+            "completed_all": total_completed,
+            "overdue": overdue,
+            "weeks": weeks,
+            "max_weekly": max_weekly,
+            "top_categories": top_categories,
+            "team_activity": team_activity,
+        })
 
 
 @app.get("/roster", response_class=HTMLResponse)

@@ -21,8 +21,13 @@ Feature: Insights / Report page
     Then the response status is 200
     And the page does not contain "Internal Server Error"
 
-  Scenario: Report page with refresh parameter
+  Scenario: Report page shows Generate button when no insights cached
     Given the database is empty
-    When I navigate to "/report?refresh=true"
+    When I navigate to "/report"
     Then the response status is 200
-    And the page contains "Insights"
+    And the page contains "Generate Insights"
+
+  Scenario: Report refresh API endpoint returns success
+    Given the database is empty
+    When I POST to "/api/report-refresh"
+    Then the response status is 200

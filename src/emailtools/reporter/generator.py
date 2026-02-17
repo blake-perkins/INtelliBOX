@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from emailtools.ai.processor import get_ai_client
 from emailtools.config import settings
-from emailtools.models import Action, Email, ProgramNewsCache, ReportCache
+from emailtools.models import Action, Assignment, Email, ProgramNewsCache, ReportCache
 from emailtools.utils.logging import logger
 
 
@@ -196,13 +196,10 @@ def get_cached_program_news(session: Session, days: int = None, force_refresh: b
 
 def get_cached_structured_program_news(session: Session, days: int = None, force_refresh: bool = False) -> Dict:
     """
-    Get cached structured program news or generate new if needed.
+    Get cached structured program news or generate new if explicitly requested.
 
-    Cache is refreshed when:
-    - force_refresh is True
-    - No cache exists
-    - Cache is older than 12 hours
-    - New emails received since last generation
+    Only regenerates when force_refresh=True. Normal page loads always return
+    cached data instantly (even if stale) to avoid blocking on AI calls.
 
     Args:
         session: Database session
@@ -220,25 +217,17 @@ def get_cached_structured_program_news(session: Session, days: int = None, force
         ProgramNewsCache.days_covered == days
     ).order_by(ProgramNewsCache.generated_at.desc()).first()
 
-    # Check if we need to regenerate
+    # Only regenerate when explicitly requested — never auto-regen on page load
     should_regenerate = force_refresh
 
-    if not should_regenerate and latest_cache:
-        # Check if cache is older than 12 hours
-        cache_age = datetime.utcnow() - latest_cache.generated_at
-        if cache_age.total_seconds() > (12 * 3600):
-            should_regenerate = True
-            logger.info(f"Structured news cache is {cache_age.total_seconds() / 3600:.1f} hours old, regenerating")
-
-        # Check if new emails have been received since cache was generated
-        if not should_regenerate and latest_cache.latest_email_date:
-            newest_email = session.query(Email).order_by(Email.received_date.desc()).first()
-            if newest_email and newest_email.received_date > latest_cache.latest_email_date:
-                should_regenerate = True
-                logger.info("New emails received since last structured news cache, regenerating")
-    elif not latest_cache:
-        should_regenerate = True
-        logger.info("No structured news cache found, generating")
+    if not latest_cache and not force_refresh:
+        logger.info("No structured news cache found; waiting for user to trigger generation")
+        return {
+            "structured_data": None,
+            "generated_at": None,
+            "is_cached": False,
+            "email_count": 0
+        }
 
     # Use cache if valid
     if not should_regenerate and latest_cache:
@@ -379,24 +368,38 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
 
     # Calculate basic statistics
     now = datetime.utcnow()
+    today = now.date()
     high_priority_count = sum(1 for a in unassigned_actions if a.priority == "high")
     medium_priority_count = sum(1 for a in unassigned_actions if a.priority == "medium")
     low_priority_count = sum(1 for a in unassigned_actions if a.priority == "low")
 
-    # Calculate overdue and due this week
+    # Overdue and due this week — across ALL non-completed actions (not just unassigned)
+    # This matches the /api/stats logic so numbers are consistent across the app
     week_from_now = now + timedelta(days=7)
-    overdue_count = sum(1 for a in unassigned_actions if a.due_date and a.due_date < now)
-    due_this_week_count = sum(
-        1 for a in unassigned_actions
-        if a.due_date and now <= a.due_date <= week_from_now
-    )
+    overdue_count = session.query(Action).outerjoin(Assignment).filter(
+        Action.due_date < today,
+        (Assignment.id.is_(None)) | (Assignment.status != "completed")
+    ).count()
+    due_this_week_count = session.query(Action).outerjoin(Assignment).filter(
+        Action.due_date >= today,
+        Action.due_date <= week_from_now,
+        (Assignment.id.is_(None)) | (Assignment.status != "completed")
+    ).count()
 
-    # Get count of emails processed today
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    emails_today = session.query(Email).filter(Email.created_at >= today_start).count()
+    # Pipeline counts — always fresh (cheap queries)
+    assigned_in_progress = session.query(Assignment).filter(
+        Assignment.status != "completed"
+    ).count()
+    completed_count = session.query(Assignment).filter(
+        Assignment.status == "completed"
+    ).count()
 
-    # Get cached structured program news
-    program_news_data = get_cached_structured_program_news(session, days)
+    # Completed this week (assignments marked complete in the last 7 days)
+    week_ago = now - timedelta(days=7)
+    completed_this_week = session.query(Assignment).filter(
+        Assignment.status == "completed",
+        Assignment.completed_at >= week_ago
+    ).count()
 
     # Check cache for AI insights (expensive operation)
     latest_cache = session.query(ReportCache).order_by(
@@ -424,13 +427,37 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         is_cached = True
         insights_generated_at = latest_cache.generated_at
     else:
-        # Generate new AI insights
+        # Generate new AI insights with full program context
         logger.info("Generating new AI insights")
         recent_emails = get_recent_emails(session, days)
 
+        # Gather ALL active actions (not just unassigned) for accurate AI context
+        all_actions = session.query(Action).all()
+        assigned_active = session.query(Assignment).filter(
+            Assignment.status != "completed"
+        ).count()
+        completed_count = session.query(Assignment).filter(
+            Assignment.status == "completed"
+        ).count()
+        today = datetime.utcnow().date()
+        total_overdue = session.query(Action).outerjoin(Assignment).filter(
+            Action.due_date < now,
+            (Assignment.id.is_(None)) | (Assignment.status != "completed")
+        ).count()
+
+        program_stats = {
+            "total_actions": len(all_actions),
+            "unassigned": len(unassigned_actions),
+            "assigned_in_progress": assigned_active,
+            "completed": completed_count,
+            "overdue": total_overdue,
+        }
+
         client = get_ai_client()
         try:
-            insights = client.generate_report_insights(unassigned_actions, recent_emails, days)
+            insights = client.generate_report_insights(
+                unassigned_actions, recent_emails, days, program_stats=program_stats
+            )
         except Exception as e:
             logger.error(f"Failed to generate AI insights: {e}")
             insights = {
@@ -483,11 +510,10 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         "low_priority_count": low_priority_count,
         "overdue_count": overdue_count,
         "due_this_week_count": due_this_week_count,
-        "emails_today": emails_today,
+        "assigned_in_progress": assigned_in_progress,
+        "completed_count": completed_count,
+        "completed_this_week": completed_this_week,
         "email_count": cached_data.get("email_count", 0) if is_cached else len(recent_emails) if 'recent_emails' in locals() else 0,
-        "program_news": program_news_data["structured_data"],  # Structured data instead of plain summary
-        "program_news_generated_at": program_news_data["generated_at"],
-        "program_news_email_count": program_news_data["email_count"],
         "insights": insights,
         "unassigned_actions": unassigned_actions  # Keep as ORM objects for template
     }

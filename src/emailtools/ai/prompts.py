@@ -128,57 +128,61 @@ Top senders should list the 3-4 most active senders.
 
 JSON response:"""
 
-REPORT_INSIGHTS_PROMPT = """Analyze the following action items and recent email activity to generate actionable insights.
+REPORT_INSIGHTS_PROMPT = """You are generating an executive briefing for a program director reviewing their team's action item pipeline.
 
-## Current Action Items ({total_actions} total)
-Priority breakdown:
-- High priority: {high_priority_count}
-- Medium priority: {medium_priority_count}
-- Low priority: {low_priority_count}
+## Program Status
 
-Overdue actions: {overdue_count}
-Due this week: {due_this_week_count}
+Total action items across the program: {total_actions}
+- Awaiting assignment: {unassigned_count} (High: {high_priority_count}, Medium: {medium_priority_count}, Low: {low_priority_count})
+- Assigned and in progress: {assigned_in_progress}
+- Completed: {completed_count}
+- Overdue (not yet completed): {overdue_count}
+- Due this week: {due_this_week_count}
 
-Actions by category:
+Unassigned actions by category:
 {category_breakdown}
 
-Recent email activity ({days} days):
+Recent inbound email traffic ({days} days):
 {email_summaries}
 
-## Generate Structured Insights
+## Instructions
 
-Provide a JSON response with the following structure:
+Write for a director who has 60 seconds to understand:
+1. What is the overall health of our action pipeline?
+2. What external requests are driving the most work?
+3. What needs their attention right now?
+
+Be specific and factual — use the exact numbers provided above. Do not contradict the data. If overdue count is {overdue_count}, state that number exactly. Do not use filler language like "well-managed" unless the data supports it.
+
+Respond with this JSON structure:
 
 {{
-  "executive_summary": "Write a 2-3 sentence executive briefing that: (1) States the current workload status in concrete terms (e.g., 'Team has 27 unassigned actions with 5 overdue'), (2) Highlights the single most urgent concern or bottleneck requiring leadership attention, (3) Provides one clear actionable recommendation. Write as if briefing a team lead who needs to make decisions quickly.",
+  "executive_summary": "2-3 sentences. Lead with the most important fact. State exact numbers (e.g., '{overdue_count} overdue items' if overdue > 0, '{unassigned_count} items awaiting assignment'). Then identify the top risk or bottleneck. End with one concrete recommendation.",
   "trends": {{
-    "action_volume": "Are actions increasing or decreasing? Any patterns?",
-    "priority_distribution": "Is the high-priority ratio concerning or healthy?",
-    "response_patterns": "How quickly are actions being addressed?"
+    "action_volume": "What does the volume of incoming requests suggest? Are certain senders or topics driving most of the workload?",
+    "priority_distribution": "Is the mix of high/medium/low appropriate, or is there a skew that suggests triage issues?",
+    "response_patterns": "Based on the ratio of unassigned vs. in-progress vs. completed, how is throughput?"
   }},
   "category_insights": [
     {{
       "category": "category_name",
       "count": number,
-      "insight": "Key observation about this category",
+      "insight": "One-sentence observation relevant to a director",
       "urgency": "high|medium|low"
     }}
   ],
   "urgent_items": [
     {{
-      "action_title": "title",
-      "reason": "Why this needs immediate attention",
-      "recommended_action": "Specific next step"
+      "action_title": "title of a specific action that needs attention",
+      "reason": "Why — be specific (overdue, high priority unassigned, etc.)",
+      "recommended_action": "One concrete next step"
     }}
   ],
-  "bottlenecks": "Identify any patterns of delayed responses or recurring request types",
+  "bottlenecks": "Where is work getting stuck? Look at the unassigned-to-completed ratio and any category patterns.",
   "recommendations": [
-    "Specific actionable recommendation 1",
-    "Specific actionable recommendation 2",
-    "Specific actionable recommendation 3"
+    "Specific, actionable recommendation grounded in the data above",
+    "Another recommendation"
   ]
 }}
-
-Focus on actionable insights that help the team prioritize and respond effectively.
 
 JSON response:"""
