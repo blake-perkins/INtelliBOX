@@ -35,6 +35,7 @@
                     <option value="">All Actions</option>
                     <option value="false" {% if assigned == 'false' %}selected{% endif %}>Unassigned</option>
                     <option value="true" {% if assigned == 'true' %}selected{% endif %}>Assigned</option>
+                    <option value="completed" {% if assigned == 'completed' or completed == 'true' %}selected{% endif %}>Completed</option>
                 </select>
             </div>
 

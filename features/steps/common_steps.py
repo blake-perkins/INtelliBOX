@@ -183,6 +183,84 @@ def step_completed_action(context, title):
     session.close()
 
 
+@given('an unassigned "{priority}" priority action exists for the same email with title "{title}"')
+def step_action_same_email(context, priority, title):
+    session = make_session(context)
+    action = Action(
+        email_id=context.last_email_id,
+        title=title,
+        description=f"Description for {title}",
+        priority=priority,
+        due_date=datetime.utcnow() + timedelta(days=5),
+        category="RFI",
+        confidence_score=0.9,
+    )
+    session.add(action)
+    session.commit()
+    # Don't overwrite last_action_id — keep the first one
+    session.close()
+
+
+@given('an overdue assigned action titled "{title}" is assigned to "{assignee}"')
+def step_overdue_assigned_action(context, title, assignee):
+    session = make_session(context)
+    email = Email(
+        message_id=f"email-overdue-assigned-{title.lower().replace(' ', '-')}@test.com",
+        subject=f"Subject for {title}",
+        from_address="sender@example.com",
+        from_name="Sender",
+        to_addresses='["team@example.com"]',
+        received_date=datetime.utcnow() - timedelta(days=10),
+        body_text="Email body.",
+        processed=True,
+        processed_at=datetime.utcnow(),
+    )
+    session.add(email)
+    session.commit()
+    action = Action(
+        email_id=email.id,
+        title=title,
+        description=f"Description for {title}",
+        priority="high",
+        due_date=datetime.utcnow() - timedelta(days=3),
+        category="RFI",
+        confidence_score=0.9,
+    )
+    session.add(action)
+    session.commit()
+    assignment = Assignment(
+        action_id=action.id,
+        assigned_to=assignee,
+        status="assigned",
+        notes="",
+    )
+    session.add(assignment)
+    session.commit()
+    context.last_action_id = action.id
+    context.last_email_id = email.id
+    session.close()
+
+
+@given('an unprocessed email exists with subject "{subject}"')
+def step_unprocessed_email(context, subject):
+    session = make_session(context)
+    email = Email(
+        message_id=f"msg-unprocessed-{subject.lower().replace(' ', '-')}@test.com",
+        subject=subject,
+        from_address="sender@example.com",
+        from_name="Test Sender",
+        to_addresses='["team@example.com"]',
+        received_date=datetime.utcnow() - timedelta(days=1),
+        body_text=f"Body of email: {subject}",
+        processed=False,
+    )
+    session.add(email)
+    session.commit()
+    context.last_email = email
+    context.last_email_id = email.id
+    session.close()
+
+
 @given('a roster member "{first}" "{last}" with email "{email}" exists')
 def step_roster_member_exists(context, first, last, email):
     session = make_session(context)

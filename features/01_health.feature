@@ -17,6 +17,11 @@ Feature: Health and API stats endpoints
     And the JSON field total_actions equals 0
     And the JSON field unassigned_actions equals 0
     And the JSON field unassigned_high equals 0
+    And the JSON field unassigned_medium equals 0
+    And the JSON field unassigned_low equals 0
+    And the JSON field overdue_count equals 0
+    And the JSON field assigned_actions equals 0
+    And the JSON field completed_actions equals 0
 
   Scenario: API stats returns correct counts with data
     Given an unassigned "high" priority action exists with title "Test high action"
@@ -26,3 +31,24 @@ Feature: Health and API stats endpoints
     And the JSON field total_actions equals 2
     And the JSON field unassigned_actions equals 2
     And the JSON field unassigned_high equals 1
+    And the JSON field unassigned_medium equals 1
+    And the JSON field unassigned_low equals 0
+
+  Scenario: API stats reflects assigned actions
+    Given an action titled "Assigned stats" is assigned to "bob@example.com"
+    When I navigate to "/api/stats"
+    Then the response status is 200
+    And the JSON field assigned_actions equals 1
+    And the JSON field unassigned_actions equals 0
+
+  Scenario: API stats reflects completed actions
+    Given a completed action titled "Done stats" exists
+    When I navigate to "/api/stats"
+    Then the response status is 200
+    And the JSON field completed_actions equals 1
+
+  Scenario: API stats reflects overdue actions
+    Given an overdue unassigned high priority action exists
+    When I navigate to "/api/stats"
+    Then the response status is 200
+    And the JSON field overdue_count equals 1

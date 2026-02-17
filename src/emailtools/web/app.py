@@ -190,6 +190,7 @@ async def list_actions(
     request: Request,
     priority: Optional[str] = None,
     assigned: Optional[str] = None,
+    completed: Optional[str] = None,
     assignee: Optional[str] = None,
     search: Optional[str] = None,
     overdue: Optional[str] = None,
@@ -229,7 +230,9 @@ async def list_actions(
         if priority:
             query = query.filter(Action.priority == priority)
 
-        if assigned == "true":
+        if completed == "true" or assigned == "completed":
+            query = query.filter(Assignment.status == "completed")
+        elif assigned == "true":
             query = query.filter(Assignment.id.isnot(None))
         elif assigned == "false":
             query = query.filter(Assignment.id.is_(None))
@@ -280,6 +283,7 @@ async def list_actions(
             "actions": actions,
             "priority": priority,
             "assigned": assigned,
+            "completed": completed,
             "assignee": assignee,
             "search": search,
             "page": page,
@@ -615,6 +619,30 @@ async def complete_action(action_id: int):
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
+
+
+@app.post("/actions/{action_id}/priority")
+async def change_priority(action_id: int, priority: str = Form(...)):
+    """Quick-change priority (used by dashboard AJAX)."""
+    with get_session() as session:
+        action = session.query(Action).filter_by(id=action_id).first()
+        if not action:
+            raise HTTPException(status_code=404, detail="Action not found")
+        if priority in ["high", "medium", "low"]:
+            action.priority = priority
+            session.commit()
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
+@app.post("/actions/{action_id}/unassign")
+async def unassign_action(action_id: int):
+    """Remove assignment from an action (used by dashboard AJAX)."""
+    with get_session() as session:
+        assignment = session.query(Assignment).filter_by(action_id=action_id).first()
+        if assignment:
+            session.delete(assignment)
+            session.commit()
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
 @app.post("/actions/{action_id}/status")

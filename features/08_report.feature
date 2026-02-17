@@ -20,3 +20,9 @@ Feature: Insights / Report page
     When I navigate to "/report"
     Then the response status is 200
     And the page does not contain "Internal Server Error"
+
+  Scenario: Report page with refresh parameter
+    Given the database is empty
+    When I navigate to "/report?refresh=true"
+    Then the response status is 200
+    And the page contains "Insights"

@@ -144,45 +144,37 @@
 </div>
 {% endif %}
 
-<!-- MEDIUM PRIORITY: Top 3 visible, rest collapsible -->
-{% if medium_priority_actions %}
-<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #f39c12;" id="card-medium">
-    <div class="card-header" style="background-color: #fffbf0; color: #b7770d; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.06);">
-        📋 Medium Priority — Unassigned ({{ medium_priority_actions|length }})
-    </div>
-    <table style="margin: 0 -1.5rem 0 -1.5rem; width: calc(100% + 3rem);">
-        <thead>
-            <tr>
-                <th style="padding-left: 1.5rem;">Action</th>
-                <th style="width: 140px;">Due Date</th>
-                <th style="width: 300px;">Assign To</th>
-            </tr>
-        </thead>
-        <tbody>
+<!-- MEDIUM + LOW PRIORITY: Side by Side -->
+{% if medium_priority_actions or low_priority_actions %}
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+
+    {% if medium_priority_actions %}
+    <div class="card" style="border-left: 4px solid #f39c12; margin-bottom: 0;" id="card-medium">
+        <div class="card-header" style="background-color: #fffbf0; color: #b7770d; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.06);">
+            📋 Medium Priority — Unassigned ({{ medium_priority_actions|length }})
+        </div>
+        <div style="margin: 0 -1.5rem 0 -1.5rem;">
             {% for action in medium_priority_actions %}
-            <tr class="med-row{% if loop.index > 3 %} med-extra{% endif %}"
-                style="cursor: pointer;{% if loop.index > 3 %} display: none;{% endif %}"
-                onclick="window.location='/actions/{{ action.id }}'">
-                <td style="padding-left: 1.5rem;">
-                    <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
-                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
-                        {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
-                        <span style="color: #ccc;">|</span>
-                        <select onclick="event.stopPropagation()" onchange="changePriority({{ action.id }}, this, true)"
-                                autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.78rem; background: white; cursor: pointer; color: #555;">
-                            <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
-                            <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
-                            <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
-                        </select>
+            <div class="med-row{% if loop.index > 3 %} med-extra{% endif %}"
+                 style="padding: 0.65rem 1.5rem; border-bottom: 1px solid #f5f5f5; cursor: pointer;{% if loop.index > 3 %} display: none;{% endif %}"
+                 onclick="window.location='/actions/{{ action.id }}'">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.5rem;">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; font-size: 0.9rem;">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</div>
+                        <div style="font-size: 0.78rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
+                            {{ action.email.from_address }}
+                            <span style="color: #ccc;">|</span>
+                            <select onclick="event.stopPropagation()" onchange="changePriority({{ action.id }}, this, true)"
+                                    autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.75rem; background: white; cursor: pointer; color: #555;">
+                                <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
+                                <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
+                            </select>
+                        </div>
                     </div>
-                </td>
-                <td style="white-space: nowrap; font-size: 0.9rem; color: #555;">
-                    {% if action.due_date %}{{ action.due_date.strftime('%b %d, %Y') }}{% else %}<span style="color: #999;">No date</span>{% endif %}
-                </td>
-                <td onclick="event.stopPropagation()" style="white-space: nowrap;">
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div onclick="event.stopPropagation()" style="flex-shrink: 0; display: flex; gap: 0.35rem; align-items: center;">
                         <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
-                                style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
+                                style="padding: 0.35rem 0.5rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.8rem; background: white; cursor: pointer; max-width: 150px;"
                                 onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
                             <option value="" selected>Unassigned</option>
                             {% for member in roster %}
@@ -190,105 +182,76 @@
                             {% endfor %}
                         </select>
                         <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, true)"
-                                style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">Assign</button>
+                                style="padding: 0.35rem 0.7rem; font-size: 0.8rem; white-space: nowrap;">Assign</button>
                     </div>
-                </td>
-            </tr>
+                </div>
+            </div>
             {% endfor %}
-        </tbody>
-    </table>
-    {% if medium_priority_actions|length > 3 %}
-    <div style="padding: 0.6rem 1.5rem; border-top: 1px solid #f0f0f0; text-align: center;">
-        <button id="btn-med-expand" onclick="toggleMedium()"
-                style="background: none; border: none; color: #f39c12; font-size: 0.85rem; cursor: pointer; font-weight: 600;">
-            ▼ Show {{ medium_priority_actions|length - 3 }} more
-        </button>
+        </div>
+        {% if medium_priority_actions|length > 3 %}
+        <div style="padding: 0.5rem 1.5rem; border-top: 1px solid #f0f0f0; text-align: center;">
+            <button id="btn-med-expand" onclick="toggleSection('med')"
+                    style="background: none; border: none; color: #f39c12; font-size: 0.85rem; cursor: pointer; font-weight: 600;">
+                ▼ Show {{ medium_priority_actions|length - 3 }} more
+            </button>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
-</div>
-{% endif %}
 
-<!-- LOW PRIORITY: Collapsed by default -->
-{% if low_priority_actions %}
-<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #95a5a6;" id="card-low">
-    <div class="card-header" style="background-color: #f9f9f9; color: #666; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.06); cursor: pointer; user-select: none;"
-         onclick="toggleLow()">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span>📌 Low Priority — Unassigned ({{ low_priority_actions|length }})</span>
-            <span id="btn-low-icon" style="font-size: 0.8rem; color: #999;">▶ Show</span>
+    {% if low_priority_actions %}
+    <div class="card" style="border-left: 4px solid #95a5a6; margin-bottom: 0;" id="card-low">
+        <div class="card-header" style="background-color: #f9f9f9; color: #666; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.06);">
+            📌 Low Priority — Unassigned ({{ low_priority_actions|length }})
         </div>
-    </div>
-    <div id="low-body" style="display: none;">
-        <table style="margin: 0 -1.5rem 0 -1.5rem; width: calc(100% + 3rem);">
-            <thead>
-                <tr>
-                    <th style="padding-left: 1.5rem;">Action</th>
-                    <th style="width: 140px;">Due Date</th>
-                    <th style="width: 300px;">Assign To</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for action in low_priority_actions %}
-                <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
-                    <td style="padding-left: 1.5rem;">
-                        <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
-                        <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
-                            {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
+        <div style="margin: 0 -1.5rem 0 -1.5rem;">
+            {% for action in low_priority_actions %}
+            <div class="low-row{% if loop.index > 3 %} low-extra{% endif %}"
+                 style="padding: 0.65rem 1.5rem; border-bottom: 1px solid #f5f5f5; cursor: pointer;{% if loop.index > 3 %} display: none;{% endif %}"
+                 onclick="window.location='/actions/{{ action.id }}'">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.5rem;">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; font-size: 0.9rem;">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</div>
+                        <div style="font-size: 0.78rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
+                            {{ action.email.from_address }}
                             <span style="color: #ccc;">|</span>
                             <select onclick="event.stopPropagation()" onchange="changePriority({{ action.id }}, this, true)"
-                                    autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.78rem; background: white; cursor: pointer; color: #555;">
+                                    autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.75rem; background: white; cursor: pointer; color: #555;">
                                 <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
                                 <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
                                 <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
                             </select>
                         </div>
-                    </td>
-                    <td style="white-space: nowrap; font-size: 0.9rem; color: #555;">
-                        {% if action.due_date %}{{ action.due_date.strftime('%b %d, %Y') }}{% else %}<span style="color: #999;">No date</span>{% endif %}
-                    </td>
-                    <td onclick="event.stopPropagation()" style="white-space: nowrap;">
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
-                                    style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
-                                    onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
-                                <option value="" selected>Unassigned</option>
-                                {% for member in roster %}
-                                <option value="{{ member.full_name }}">{{ member.last_name }}, {{ member.first_name }}</option>
-                                {% endfor %}
-                            </select>
-                            <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, true)"
-                                    style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">Assign</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </div>
+                    <div onclick="event.stopPropagation()" style="flex-shrink: 0; display: flex; gap: 0.35rem; align-items: center;">
+                        <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
+                                style="padding: 0.35rem 0.5rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.8rem; background: white; cursor: pointer; max-width: 150px;"
+                                onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
+                            <option value="" selected>Unassigned</option>
+                            {% for member in roster %}
+                            <option value="{{ member.full_name }}">{{ member.last_name }}, {{ member.first_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, true)"
+                                style="padding: 0.35rem 0.7rem; font-size: 0.8rem; white-space: nowrap;">Assign</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if low_priority_actions|length > 3 %}
+        <div style="padding: 0.5rem 1.5rem; border-top: 1px solid #f0f0f0; text-align: center;">
+            <button id="btn-low-expand" onclick="toggleSection('low')"
+                    style="background: none; border: none; color: #95a5a6; font-size: 0.85rem; cursor: pointer; font-weight: 600;">
+                ▼ Show {{ low_priority_actions|length - 3 }} more
+            </button>
+        </div>
+        {% endif %}
     </div>
+    {% endif %}
+
 </div>
 {% endif %}
-
-<!-- Priority Breakdown - Compact -->
-<div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-header">Priority Distribution (Unassigned)</div>
-    <div style="display: flex; justify-content: space-around; padding: 1rem;">
-        <div style="text-align: center;">
-            <div style="font-size: 1.75rem; font-weight: bold; color: #a93226;">{{ high_priority }}</div>
-            <div style="color: #7f8c8d; font-size: 0.85rem; margin-bottom: 0.5rem;">High</div>
-            <a href="/actions?priority=high&assigned=false" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">View</a>
-        </div>
-        <div style="text-align: center;">
-            <div style="font-size: 1.75rem; font-weight: bold; color: #f39c12;">{{ medium_priority }}</div>
-            <div style="color: #7f8c8d; font-size: 0.85rem; margin-bottom: 0.5rem;">Medium</div>
-            <a href="/actions?priority=medium&assigned=false" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">View</a>
-        </div>
-        <div style="text-align: center;">
-            <div style="font-size: 1.75rem; font-weight: bold; color: #95a5a6;">{{ low_priority }}</div>
-            <div style="color: #7f8c8d; font-size: 0.85rem; margin-bottom: 0.5rem;">Low</div>
-            <a href="/actions?priority=low&assigned=false" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">View</a>
-        </div>
-    </div>
-</div>
 
 <!-- Activity Stream - Combined -->
 <div class="card" style="margin-bottom: 1.5rem;">
@@ -367,21 +330,25 @@ async function quickAssign(actionId, btn, removeRow) {
         if (resp.ok || resp.type === 'opaqueredirect') {
             refreshStats();
             if (removeRow) {
-                const row = btn.closest('tr');
-                row.style.transition = 'opacity 0.3s';
-                row.style.opacity = '0';
-                setTimeout(() => {
-                    const tbody = row.parentElement;
-                    row.remove();
-                    if (tbody && tbody.querySelectorAll('tr').length === 0) {
-                        const card = tbody.closest('.card');
-                        if (card) {
-                            card.style.transition = 'opacity 0.4s';
-                            card.style.opacity = '0';
-                            setTimeout(() => { card.style.display = 'none'; }, 400);
+                const row = btn.closest('tr') || btn.closest('[class*="-row"]');
+                if (row) {
+                    row.style.transition = 'opacity 0.3s';
+                    row.style.opacity = '0';
+                    setTimeout(() => {
+                        const parent = row.parentElement;
+                        row.remove();
+                        // Check if section is now empty (works for both <tbody> and div containers)
+                        const remaining = parent ? (parent.querySelectorAll('tr').length + parent.querySelectorAll('[class*="-row"]').length) : 0;
+                        if (remaining === 0) {
+                            const card = parent.closest('.card');
+                            if (card) {
+                                card.style.transition = 'opacity 0.4s';
+                                card.style.opacity = '0';
+                                setTimeout(() => { card.style.display = 'none'; }, 400);
+                            }
                         }
-                    }
-                }, 300);
+                    }, 300);
+                }
             } else {
                 // Overdue rows stay — flash button green to confirm
                 btn.textContent = '✓ Saved';
@@ -411,10 +378,13 @@ async function changePriority(actionId, select, removeRow) {
         method: 'POST', body, redirect: 'manual'
     });
     if (resp.ok || resp.type === 'opaqueredirect') {
+        refreshStats();
         if (removeRow) {
-            const row = select.closest('tr');
-            row.style.transition = 'opacity 0.3s';
-            row.style.opacity = '0';
+            const row = select.closest('tr') || select.closest('[class*="-row"]');
+            if (row) {
+                row.style.transition = 'opacity 0.3s';
+                row.style.opacity = '0';
+            }
             setTimeout(() => { location.reload(); }, 350);
         }
     } else {
@@ -423,22 +393,14 @@ async function changePriority(actionId, select, removeRow) {
     }
 }
 
-function toggleMedium() {
-    const extras = document.querySelectorAll('.med-extra');
-    const btn = document.getElementById('btn-med-expand');
+function toggleSection(prefix) {
+    const extras = document.querySelectorAll('.' + prefix + '-extra');
+    const btn = document.getElementById('btn-' + prefix + '-expand');
     const hidden = extras[0] && extras[0].style.display === 'none';
     extras.forEach(r => r.style.display = hidden ? '' : 'none');
     btn.textContent = hidden
         ? '▲ Show less'
         : '▼ Show ' + extras.length + ' more';
-}
-
-function toggleLow() {
-    const body = document.getElementById('low-body');
-    const icon = document.getElementById('btn-low-icon');
-    const visible = body.style.display !== 'none';
-    body.style.display = visible ? 'none' : '';
-    icon.textContent = visible ? '▶ Show' : '▲ Hide';
 }
 
     // Auto-refresh every 30 seconds
