@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - INtelliBOX{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        ⚙️ Priority Settings
+    </div>
+
+    <form method="POST" action="/settings" style="padding: 1rem;">
+        <!-- Default Priority -->
+        <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #ecf0f1;">
+            <h3 style="margin-bottom: 1rem; color: #2c3e50; font-size: 1.1rem;">Default Priority</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                The base priority assigned to all actions unless overridden by rules below.
+            </p>
+            <select name="priority_default" style="width: 100%; max-width: 300px; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                <option value="high" {% if priority_default == 'high' %}selected{% endif %}>High</option>
+                <option value="medium" {% if priority_default == 'medium' %}selected{% endif %}>Medium</option>
+                <option value="low" {% if priority_default == 'low' %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+
+        <!-- Due Date Threshold -->
+        <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #ecf0f1;">
+            <h3 style="margin-bottom: 1rem; color: #2c3e50; font-size: 1.1rem;">Due Date Priority Rule</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                Automatically set priority to <strong style="color: #e74c3c;">HIGH</strong> if due date is within this many days.
+            </p>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <input type="number"
+                       name="priority_days_threshold"
+                       value="{{ priority_days_threshold }}"
+                       min="1"
+                       max="30"
+                       style="width: 100px; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                <span style="color: #666;">days</span>
+            </div>
+        </div>
+
+        <!-- High Priority Senders -->
+        <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #ecf0f1;">
+            <h3 style="margin-bottom: 1rem; color: #2c3e50; font-size: 1.1rem;">High Priority Senders</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                Emails from these addresses/domains will always be marked as <strong style="color: #e74c3c;">HIGH</strong> priority.
+                <br>
+                <span style="font-size: 0.85rem; opacity: 0.8;">Enter one per line. Use full email (user@domain.com) or domain only (@domain.com).</span>
+            </p>
+            <textarea name="priority_high_senders"
+                      rows="6"
+                      placeholder="customer@company.com&#10;@importantclient.com&#10;director@yourcompany.com"
+                      style="width: 100%; max-width: 600px; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; font-family: monospace;">{{ priority_high_senders_text }}</textarea>
+        </div>
+
+        <!-- High Priority Keywords -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: #2c3e50; font-size: 1.1rem;">High Priority Keywords</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                If subject or body contains any of these keywords, mark as <strong style="color: #e74c3c;">HIGH</strong> priority.
+                <br>
+                <span style="font-size: 0.85rem; opacity: 0.8;">Enter one per line. Matching is case-insensitive.</span>
+            </p>
+            <textarea name="priority_high_keywords"
+                      rows="6"
+                      placeholder="URGENT&#10;CRITICAL&#10;RFI&#10;ACTION REQUIRED&#10;IMMEDIATE"
+                      style="width: 100%; max-width: 600px; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; font-family: monospace;">{{ priority_high_keywords_text }}</textarea>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 1rem; padding-top: 1.5rem; border-top: 2px solid #ecf0f1;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem;">
+                💾 Save Settings
+            </button>
+            <a href="/" class="btn" style="padding: 0.75rem 1.5rem; font-size: 1rem; background: #95a5a6; color: white; text-decoration: none;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Info Box -->
+<div class="card" style="background: #e8f5e9; border-left: 4px solid #27ae60;">
+    <h3 style="color: #27ae60; margin-bottom: 0.5rem; font-size: 1rem;">ℹ️ How Priority Rules Work</h3>
+    <ol style="margin-left: 1.5rem; color: #555; font-size: 0.9rem; line-height: 1.8;">
+        <li><strong>AI analyzes the email</strong> and suggests an initial priority</li>
+        <li><strong>Rules are checked</strong> in this order:
+            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                <li>If sender matches high-priority list → <strong style="color: #e74c3c;">HIGH</strong></li>
+                <li>If keywords found in subject/body → <strong style="color: #e74c3c;">HIGH</strong></li>
+                <li>If due date within threshold → <strong style="color: #e74c3c;">HIGH</strong></li>
+                <li>Otherwise → Use default priority</li>
+            </ul>
+        </li>
+        <li><strong>Priority is applied</strong> to the action and shown in the actions list</li>
+    </ol>
+</div>
+
+{% if success %}
+<div style="position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slideIn 0.3s ease-out;">
+    ✓ Settings saved successfully!
+</div>
+<style>
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+<script>
+    setTimeout(() => {
+        const notification = document.querySelector('[style*="position: fixed"]');
+        if (notification) {
+            notification.style.transition = 'opacity 0.3s ease-out';
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 3000);
+</script>
+{% endif %}
+{% endblock %}

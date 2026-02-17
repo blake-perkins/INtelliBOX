@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple
 
 from emailtools.models import Action, Email
 from emailtools.utils.logging import logger
+from emailtools.priority_rules import PriorityRuleEngine
 
 
 class MockAIClient:
@@ -233,11 +234,23 @@ class MockAIClient:
                     except (ValueError, TypeError):
                         logger.warning(f"Failed to parse due_date: {action_dict.get('due_date')}")
 
+                # Get AI-suggested priority
+                ai_priority = action_dict.get("priority")
+
+                # Apply priority rules to get final priority
+                final_priority = PriorityRuleEngine.apply_priority_rules(
+                    email_from=email.from_address,
+                    email_subject=email.subject,
+                    email_body=email.body_text or email.body_html or "",
+                    due_date=due_date,
+                    ai_priority=ai_priority
+                )
+
                 action = Action(
                     email_id=email.id,
                     title=action_dict.get("title", "Untitled Action")[:500],
                     description=action_dict.get("description"),
-                    priority=action_dict.get("priority"),
+                    priority=final_priority,  # Use rule-adjusted priority
                     due_date=due_date,
                     category=action_dict.get("category"),
                     confidence_score=action_dict.get("confidence"),
@@ -245,7 +258,12 @@ class MockAIClient:
                 )
 
                 actions.append(action)
-                logger.debug(f"Mock AI: Created action: {action.title}")
+
+                # Log if priority was overridden
+                if ai_priority and ai_priority != final_priority:
+                    logger.info(f"Priority override: {ai_priority} → {final_priority} for '{action.title[:50]}'")
+                else:
+                    logger.debug(f"Mock AI: Created action: {action.title}")
 
             except Exception as e:
                 logger.error(f"Failed to create Action object: {e}")

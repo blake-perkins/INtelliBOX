@@ -14,6 +14,7 @@ from emailtools.database import get_session
 from emailtools.models import Action, Assignment, Email, ProcessingLog
 from emailtools.reporter.generator import generate_report_data, get_cached_program_news
 from emailtools.config import settings
+from emailtools.settings_service import SettingsService
 
 # Create FastAPI app
 app = FastAPI(
@@ -651,6 +652,52 @@ async def create_action(
         session.refresh(action)
 
     return RedirectResponse(url=f"/actions/{action.id}", status_code=303)
+
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request, success: bool = False):
+    """Settings page for configuring priority rules."""
+    # Get current settings
+    priority_config = SettingsService.get_priority_config()
+
+    # Convert lists to newline-separated text for textarea
+    high_senders = priority_config.get('high_senders', [])
+    high_keywords = priority_config.get('high_keywords', [])
+
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
+            "priority_default": priority_config.get('default_priority', 'medium'),
+            "priority_days_threshold": priority_config.get('days_threshold', 5),
+            "priority_high_senders_text": '\n'.join(high_senders),
+            "priority_high_keywords_text": '\n'.join(high_keywords),
+            "success": success
+        }
+    )
+
+
+@app.post("/settings")
+async def save_settings(
+    request: Request,
+    priority_default: str = Form(...),
+    priority_days_threshold: int = Form(...),
+    priority_high_senders: str = Form(""),
+    priority_high_keywords: str = Form("")
+):
+    """Save priority settings."""
+    # Parse textarea inputs (newline-separated) into lists
+    senders = [s.strip() for s in priority_high_senders.split('\n') if s.strip()]
+    keywords = [k.strip() for k in priority_high_keywords.split('\n') if k.strip()]
+
+    # Save settings
+    SettingsService.set_setting('priority_default', priority_default)
+    SettingsService.set_setting('priority_days_threshold', priority_days_threshold)
+    SettingsService.set_setting('priority_high_senders', senders)
+    SettingsService.set_setting('priority_high_keywords', keywords)
+
+    # Redirect with success flag
+    return RedirectResponse(url="/settings?success=true", status_code=303)
 
 
 @app.get("/health")
