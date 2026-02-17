@@ -11,6 +11,14 @@ Feature: Create new action manually
     And the page contains "Select category"
     And the page contains "select"
 
+  Scenario: Create action form category dropdown is populated with default categories
+    Given an email exists with subject "Category test email"
+    When I navigate to the create action form for that email
+    Then the response status is 200
+    And the page contains "RFI"
+    And the page contains "data_call"
+    And the page contains "deliverable"
+
   Scenario: Create action form shows the source email context
     Given an email exists with subject "Project status update"
     When I navigate to the create action form for that email
