@@ -37,14 +37,29 @@ TEST_MODULES = [
 
 
 def run_test_module(module_path):
-    """Run a single test module and return results."""
+    """Run a single pytest module and return results."""
     print(f"\n{BLUE}{'=' * 70}{RESET}")
     print(f"{BOLD}Running: {module_path}{RESET}")
     print(f"{BLUE}{'=' * 70}{RESET}\n")
 
-    # Run pytest with minimal output
     result = subprocess.run(
         [sys.executable, "-m", "pytest", module_path, "-v", "--tb=short", "-q"],
+        capture_output=False,
+        text=True
+    )
+
+    return result.returncode == 0
+
+
+def run_behave():
+    """Run the Behave BDD test suite and return pass/fail."""
+    print(f"\n{BLUE}{'=' * 70}{RESET}")
+    print(f"{BOLD}Running: features/ (Behave BDD){RESET}")
+    print(f"{BLUE}{'=' * 70}{RESET}\n")
+
+    behave_exe = Path("venv/Scripts/behave.exe")
+    result = subprocess.run(
+        [str(behave_exe), "features/", "--no-capture"],
         capture_output=False,
         text=True
     )
@@ -60,9 +75,12 @@ def main():
     results = {}
 
     for module in TEST_MODULES:
-        module_name = Path(module).stem
         success = run_test_module(module)
         results[module] = success
+
+    # Run Behave BDD suite
+    bdd_success = run_behave()
+    results["features/ (BDD)"] = bdd_success
 
     # Print summary
     print(f"\n{BOLD}{BLUE}{'=' * 70}{RESET}")
@@ -86,7 +104,10 @@ def main():
         print(f"{RED}Run failed modules individually for details:{RESET}")
         for module, success in results.items():
             if not success:
-                print(f"  {RED}./venv/Scripts/python.exe -m pytest {module} -v{RESET}")
+                if "BDD" in module:
+                    print(f"  {RED}./venv/Scripts/behave.exe features/ --no-capture{RESET}")
+                else:
+                    print(f"  {RED}./venv/Scripts/python.exe -m pytest {module} -v{RESET}")
         return 1
 
 

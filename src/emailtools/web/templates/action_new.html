@@ -92,10 +92,12 @@
                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">
                         Category (optional)
                     </label>
-                    <input type="text"
-                           name="category"
-                           placeholder="e.g., RFI, Data Call"
-                           style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem;">
+                    <select name="category" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95rem;">
+                        <option value="">— Select category —</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat['name'] }}">{{ cat['name'] }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
 

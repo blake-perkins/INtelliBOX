@@ -806,9 +806,12 @@ async def new_action_form(request: Request, email_id: int):
         if not email:
             raise HTTPException(status_code=404, detail="Email not found")
 
+        ai_config = SettingsService.get_ai_config()
+        categories = ai_config.get('categories', SettingsService.DEFAULT_CATEGORIES)
         return templates.TemplateResponse("action_new.html", {
             "request": request,
-            "email": email
+            "email": email,
+            "categories": categories,
         })
 
 
@@ -850,8 +853,9 @@ async def create_action(
         session.add(action)
         session.commit()
         session.refresh(action)
+        action_id = action.id  # capture before session closes
 
-    return RedirectResponse(url=f"/actions/{action.id}", status_code=303)
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
 @app.get("/settings", response_class=HTMLResponse)
