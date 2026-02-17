@@ -390,9 +390,17 @@ async def view_report(request: Request, refresh: bool = False):
         # Use enhanced report with caching
         report_data = generate_enhanced_report(session, days=7, force_refresh=refresh)
 
+        # Calculate cache age in minutes for display
+        if report_data.get("is_cached"):
+            cache_age_minutes = int((datetime.utcnow() - report_data["generated_at"]).total_seconds() / 60)
+        else:
+            cache_age_minutes = 0
+
         return templates.TemplateResponse("report.html", {
             "request": request,
-            "report": report_data
+            "report": report_data,
+            "cache_age_minutes": cache_age_minutes,
+            "datetime": datetime  # Make datetime available in template
         })
 
 

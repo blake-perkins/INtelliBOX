@@ -13,7 +13,7 @@
     <div style="font-size: 0.85rem;">
         {% if report.is_cached %}
         <span style="color: #28a745; margin-right: 1rem;">
-            <i class="fas fa-check-circle"></i> Cached ({{ (report.generated_at.timestamp() - datetime.now().timestamp()) | abs | int // 60 }} min ago)
+            <i class="fas fa-check-circle"></i> Cached ({{ cache_age_minutes }} min ago)
         </span>
         <a href="/report?refresh=true" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
             <i class="fas fa-sync-alt"></i> Refresh
