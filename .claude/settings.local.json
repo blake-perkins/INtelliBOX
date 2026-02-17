@@ -24,7 +24,16 @@
       "Bash(taskkill:*)",
       "Bash(./venv/Scripts/pip.exe install:*)",
       "Bash(./venv/Scripts/python.exe:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(findstr:*)",
+      "Bash(./venv/Scripts/pip install:*)",
+      "Bash(./venv/Scripts/python:*)",
+      "Bash(git mv:*)",
+      "Bash(ls:*)",
+      "Bash(git rm:*)",
+      "Bash(py -m pytest tests/ -v --tb=short)",
+      "Bash(python3 -m pytest:*)",
+      "Bash(/c/Users/Death/AppData/Local/Programs/Python/Python313/python.exe -m pytest:*)"
     ]
   }
 }

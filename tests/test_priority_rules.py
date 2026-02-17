@@ -8,11 +8,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 
-from emailtools.priority_rules import PriorityRuleEngine
-from emailtools.settings_service import SettingsService
+# Import models first to ensure they're registered with Base
 from emailtools.models import Base, Settings
-from emailtools import database
-
+from emailtools import database as database_module
+import emailtools.settings_service as settings_service_module
 
 # Create a unique temporary database file for this test module
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_priority_rules.db', prefix='test_emailtools_')
@@ -31,8 +30,13 @@ def override_get_session():
         session.close()
 
 
-# Patch the get_session function
-database.get_session = override_get_session
+# Patch get_session in both modules BEFORE importing anything that uses them
+database_module.get_session = override_get_session
+settings_service_module.get_session = override_get_session
+
+# Now safe to import these
+from emailtools.priority_rules import PriorityRuleEngine
+from emailtools.settings_service import SettingsService
 
 
 @pytest.fixture(scope="module", autouse=True)

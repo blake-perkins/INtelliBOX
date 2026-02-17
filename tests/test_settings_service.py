@@ -7,10 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 
-from emailtools.settings_service import SettingsService
 from emailtools.models import Settings, Base
-from emailtools import database
-
 
 # Create a unique temporary database file for this test module
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_settings_service.db', prefix='test_emailtools_')
@@ -29,8 +26,15 @@ def override_get_session():
         session.close()
 
 
-# Patch the get_session function
-database.get_session = override_get_session
+# Patch get_session in both database module and settings_service module
+import emailtools.database as database_module
+import emailtools.settings_service as settings_service_module
+
+database_module.get_session = override_get_session
+settings_service_module.get_session = override_get_session
+
+# Now import SettingsService after patching
+from emailtools.settings_service import SettingsService
 
 
 @pytest.fixture(scope="module", autouse=True)
