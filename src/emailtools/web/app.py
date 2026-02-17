@@ -594,52 +594,6 @@ async def assign_action(
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
-@app.post("/actions/{action_id}/priority")
-async def update_priority(
-    action_id: int,
-    priority: str = Form(...),
-):
-    """Update action priority."""
-    with get_session() as session:
-        action = session.query(Action).filter_by(id=action_id).first()
-        if not action:
-            raise HTTPException(status_code=404, detail="Action not found")
-
-        if priority not in ["high", "medium", "low"]:
-            raise HTTPException(status_code=400, detail="Invalid priority")
-
-        action.priority = priority
-        session.commit()
-
-    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
-
-
-@app.post("/actions/{action_id}/due-date")
-async def update_due_date(
-    action_id: int,
-    due_date: str = Form(""),
-):
-    """Update action due date."""
-    with get_session() as session:
-        action = session.query(Action).filter_by(id=action_id).first()
-        if not action:
-            raise HTTPException(status_code=404, detail="Action not found")
-
-        # Parse date or clear if empty
-        if due_date:
-            from datetime import datetime as dt
-            try:
-                action.due_date = dt.strptime(due_date, "%Y-%m-%d").date()
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid date format")
-        else:
-            action.due_date = None
-
-        session.commit()
-
-    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
-
-
 @app.post("/actions/{action_id}/complete")
 async def complete_action(action_id: int):
     """Mark an action as completed."""
@@ -661,18 +615,6 @@ async def complete_action(action_id: int):
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
-
-@app.post("/actions/{action_id}/unassign")
-async def unassign_action(action_id: int):
-    """Remove assignment from an action."""
-    with get_session() as session:
-        assignment = session.query(Assignment).filter_by(action_id=action_id).first()
-
-        if assignment:
-            session.delete(assignment)
-            session.commit()
-
-    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
 @app.post("/actions/{action_id}/status")
@@ -704,8 +646,10 @@ async def edit_action(
     priority: str = Form("medium"),
     due_date: str = Form(""),
     category: str = Form(""),
+    assigned_to: str = Form(""),
+    notes: str = Form(""),
 ):
-    """Update title, description, priority, due date, and category in one submit."""
+    """Update action fields and optionally assign in one submit."""
     with get_session() as session:
         action = session.query(Action).filter_by(id=action_id).first()
         if not action:
@@ -727,57 +671,25 @@ async def edit_action(
         else:
             action.due_date = None
 
-        session.commit()
+        # Handle assignment
+        existing = session.query(Assignment).filter_by(action_id=action_id).first()
+        if assigned_to and assigned_to.strip():
+            if existing:
+                existing.assigned_to = assigned_to.strip()
+                existing.notes = notes.strip() if notes.strip() else existing.notes
+                existing.assigned_at = datetime.utcnow()
+            else:
+                new_assignment = Assignment(
+                    action_id=action_id,
+                    assigned_to=assigned_to.strip(),
+                    notes=notes.strip() if notes.strip() else None,
+                    status="assigned",
+                )
+                session.add(new_assignment)
+        elif existing:
+            # User selected "Unassigned" — remove the assignment
+            session.delete(existing)
 
-    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
-
-
-@app.post("/actions/{action_id}/title")
-async def update_action_title(
-    action_id: int,
-    title: str = Form(...)
-):
-    """Update action title."""
-    with get_session() as session:
-        action = session.query(Action).filter_by(id=action_id).first()
-        if not action:
-            raise HTTPException(status_code=404, detail="Action not found")
-
-        action.title = title
-        session.commit()
-
-    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
-
-
-@app.post("/actions/{action_id}/description")
-async def update_action_description(
-    action_id: int,
-    description: str = Form(...)
-):
-    """Update action description."""
-    with get_session() as session:
-        action = session.query(Action).filter_by(id=action_id).first()
-        if not action:
-            raise HTTPException(status_code=404, detail="Action not found")
-
-        action.description = description if description.strip() else None
-        session.commit()
-
-    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
-
-
-@app.post("/actions/{action_id}/category")
-async def update_action_category(
-    action_id: int,
-    category: str = Form("")
-):
-    """Update action category."""
-    with get_session() as session:
-        action = session.query(Action).filter_by(id=action_id).first()
-        if not action:
-            raise HTTPException(status_code=404, detail="Action not found")
-
-        action.category = category.strip() if category.strip() else None
         session.commit()
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)

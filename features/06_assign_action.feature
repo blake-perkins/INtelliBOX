@@ -17,10 +17,15 @@ Feature: Assign and manage action assignments
     Then the response status is 303
     And the action assignment is saved in the database
 
-  Scenario: Unassign an action
+  Scenario: Unassign an action via edit form
     Given an action titled "Unassign this" is assigned to "frank@example.com"
-    When I unassign the action
+    When I save a full edit form for the action
+      | field       | value          |
+      | title       | Unassign this  |
+      | priority    | medium         |
+      | assigned_to |                |
     Then the response status is 303
+    And the action has no assignment in the database
 
   Scenario: Mark an assigned action as complete
     Given an action titled "Complete this" is assigned to "grace@example.com"

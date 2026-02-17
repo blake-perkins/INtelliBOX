@@ -1,10 +1,10 @@
-# INtelliBOX
+# EmailTools
 
 An automated email action tracking system for fast-paced software teams.
 
 ## Overview
 
-INtelliBOX helps teams manage incoming Requests for Information (RFIs), data calls, and stakeholder requests by:
+EmailTools helps teams manage incoming Requests for Information (RFIs), data calls, and stakeholder requests by:
 - Parsing emails using AI to extract actionable items
 - Storing them in a database with metadata
 - Generating nightly reports showing unassigned actions
@@ -29,7 +29,7 @@ INtelliBOX helps teams manage incoming Requests for Information (RFIs), data cal
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd INtelliBOX
+   cd EmailTools
    ```
 
 2. **Create virtual environment**
@@ -51,7 +51,7 @@ INtelliBOX helps teams manage incoming Requests for Information (RFIs), data cal
 
 5. **Initialize database**
    ```bash
-   intellibox init
+   emailtools init
    ```
 
 ## Usage
@@ -60,47 +60,47 @@ INtelliBOX helps teams manage incoming Requests for Information (RFIs), data cal
 
 Drop `.eml` files in the `data/inbox/` directory and run:
 ```bash
-intellibox process
+emailtools process
 ```
 
 ### View Actions
 
 ```bash
 # List all actions
-intellibox actions list
+emailtools actions list
 
 # List unassigned actions only
-intellibox actions list --unassigned
+emailtools actions list --unassigned
 ```
 
 ### Generate Reports
 
 ```bash
 # Preview report without sending
-intellibox report generate
+emailtools report generate
 
 # Send report immediately
-intellibox report send
+emailtools report send
 
 # Start scheduler for nightly reports (6:00 AM)
-intellibox report schedule
+emailtools report schedule
 ```
 
 ### Database Commands
 
 ```bash
 # View database contents
-intellibox db show
+emailtools db show
 
 # View specific table
-intellibox db show --table actions
+emailtools db show --table actions
 ```
 
 ## Project Structure
 
 ```
-INtelliBOX/
-├── src/intellibox/          # Main application code
+EmailTools/
+├── src/emailtools/          # Main application code
 │   ├── ingestion/          # Email parsing and file watching
 │   ├── ai/                 # GPT-4 integration
 │   ├── reporter/           # Report generation and sending
@@ -109,7 +109,7 @@ INtelliBOX/
 ├── data/                   # Local data (gitignored)
 │   ├── inbox/             # Drop .eml files here
 │   ├── emails/            # Archived emails
-│   └── intellibox.db      # SQLite database
+│   └── emailtools.db      # SQLite database
 └── alembic/               # Database migrations
 ```
 

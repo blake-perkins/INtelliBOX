@@ -33,9 +33,12 @@ Feature: Dashboard
     Then the response status is 200
     And the page contains "Overdue action item"
 
-  Scenario: Change priority of an action
+  Scenario: Change priority of an action via edit form
     Given an unassigned "high" priority action exists with title "Reprioritize this"
-    When I change the action priority to "low"
+    When I save a full edit form for the action
+      | field    | value             |
+      | title    | Reprioritize this |
+      | priority | low               |
     Then the response status is 303
     And the action priority is "low" in the database
 

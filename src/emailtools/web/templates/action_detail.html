@@ -24,26 +24,10 @@
         <span style="background: #d4edda; color: #155724; padding: 0.35rem 0.85rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
             ✓ COMPLETED
         </span>
-        {% endif %}
-        {% if assignment %}
-            {% if assignment.status != 'completed' %}
-            <form method="POST" action="/actions/{{ action.id }}/status" style="display: inline; margin-left: auto;">
-                <input type="hidden" name="status" value="completed">
-                <button type="submit" class="btn"
-                        style="background: #27ae60; color: white; padding: 0.35rem 0.9rem; font-size: 0.8rem;"
-                        onclick="return confirm('Mark this action as completed?')">
-                    ✓ Done
-                </button>
-            </form>
-            {% else %}
-            <form method="POST" action="/actions/{{ action.id }}/status" style="display: inline; margin-left: auto;">
-                <input type="hidden" name="status" value="assigned">
-                <button type="submit" class="btn"
-                        style="background: white; color: #f39c12; border: 1.5px solid #f39c12; padding: 0.35rem 0.9rem; font-size: 0.8rem;">
-                    ↩ Reopen
-                </button>
-            </form>
-            {% endif %}
+        {% elif assignment %}
+        <span style="background: #e8f4fd; color: #1a6fa8; padding: 0.35rem 0.85rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
+            ASSIGNED
+        </span>
         {% endif %}
     </div>
     <div style="color: #888; font-size: 0.875rem;">
@@ -54,26 +38,89 @@
 <!-- Two-column layout -->
 <div style="display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start;">
 
-    <!-- LEFT: Assignment + Edit -->
+    <!-- LEFT: Unified Edit Form -->
     <div style="display: grid; gap: 1.5rem;">
 
-        <!-- Assignment Card (first for quick access) -->
         <div class="card">
             <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; margin: -1.5rem -1.5rem 1.5rem -1.5rem; padding: 1rem 1.5rem;">
-                {% if assignment %}Update Assignment{% else %}Assign Action{% endif %}
+                Edit Action
             </div>
 
-            <form method="POST" action="/actions/{{ action.id }}/assign">
+            <form method="POST" action="/actions/{{ action.id }}/edit">
                 <div style="display: grid; gap: 1.25rem;">
+                    <!-- Title -->
                     <div>
-                        <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Assign To</label>
+                        <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Title</label>
+                        <input type="text"
+                               name="title"
+                               value="{{ action.title }}"
+                               style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; transition: border-color 0.15s;"
+                               onfocus="this.style.borderColor='#667eea'"
+                               onblur="this.style.borderColor='#ddd'"
+                               required>
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Description</label>
+                        <textarea name="description"
+                                  rows="4"
+                                  placeholder="Add context or details about this action..."
+                                  style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: border-color 0.15s;"
+                                  onfocus="this.style.borderColor='#667eea'"
+                                  onblur="this.style.borderColor='#ddd'">{{ action.description or '' }}</textarea>
+                    </div>
+
+                    <!-- Priority + Due Date + Category (inline row) -->
+                    <div style="display: grid; grid-template-columns: 150px 1fr 1fr; gap: 1.25rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Priority</label>
+                            <select name="priority"
+                                    style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; background: white; transition: border-color 0.15s;"
+                                    onfocus="this.style.borderColor='#667eea'"
+                                    onblur="this.style.borderColor='#ddd'">
+                                <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
+                                <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Due Date <span style="font-weight: 400; color: #999;">(optional)</span></label>
+                            <input type="date"
+                                   name="due_date"
+                                   value="{% if action.due_date %}{{ action.due_date.strftime('%Y-%m-%d') }}{% endif %}"
+                                   style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; transition: border-color 0.15s;"
+                                   onfocus="this.style.borderColor='#667eea'"
+                                   onblur="this.style.borderColor='#ddd'">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Category <span style="font-weight: 400; color: #999;">(optional)</span></label>
+                            <select name="category"
+                                    style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; background: white; transition: border-color 0.15s;"
+                                    onfocus="this.style.borderColor='#667eea'"
+                                    onblur="this.style.borderColor='#ddd'">
+                                <option value="">— none —</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.name }}" {% if action.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div style="border-top: 1px solid #ecf0f1; margin: 0.25rem 0;"></div>
+
+                    <!-- Assignment -->
+                    <div>
+                        <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Assigned To <span style="font-weight: 400; color: #999;">(optional)</span></label>
                         {% if roster %}
                         <select name="assigned_to"
+                                id="assigned-to-select"
                                 style="width: 100%; max-width: 460px; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; background: white; transition: border-color 0.15s;"
                                 onfocus="this.style.borderColor='#667eea'"
                                 onblur="this.style.borderColor='#ddd'"
-                                required>
-                            <option value="" disabled {% if not assignment %}selected{% endif %}>Select a team member...</option>
+                                onchange="document.getElementById('notes-section').style.display = this.value ? 'block' : 'none'">
+                            <option value="">— Unassigned —</option>
                             {% for member in roster %}
                             <option value="{{ member.full_name }}"
                                 {% if assignment and assignment.assigned_to == member.full_name %}selected{% endif %}>
@@ -91,23 +138,22 @@
                         {% endif %}
                     </div>
 
-                    <div>
+                    <div id="notes-section" style="display: {% if assignment %}block{% else %}none{% endif %};">
                         <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Notes <span style="font-weight: 400; color: #999;">(optional)</span></label>
                         <textarea name="notes"
-                                  rows="3"
+                                  rows="2"
                                   placeholder="Add any context or instructions..."
-                                  style="width: 100%; max-width: 600px; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: border-color 0.15s;"
+                                  style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: border-color 0.15s;"
                                   onfocus="this.style.borderColor='#667eea'"
                                   onblur="this.style.borderColor='#ddd'">{% if assignment and assignment.notes %}{{ assignment.notes }}{% endif %}</textarea>
                     </div>
 
-                    {% if roster %}
+                    <!-- Save -->
                     <div>
                         <button type="submit" class="btn btn-primary" style="padding: 0.7rem 1.75rem; font-size: 0.95rem;">
-                            {% if assignment %}Update Assignment{% else %}Assign Action{% endif %}
+                            Save Changes
                         </button>
                     </div>
-                    {% endif %}
                 </div>
             </form>
 
@@ -131,92 +177,8 @@
                     </button>
                 </form>
                 {% endif %}
-                <form method="POST" action="/actions/{{ action.id }}/unassign" style="display: inline;">
-                    <button type="submit" class="btn"
-                            style="background: white; color: #e74c3c; border: 1.5px solid #e74c3c; padding: 0.65rem 1.4rem; font-size: 0.9rem;"
-                            onclick="return confirm('Remove assignment from this action?')">
-                        Unassign
-                    </button>
-                </form>
             </div>
             {% endif %}
-        </div>
-
-        <!-- Edit Action Card -->
-        <div class="card">
-            <div class="card-header">Edit Action</div>
-
-            <form method="POST" action="/actions/{{ action.id }}/edit">
-                <div style="display: grid; gap: 1.25rem;">
-                    <!-- Title -->
-                    <div>
-                        <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Title</label>
-                        <input type="text"
-                               name="title"
-                               value="{{ action.title }}"
-                               style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; transition: border-color 0.15s;"
-                               onfocus="this.style.borderColor='#667eea'"
-                               onblur="this.style.borderColor='#ddd'"
-                               required>
-                    </div>
-
-                    <!-- Description -->
-                    <div>
-                        <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Description</label>
-                        <textarea name="description"
-                                  rows="5"
-                                  placeholder="Add context or details about this action..."
-                                  style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; font-family: inherit; resize: vertical; transition: border-color 0.15s;"
-                                  onfocus="this.style.borderColor='#667eea'"
-                                  onblur="this.style.borderColor='#ddd'">{{ action.description or '' }}</textarea>
-                    </div>
-
-                    <!-- Priority + Due Date (inline row) -->
-                    <div style="display: grid; grid-template-columns: 180px 1fr; gap: 1.25rem;">
-                        <div>
-                            <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Priority</label>
-                            <select name="priority"
-                                    style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; background: white; transition: border-color 0.15s;"
-                                    onfocus="this.style.borderColor='#667eea'"
-                                    onblur="this.style.borderColor='#ddd'">
-                                <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
-                                <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
-                                <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Due Date <span style="font-weight: 400; color: #999;">(optional)</span></label>
-                            <input type="date"
-                                   name="due_date"
-                                   value="{% if action.due_date %}{{ action.due_date.strftime('%Y-%m-%d') }}{% endif %}"
-                                   style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; transition: border-color 0.15s;"
-                                   onfocus="this.style.borderColor='#667eea'"
-                                   onblur="this.style.borderColor='#ddd'">
-                        </div>
-                    </div>
-
-                    <!-- Category -->
-                    <div>
-                        <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.875rem; color: #555;">Category <span style="font-weight: 400; color: #999;">(optional)</span></label>
-                        <select name="category"
-                                style="width: 100%; padding: 0.7rem 0.875rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.95rem; background: white; transition: border-color 0.15s;"
-                                onfocus="this.style.borderColor='#667eea'"
-                                onblur="this.style.borderColor='#ddd'">
-                            <option value="">— none —</option>
-                            {% for cat in categories %}
-                            <option value="{{ cat.name }}" {% if action.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <!-- Save -->
-                    <div>
-                        <button type="submit" class="btn btn-primary" style="padding: 0.7rem 1.75rem; font-size: 0.95rem;">
-                            Save Changes
-                        </button>
-                    </div>
-                </div>
-            </form>
         </div>
 
     </div><!-- end left column -->
@@ -251,19 +213,8 @@
             <div style="font-weight: 700; font-size: 0.8rem; letter-spacing: 0.06em; color: #888; text-transform: uppercase; margin-bottom: 1rem;">Details</div>
             <div style="display: grid; gap: 0.75rem;">
                 <div>
-                    <div style="font-size: 0.75rem; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Category</div>
-                    <form method="POST" action="/actions/{{ action.id }}/category" style="display: flex; gap: 0.4rem; align-items: center;">
-                        <select name="category"
-                                style="flex: 1; padding: 0.35rem 0.5rem; border: 1.5px solid #ddd; border-radius: 5px; font-size: 0.875rem; min-width: 0; background: white; transition: border-color 0.15s;"
-                                onfocus="this.style.borderColor='#667eea'"
-                                onblur="this.style.borderColor='#ddd'">
-                            <option value="">— none —</option>
-                            {% for cat in categories %}
-                            <option value="{{ cat.name }}" {% if action.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn btn-primary" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; white-space: nowrap;">Save</button>
-                    </form>
+                    <div style="font-size: 0.75rem; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Category</div>
+                    <div style="font-size: 0.9rem; color: #2c3e50;">{{ action.category or '—' }}</div>
                 </div>
                 <div>
                     <div style="font-size: 0.75rem; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Created</div>

@@ -18,13 +18,6 @@ def step_assign_action(context, assignee):
     )
 
 
-@when("I unassign the action")
-def step_unassign_action(context):
-    context.response = context.client.post(
-        f"/actions/{context.last_action_id}/unassign",
-        follow_redirects=False,
-    )
-
 
 @when("I mark the action as complete")
 def step_complete_action(context):
@@ -34,56 +27,11 @@ def step_complete_action(context):
     )
 
 
-@when('I change the action priority to "{priority}"')
-def step_change_priority(context, priority):
-    context.response = context.client.post(
-        f"/actions/{context.last_action_id}/priority",
-        data={"priority": priority},
-        follow_redirects=False,
-    )
-
-
 @when('I change the action status to "{status}"')
 def step_change_status(context, status):
     context.response = context.client.post(
         f"/actions/{context.last_action_id}/status",
         data={"status": status},
-        follow_redirects=False,
-    )
-
-
-@when('I edit the action title to "{title}"')
-def step_edit_title(context, title):
-    context.response = context.client.post(
-        f"/actions/{context.last_action_id}/title",
-        data={"title": title},
-        follow_redirects=False,
-    )
-
-
-@when('I edit the action description to "{description}"')
-def step_edit_description(context, description):
-    context.response = context.client.post(
-        f"/actions/{context.last_action_id}/description",
-        data={"description": description},
-        follow_redirects=False,
-    )
-
-
-@when('I edit the action category to "{category}"')
-def step_edit_category(context, category):
-    context.response = context.client.post(
-        f"/actions/{context.last_action_id}/category",
-        data={"category": category},
-        follow_redirects=False,
-    )
-
-
-@when('I edit the action due date to "{due_date}"')
-def step_edit_due_date(context, due_date):
-    context.response = context.client.post(
-        f"/actions/{context.last_action_id}/due-date",
-        data={"due_date": due_date},
         follow_redirects=False,
     )
 
