@@ -3,40 +3,6 @@
 {% block title %}Actions - INtelliBOX{% endblock %}
 
 {% block content %}
-<!-- Compact Metrics Bar -->
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
-    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 1rem;">
-        <!-- Metrics -->
-        <div style="display: flex; gap: 1.5rem; align-items: center; font-size: 0.95rem; flex-wrap: wrap;">
-            <span style="font-weight: 700; font-size: 1.05rem; letter-spacing: 0.03em;">📋 Actions</span>
-            <div style="opacity: 0.4;">|</div>
-            <a href="/actions" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px; {% if not priority and not assigned and not overdue %}background: rgba(255,255,255,0.25); outline: 1px solid rgba(255,255,255,0.4);{% endif %}" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
-                <span style="opacity: 0.8;">📋</span>
-                <span><strong>{{ total_actions }}</strong> <span style="opacity: 0.7;">total</span></span>
-            </a>
-            <div style="opacity: 0.4;">|</div>
-            <a href="/actions?assigned=false" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px; {% if assigned == 'false' %}background: rgba(255,255,255,0.25); outline: 1px solid rgba(255,255,255,0.4);{% endif %}" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
-                <span style="opacity: 0.8;">📋</span>
-                <span><strong>{{ unassigned_actions }}</strong> <span style="opacity: 0.7;">unassigned</span></span>
-            </a>
-            <div style="opacity: 0.4;">|</div>
-            <a href="/actions?priority=high" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px; {% if priority == 'high' %}background: rgba(255,255,255,0.25); outline: 1px solid rgba(255,255,255,0.4);{% endif %}" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
-                <span style="opacity: 0.8;">🔥</span>
-                <span style="{% if high_priority > 0 and priority != 'high' %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
-                    <strong>{{ high_priority }}</strong> <span style="opacity: 0.7;">high</span>
-                </span>
-            </a>
-            <div style="opacity: 0.4;">|</div>
-            <a href="/actions?overdue=true" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px; {% if overdue == 'true' %}background: rgba(255,255,255,0.25); outline: 1px solid rgba(255,255,255,0.4);{% endif %}" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
-                <span style="opacity: 0.8;">⚠️</span>
-                <span style="{% if overdue_count > 0 and overdue != 'true' %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
-                    <strong>{{ overdue_count }}</strong> <span style="opacity: 0.7;">overdue</span>
-                </span>
-            </a>
-        </div>
-    </div>
-</div>
-
 <!-- Search and Filters -->
 <div class="card" style="margin-bottom: 1.5rem;">
     <form method="get" style="display: grid; gap: 1rem;">

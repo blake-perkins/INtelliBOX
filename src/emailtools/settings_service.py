@@ -100,6 +100,12 @@ class SettingsService:
         return '\n'.join(f'   - "{c["name"]}": {c["description"]}' for c in categories)
 
     @staticmethod
+    def update_last_sync_time() -> None:
+        """Record the current UTC time as the last sync timestamp."""
+        from datetime import datetime
+        SettingsService.set_setting('last_sync_time', datetime.utcnow().isoformat())
+
+    @staticmethod
     def parse_categories_text(text: str) -> list:
         """
         Parse a categories textarea value into a list of {name, description} dicts.

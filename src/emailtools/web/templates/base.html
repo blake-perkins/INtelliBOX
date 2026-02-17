@@ -272,9 +272,52 @@
                 <li><a href="/emails">Emails</a></li>
                 <li><a href="/report">Insights</a></li>
                 <li><a href="/settings">⚙️ Settings</a></li>
+                <li style="border-left: 1px solid rgba(255,255,255,0.2); padding-left: 1.5rem; margin-left: 0.25rem; font-size: 0.7rem; opacity: 0.55; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
+                    📡 <span id="nav-last-sync">—</span>
+                </li>
             </ul>
         </div>
     </nav>
+
+    <!-- Global Stats Bar -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.65rem 2rem; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
+        <div style="max-width: 1400px; margin: 0 auto; display: flex; gap: 1.25rem; align-items: center; justify-content: center; font-size: 0.875rem; flex-wrap: wrap;">
+            <a href="/actions" style="display: flex; align-items: center; gap: 0.4rem; color: white; text-decoration: none; border-radius: 10px; padding: 0.1rem 0.4rem; transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='transparent'">
+                <span style="opacity: 0.75;">📊</span>
+                <span><strong id="stat-total">—</strong> <span style="opacity: 0.7;">total</span></span>
+            </a>
+            <div style="opacity: 0.35;">|</div>
+            <a href="/actions?assigned=false" style="display: flex; align-items: center; gap: 0.4rem; color: white; text-decoration: none; border-radius: 10px; padding: 0.1rem 0.4rem; transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='transparent'">
+                <span style="opacity: 0.75;">📥</span>
+                <span><strong id="stat-unassigned">—</strong> <span style="opacity: 0.7;">unassigned</span></span>
+            </a>
+            <div style="opacity: 0.35;">|</div>
+            <a href="/actions?assigned=true" style="display: flex; align-items: center; gap: 0.4rem; color: white; text-decoration: none; border-radius: 10px; padding: 0.1rem 0.4rem; transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='transparent'">
+                <span style="opacity: 0.75;">⏳</span>
+                <span><strong id="stat-in-progress">—</strong> <span style="opacity: 0.7;">in progress</span></span>
+            </a>
+            <div style="opacity: 0.35;">|</div>
+            <a href="/actions?overdue=true" style="display: flex; align-items: center; gap: 0.4rem; color: white; text-decoration: none; border-radius: 10px; padding: 0.1rem 0.4rem; transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='transparent'">
+                <span>🔴</span>
+                <span id="stat-overdue-wrap"><strong id="stat-overdue">—</strong> <span style="opacity: 0.7;">overdue</span></span>
+            </a>
+            <div style="opacity: 0.35;">|</div>
+            <a href="/actions?priority=high" style="display: flex; align-items: center; gap: 0.4rem; color: white; text-decoration: none; border-radius: 10px; padding: 0.1rem 0.4rem; transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='transparent'">
+                <span>🟠</span>
+                <span id="stat-high-wrap"><strong id="stat-high">—</strong> <span style="opacity: 0.7;">high</span></span>
+            </a>
+            <div style="opacity: 0.35;">|</div>
+            <a href="/actions?priority=medium" style="display: flex; align-items: center; gap: 0.4rem; color: white; text-decoration: none; border-radius: 10px; padding: 0.1rem 0.4rem; transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='transparent'">
+                <span>🟡</span>
+                <span id="stat-medium-wrap"><strong id="stat-medium">—</strong> <span style="opacity: 0.7;">medium</span></span>
+            </a>
+            <div style="opacity: 0.35;">|</div>
+            <a href="/actions?priority=low" style="display: flex; align-items: center; gap: 0.4rem; color: white; text-decoration: none; border-radius: 10px; padding: 0.1rem 0.4rem; transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='transparent'">
+                <span>🟢</span>
+                <span id="stat-low-wrap"><strong id="stat-low">—</strong> <span style="opacity: 0.7;">low</span></span>
+            </a>
+        </div>
+    </div>
 
     <div class="container">
         {% block content %}{% endblock %}
@@ -301,6 +344,31 @@
             });
         }
     });
+    </script>
+    <script>
+    /* Populate global stats bar from /api/stats */
+    (async function() {
+        try {
+            const data = await fetch('/api/stats').then(r => r.json());
+            document.getElementById('nav-last-sync').textContent = data.last_sync || 'never';
+            document.getElementById('stat-total').textContent = data.total_actions ?? '—';
+            document.getElementById('stat-unassigned').textContent = data.unassigned_actions ?? '—';
+            document.getElementById('stat-in-progress').textContent = data.in_progress ?? '—';
+            document.getElementById('stat-overdue').textContent = data.overdue_count ?? '—';
+            document.getElementById('stat-high').textContent = data.high_priority ?? '—';
+            document.getElementById('stat-medium').textContent = data.medium_priority ?? '—';
+            document.getElementById('stat-low').textContent = data.low_priority ?? '—';
+            const pill = 'padding: 0.15rem 0.55rem; border-radius: 10px;';
+            if (data.overdue_count > 0)
+                document.getElementById('stat-overdue-wrap').style.cssText = pill + 'background: rgba(231,76,60,0.5);';
+            if (data.high_priority > 0)
+                document.getElementById('stat-high-wrap').style.cssText = pill + 'background: rgba(210,80,20,0.55);';
+            if (data.medium_priority > 0)
+                document.getElementById('stat-medium-wrap').style.cssText = pill + 'background: rgba(220,180,0,0.5);';
+            if (data.low_priority > 0)
+                document.getElementById('stat-low-wrap').style.cssText = pill + 'background: rgba(39,174,96,0.35);';
+        } catch (e) { /* silently ignore if server unavailable */ }
+    })();
     </script>
     {% block extra_js %}{% endblock %}
 </body>

@@ -65,6 +65,8 @@ def process(watch: bool, interval: int):
                 click.echo(f"[OK] Processed {count} email(s)")
             else:
                 click.echo("No new emails to process")
+        from emailtools.settings_service import SettingsService
+        SettingsService.update_last_sync_time()
 
 
 @cli.group()

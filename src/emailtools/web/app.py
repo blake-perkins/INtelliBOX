@@ -449,16 +449,47 @@ async def view_report(request: Request, refresh: bool = False):
 async def get_stats():
     """API endpoint for statistics (for auto-refresh)."""
     with get_session() as session:
+        today = datetime.utcnow().date()
+        last_sync = "never"
+        last_sync_str = SettingsService.get_setting('last_sync_time', None)
+        if last_sync_str:
+            try:
+                last_sync_dt = datetime.fromisoformat(last_sync_str)
+                delta = datetime.utcnow() - last_sync_dt
+                if delta.total_seconds() < 3600:
+                    last_sync = f"{int(delta.total_seconds() / 60)}m ago"
+                elif delta.total_seconds() < 86400:
+                    last_sync = f"{int(delta.total_seconds() / 3600)}h ago"
+                else:
+                    last_sync = f"{int(delta.total_seconds() / 86400)}d ago"
+            except (ValueError, TypeError):
+                pass
         return {
+            "last_sync": last_sync,
             "total_emails": session.query(Email).count(),
             "total_actions": session.query(Action).count(),
             "unassigned_actions": session.query(Action).outerjoin(Assignment).filter(
                 Assignment.id.is_(None)
             ).count(),
+            "in_progress": session.query(Assignment).filter(
+                Assignment.status == "in_progress"
+            ).count(),
+            "overdue_count": session.query(Action).outerjoin(Assignment).filter(
+                Action.due_date < today,
+                (Assignment.id.is_(None)) | (Assignment.status != "completed")
+            ).count(),
             "high_priority": session.query(Action).outerjoin(Assignment).filter(
                 Assignment.id.is_(None),
                 Action.priority == "high"
-            ).count()
+            ).count(),
+            "medium_priority": session.query(Action).outerjoin(Assignment).filter(
+                Assignment.id.is_(None),
+                Action.priority == "medium"
+            ).count(),
+            "low_priority": session.query(Action).outerjoin(Assignment).filter(
+                Assignment.id.is_(None),
+                Action.priority == "low"
+            ).count(),
         }
 
 

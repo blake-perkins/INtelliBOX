@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from emailtools.utils.logging import logger
+from emailtools.settings_service import SettingsService
 
 
 def watch_inbox(
@@ -49,6 +50,12 @@ def watch_inbox(
                         logger.error(f"Error processing {eml_file}: {e}")
                         # Mark as processed to avoid retry loop
                         processed_files.add(eml_file)
+
+            # Record this poll as the last sync time (even if no new files)
+            try:
+                SettingsService.update_last_sync_time()
+            except Exception:
+                pass
 
             if run_once:
                 logger.info("Single run complete, exiting")
