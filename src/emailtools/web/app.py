@@ -270,7 +270,12 @@ async def view_action(request: Request, action_id: int):
             Action.id != action_id
         ).all()
 
-        # Get recent assignees for quick selection
+        # Get roster for assignment dropdown
+        roster = session.query(RosterMember).filter_by(active=True).order_by(
+            RosterMember.last_name, RosterMember.first_name
+        ).all()
+
+        # Get recent assignees as fallback when no roster
         recent_assignees = session.query(Assignment.assigned_to).distinct().order_by(
             desc(Assignment.assigned_at)
         ).limit(10).all()
@@ -281,8 +286,8 @@ async def view_action(request: Request, action_id: int):
             "action": action,
             "assignment": assignment,
             "related_actions": related_actions,
+            "roster": roster,
             "recent_assignees": recent_assignee_list,
-            "team_members": settings.get_team_members(),
             "current_time": datetime.utcnow()
         })
 
@@ -589,6 +594,40 @@ async def update_assignment_status(
             raise HTTPException(status_code=400, detail="Invalid status")
 
         assignment.status = status
+        session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
+@app.post("/actions/{action_id}/edit")
+async def edit_action(
+    action_id: int,
+    title: str = Form(...),
+    description: str = Form(""),
+    priority: str = Form("medium"),
+    due_date: str = Form(""),
+):
+    """Update title, description, priority, and due date in one submit."""
+    with get_session() as session:
+        action = session.query(Action).filter_by(id=action_id).first()
+        if not action:
+            raise HTTPException(status_code=404, detail="Action not found")
+
+        action.title = title.strip()
+        action.description = description.strip() if description.strip() else None
+
+        if priority in ["high", "medium", "low"]:
+            action.priority = priority
+
+        if due_date and due_date.strip():
+            from datetime import datetime as dt
+            try:
+                action.due_date = dt.strptime(due_date.strip(), "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        else:
+            action.due_date = None
+
         session.commit()
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)

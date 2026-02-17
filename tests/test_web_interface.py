@@ -15,7 +15,7 @@ from unittest.mock import patch
 import tempfile
 
 from emailtools.database import Base
-from emailtools.models import Email, Action, Assignment
+from emailtools.models import Email, Action, Assignment, RosterMember
 
 # Create test database with unique temp file
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_web_interface.db', prefix='test_emailtools_')
@@ -224,8 +224,7 @@ class TestWebInterface:
         assert b"Provide budget data" in response.content
 
     def test_action_detail(self, setup_database):
-        """Test individual action detail page."""
-        # Get the first action's ID
+        """Test individual action detail page loads with action content."""
         session = TestSessionLocal()
         action = session.query(Action).first()
         action_id = action.id
@@ -233,7 +232,41 @@ class TestWebInterface:
 
         response = client.get(f"/actions/{action_id}")
         assert response.status_code == 200
-        assert b"Action Details" in response.content
+        assert b"Edit Action" in response.content
+        assert b"Source Email" in response.content
+
+    def test_action_detail_assign_shows_roster_dropdown(self, setup_database):
+        """When roster has members, the assign field is a <select> dropdown."""
+        session = TestSessionLocal()
+        action = session.query(Action).first()
+        action_id = action.id
+        member = RosterMember(first_name="Alice", last_name="Smith", email="alice@example.com")
+        session.add(member)
+        session.commit()
+        session.close()
+
+        response = client.get(f"/actions/{action_id}")
+        assert response.status_code == 200
+        # Dropdown present with member name
+        assert b'name="assigned_to"' in response.content
+        assert b"Smith, Alice" in response.content
+        # Free-text fallback and empty-roster CTA must NOT appear
+        assert b"Add Team Members" not in response.content
+
+    def test_action_detail_assign_shows_cta_when_roster_empty(self, setup_database):
+        """When roster is empty, the assign area shows an Add Team Members CTA instead of a free-text input."""
+        session = TestSessionLocal()
+        action = session.query(Action).first()
+        action_id = action.id
+        session.close()
+
+        response = client.get(f"/actions/{action_id}")
+        assert response.status_code == 200
+        # CTA link to settings roster tab
+        assert b"Add Team Members" in response.content
+        assert b"/settings#roster" in response.content
+        # No free-text input or select for assigned_to
+        assert b'name="assigned_to"' not in response.content
 
     def test_action_detail_not_found(self, setup_database):
         """Test 404 for non-existent action."""

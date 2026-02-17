@@ -26,7 +26,9 @@
             <div style="font-size: 0.95rem;">{{ email.subject }}</div>
 
             <div style="color: #666; font-weight: 600; font-size: 0.9rem;">Received:</div>
-            <div style="font-size: 0.95rem;">{{ email.received_date.strftime('%B %d, %Y at %I:%M %p') }}</div>
+            <div style="font-size: 0.95rem;">
+                <time class="local-time" datetime="{{ email.received_date.isoformat() }}Z">{{ email.received_date.strftime('%b %d, %Y') }}</time>
+            </div>
         </div>
     </div>
 </div>

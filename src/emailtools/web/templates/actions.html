@@ -115,7 +115,7 @@
     {% set is_complete = assignment and assignment.status == 'completed' %}
     {% set is_not_complete = not is_complete %}
     {% set is_urgent = (is_overdue or is_due_soon) and is_not_complete %}
-    <tr style="{% if is_urgent %}background-color: #fff5f5;{% elif is_complete %}background-color: #f8f9fa; opacity: 0.7;{% endif %}">
+    <tr style="{% if is_overdue and is_not_complete %}background-color: #fde8e8;{% elif is_urgent %}background-color: #fff0f0;{% elif is_complete %}background-color: #f8f9fa; opacity: 0.7;{% endif %}">
         <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
             <span class="badge badge-{{ action.priority }}">{{ action.priority }}</span>
         </td>
@@ -151,10 +151,17 @@
         </td>
         <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
             {% if action.due_date %}
-                <span style="{% if is_urgent %}color: #e74c3c; font-weight: 600;{% endif %}">
-                    {{ action.due_date.strftime('%b %d, %Y') }}
-                    {% if is_overdue and is_not_complete %}⚠️{% elif is_due_soon and is_not_complete %}🕐{% endif %}
+                {% if is_overdue and is_not_complete %}
+                <span style="color: white; font-weight: 700; background: #e74c3c; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.85rem; white-space: nowrap;">
+                    ⚠️ {{ action.due_date.strftime('%b %d, %Y') }}
                 </span>
+                {% elif is_due_soon and is_not_complete %}
+                <span style="color: #c0392b; font-weight: 600;">
+                    🕐 {{ action.due_date.strftime('%b %d, %Y') }}
+                </span>
+                {% else %}
+                <span>{{ action.due_date.strftime('%b %d, %Y') }}</span>
+                {% endif %}
             {% else %}
                 <span style="color: #999;">No date</span>
             {% endif %}

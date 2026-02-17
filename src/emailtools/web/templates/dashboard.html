@@ -34,34 +34,38 @@
 
 <!-- PRIORITY 1: Immediate Attention Required -->
 {% if overdue_actions %}
-<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #e74c3c;">
-    <div class="card-header" style="background-color: #fee; color: #c0392b; font-weight: 600;">
-        ⚠️ Overdue - Needs Immediate Attention ({{ overdue_actions|length }})
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #c0392b;">
+    <div class="card-header" style="background: #e74c3c; color: white; font-weight: 700; margin: -1.5rem -1.5rem 1rem -1.5rem; padding: 1rem 1.5rem;">
+        ⚠️ Overdue — Needs Immediate Attention ({{ overdue_actions|length }})
     </div>
-    <table style="margin-top: 0;">
+    <table style="margin: 0 -1.5rem -1.5rem -1.5rem; width: calc(100% + 3rem);">
         <thead>
             <tr>
-                <th>Action</th>
-                <th>Assigned To</th>
-                <th>Due Date</th>
+                <th style="padding-left: 1.5rem;">Action</th>
+                <th style="width: 140px;">Due Date</th>
+                <th style="width: 160px;">Assigned To</th>
             </tr>
         </thead>
         <tbody>
             {% for action in overdue_actions %}
-            <tr style="cursor: pointer; background-color: #fff5f5;" onclick="window.location='/actions/{{ action.id }}'">
-                <td>
+            <tr style="cursor: pointer; background-color: #fde8e8;" onclick="window.location='/actions/{{ action.id }}'">
+                <td style="padding-left: 1.5rem;">
                     <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
-                    <div style="font-size: 0.85rem; color: #666;">{{ action.email.from_address }}</div>
+                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem;">
+                        {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
+                    </div>
+                </td>
+                <td style="white-space: nowrap;">
+                    <span style="color: white; font-weight: 700; background: #e74c3c; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.82rem;">
+                        ⚠️ {{ action.due_date.strftime('%b %d') }}
+                    </span>
                 </td>
                 <td style="font-size: 0.9rem;">
                     {% if action.assignments %}
-                        <strong>{{ action.assignments[0].assigned_to }}</strong>
+                        <span style="font-weight: 600; color: #27ae60;">{{ action.assignments[0].assigned_to }}</span>
                     {% else %}
-                        <span style="color: #e74c3c; font-weight: 600;">⚠️ Unassigned</span>
+                        <span style="color: #e67e22; font-weight: 600;">Unassigned</span>
                     {% endif %}
-                </td>
-                <td style="color: #e74c3c; font-weight: 600; white-space: nowrap;">
-                    {{ action.due_date.strftime('%b %d') }}
                 </td>
             </tr>
             {% endfor %}
@@ -73,33 +77,47 @@
 <!-- PRIORITY 2: High Priority Needs Assignment -->
 {% if high_priority_actions %}
 <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #f39c12;">
-    <div class="card-header" style="background-color: #fff9e6; color: #d68910; font-weight: 600;">
+    <div class="card-header" style="background-color: #fff9e6; color: #d68910; font-weight: 600; margin: -1.5rem -1.5rem 1rem -1.5rem; padding: 1rem 1.5rem;">
         🔥 High Priority - Needs Assignment ({{ high_priority }})
     </div>
-    <table style="margin-top: 0;">
+    <table style="margin: 0 -1.5rem -1.5rem -1.5rem; width: calc(100% + 3rem);">
         <thead>
             <tr>
-                <th>Action</th>
-                <th>Due Date</th>
-                <th style="width: 120px;">Quick Assign</th>
+                <th style="padding-left: 1.5rem;">Action</th>
+                <th style="width: 140px;">Due Date</th>
+                <th style="width: 160px;">Assigned To</th>
             </tr>
         </thead>
         <tbody>
             {% for action in high_priority_actions %}
+            {% set hp_assignment = action.assignments[0] if action.assignments else None %}
+            {% set is_overdue = action.due_date and action.due_date < current_time %}
             <tr style="cursor: pointer; background-color: #fffcf5;" onclick="window.location='/actions/{{ action.id }}'">
-                <td>
+                <td style="padding-left: 1.5rem;">
                     <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
-                    <div style="font-size: 0.85rem; color: #666;">{{ action.email.from_address }}</div>
+                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem;">
+                        {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
+                    </div>
                 </td>
                 <td style="white-space: nowrap;">
                     {% if action.due_date %}
-                        {{ action.due_date.strftime('%b %d') }}
+                        {% if is_overdue %}
+                        <span style="color: white; font-weight: 700; background: #e74c3c; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.82rem;">
+                            ⚠️ {{ action.due_date.strftime('%b %d') }}
+                        </span>
+                        {% else %}
+                            {{ action.due_date.strftime('%b %d, %Y') }}
+                        {% endif %}
                     {% else %}
                         <span style="color: #999;">No date</span>
                     {% endif %}
                 </td>
-                <td onclick="event.stopPropagation();">
-                    <a href="/actions/{{ action.id }}" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; white-space: nowrap;">Assign →</a>
+                <td style="font-size: 0.9rem;">
+                    {% if hp_assignment %}
+                        <span style="font-weight: 600; color: #27ae60;">{{ hp_assignment.assigned_to }}</span>
+                    {% else %}
+                        <span style="color: #e67e22; font-weight: 600;">Unassigned</span>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -172,7 +190,7 @@
 
 <!-- Program News Summary - Enhanced Structured View -->
 <div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin: -1.5rem -1.5rem 1rem -1.5rem; padding: 1rem 1.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <span>📰 Program News (Last 7 Days)</span>
             <span style="font-size: 0.75rem; opacity: 0.9;">
@@ -308,7 +326,7 @@
                     <div style="font-size: 0.8rem; color: #7f8c8d;">
                         <span style="color: #3498db;">{{ assignment.assigned_to }}</span>
                         <span style="margin: 0 0.5rem;">•</span>
-                        <span>{{ assignment.assigned_at.strftime('%b %d, %I:%M%p') }}</span>
+                        <time class="local-time" datetime="{{ assignment.assigned_at.isoformat() }}Z">{{ assignment.assigned_at.strftime('%b %d, %Y') }}</time>
                     </div>
                 </div>
                 {% endfor %}
@@ -332,7 +350,7 @@
                     <div style="font-size: 0.8rem; color: #7f8c8d;">
                         <span style="color: #27ae60;">{{ assignment.assigned_to }}</span>
                         <span style="margin: 0 0.5rem;">•</span>
-                        <span>{{ assignment.assigned_at.strftime('%b %d, %I:%M%p') }}</span>
+                        <time class="local-time" datetime="{{ assignment.assigned_at.isoformat() }}Z">{{ assignment.assigned_at.strftime('%b %d, %Y') }}</time>
                     </div>
                 </div>
                 {% endfor %}
