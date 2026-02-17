@@ -387,16 +387,21 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         ReportCache.generated_at.desc()
     ).first()
 
-    # Only regenerate when explicitly requested (force_refresh) or when no cache
-    # exists at all. Never auto-regenerate on normal page loads — that blocks the
-    # request on a slow AI call and makes the page appear frozen.
-    should_regenerate_insights = force_refresh or (not latest_cache)
+    # Only regenerate when explicitly requested (force_refresh). Never
+    # auto-regenerate on normal page loads — that blocks the request on a
+    # slow AI call. When no cache exists the template shows a "Generate" CTA.
+    should_regenerate_insights = force_refresh
 
-    if not latest_cache:
-        logger.info("No insights cache found, generating AI insights for the first time")
+    if not latest_cache and not force_refresh:
+        logger.info("No insights cache found; waiting for user to trigger generation")
 
     # Get or generate AI insights
-    if not should_regenerate_insights and latest_cache:
+    if not should_regenerate_insights and not latest_cache:
+        # No cache and user hasn't requested generation — show empty state
+        insights = None
+        is_cached = False
+        insights_generated_at = None
+    elif not should_regenerate_insights and latest_cache:
         logger.info(f"Using cached AI insights (generated {latest_cache.generated_at})")
         cached_data = json.loads(latest_cache.report_data)
         insights = cached_data.get("insights", {})
@@ -441,7 +446,7 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
     # Insights are considered stale if cached and older than 1 hour, or if new
     # actions exist since the cache was generated.
     is_stale = False
-    if is_cached:
+    if is_cached and insights_generated_at:
         cache_age_seconds = (now - insights_generated_at).total_seconds()
         if cache_age_seconds > 3600:
             is_stale = True
