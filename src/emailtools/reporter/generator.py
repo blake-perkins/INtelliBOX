@@ -181,6 +181,115 @@ def get_cached_program_news(session: Session, days: int = None, force_refresh: b
     }
 
 
+def get_cached_structured_program_news(session: Session, days: int = None, force_refresh: bool = False) -> Dict:
+    """
+    Get cached structured program news or generate new if needed.
+
+    Cache is refreshed when:
+    - force_refresh is True
+    - No cache exists
+    - Cache is older than 12 hours
+    - New emails received since last generation
+
+    Args:
+        session: Database session
+        days: Number of days to summarize (default from config)
+        force_refresh: Force regeneration even if cache is valid
+
+    Returns:
+        Dict with structured news data, generated_at, is_cached, and email_count fields
+    """
+    if days is None:
+        days = settings.program_news_days
+
+    # Get most recent cache entry
+    latest_cache = session.query(ProgramNewsCache).filter(
+        ProgramNewsCache.days_covered == days
+    ).order_by(ProgramNewsCache.generated_at.desc()).first()
+
+    # Check if we need to regenerate
+    should_regenerate = force_refresh
+
+    if not should_regenerate and latest_cache:
+        # Check if cache is older than 12 hours
+        cache_age = datetime.utcnow() - latest_cache.generated_at
+        if cache_age.total_seconds() > (12 * 3600):
+            should_regenerate = True
+            logger.info(f"Structured news cache is {cache_age.total_seconds() / 3600:.1f} hours old, regenerating")
+
+        # Check if new emails have been received since cache was generated
+        if not should_regenerate and latest_cache.latest_email_date:
+            newest_email = session.query(Email).order_by(Email.received_date.desc()).first()
+            if newest_email and newest_email.received_date > latest_cache.latest_email_date:
+                should_regenerate = True
+                logger.info("New emails received since last structured news cache, regenerating")
+    elif not latest_cache:
+        should_regenerate = True
+        logger.info("No structured news cache found, generating")
+
+    # Use cache if valid
+    if not should_regenerate and latest_cache:
+        logger.info(f"Using cached structured program news (generated {latest_cache.generated_at})")
+        # Try to parse the summary as JSON (new format)
+        try:
+            structured_data = json.loads(latest_cache.summary)
+            return {
+                "structured_data": structured_data,
+                "generated_at": latest_cache.generated_at,
+                "is_cached": True,
+                "email_count": latest_cache.email_count
+            }
+        except json.JSONDecodeError:
+            # Old format, regenerate
+            logger.info("Cache is in old format, regenerating")
+            should_regenerate = True
+
+    # Generate new structured summary
+    recent_emails = get_recent_emails(session, days)
+
+    client = get_ai_client()
+    try:
+        structured_data = client.generate_structured_program_news(recent_emails, days)
+    except Exception as e:
+        logger.error(f"Failed to generate structured program news: {e}")
+        structured_data = {
+            "critical_updates": [],
+            "trending_topics": [],
+            "volume_summary": {
+                "total_emails": len(recent_emails),
+                "trend_description": "Error generating summary",
+                "notable_pattern": ""
+            },
+            "top_senders": [],
+            "key_takeaways": ["Error generating program news"]
+        }
+
+    # Get latest email date
+    latest_email_date = None
+    if recent_emails:
+        latest_email_date = max(email.received_date for email in recent_emails)
+
+    # Save to cache as JSON
+    cache_entry = ProgramNewsCache(
+        summary=json.dumps(structured_data),  # Store as JSON
+        days_covered=days,
+        email_count=len(recent_emails),
+        latest_email_date=latest_email_date,
+        generated_at=datetime.utcnow()
+    )
+    session.add(cache_entry)
+    session.commit()
+
+    logger.info(f"Structured program news cached ({len(recent_emails)} emails)")
+
+    return {
+        "structured_data": structured_data,
+        "generated_at": cache_entry.generated_at,
+        "is_cached": False,
+        "email_count": len(recent_emails)
+    }
+
+
 def generate_report_data(session: Session) -> Dict:
     """
     Generate all data needed for the daily report.

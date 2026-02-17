@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from openai import OpenAI
 from openai import APIError, APIConnectionError, RateLimitError
 
-from emailtools.ai.prompts import ACTION_EXTRACTION_PROMPT, PROGRAM_NEWS_PROMPT, REPORT_INSIGHTS_PROMPT, SYSTEM_PROMPT
+from emailtools.ai.prompts import ACTION_EXTRACTION_PROMPT, PROGRAM_NEWS_PROMPT, REPORT_INSIGHTS_PROMPT, STRUCTURED_PROGRAM_NEWS_PROMPT, SYSTEM_PROMPT
 from emailtools.config import settings
 from emailtools.models import Action, Email
 from emailtools.utils.logging import logger
@@ -249,6 +249,98 @@ class AIClient:
         except Exception as e:
             logger.error(f"Failed to generate program news: {e}")
             return "Error generating program news summary."
+
+    def generate_structured_program_news(self, emails: List[Email], days: int = 7) -> Dict:
+        """
+        Generate a structured program news summary with sections.
+
+        Args:
+            emails: List of recent emails to summarize
+            days: Number of days covered
+
+        Returns:
+            Dictionary with structured news sections
+        """
+        if not emails:
+            return {
+                "critical_updates": [],
+                "trending_topics": [],
+                "volume_summary": {
+                    "total_emails": 0,
+                    "trend_description": "No activity",
+                    "notable_pattern": ""
+                },
+                "top_senders": [],
+                "key_takeaways": ["No recent email activity"]
+            }
+
+        # Create brief summaries of each email
+        email_summaries = []
+        for email in emails[:20]:  # Limit to 20 most recent
+            summary = f"- From {email.from_address}: {email.subject}"
+            email_summaries.append(summary)
+
+        summaries_text = "\n".join(email_summaries)
+
+        prompt = STRUCTURED_PROGRAM_NEWS_PROMPT.format(
+            days=days,
+            email_count=len(emails),
+            email_summaries=summaries_text
+        )
+
+        try:
+            logger.info(f"Generating structured program news from {len(emails)} emails")
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.4,  # Balanced for structured output
+                max_tokens=800,
+                timeout=self.timeout
+            )
+
+            raw_response = response.choices[0].message.content.strip()
+            logger.debug(f"Structured program news response: {raw_response[:200]}...")
+
+            # Parse JSON response
+            try:
+                clean_json = strip_markdown_json(raw_response)
+                structured_news = json.loads(clean_json)
+                logger.info("Structured program news generated successfully")
+                return structured_news
+
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse structured news JSON: {e}")
+                logger.error(f"Raw response: {raw_response}")
+                # Return fallback structure
+                return {
+                    "critical_updates": [],
+                    "trending_topics": [],
+                    "volume_summary": {
+                        "total_emails": len(emails),
+                        "trend_description": "Unable to analyze",
+                        "notable_pattern": ""
+                    },
+                    "top_senders": [],
+                    "key_takeaways": ["Error parsing AI response - check logs"]
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to generate structured program news: {e}")
+            return {
+                "critical_updates": [],
+                "trending_topics": [],
+                "volume_summary": {
+                    "total_emails": len(emails),
+                    "trend_description": f"Error: {str(e)[:50]}",
+                    "notable_pattern": ""
+                },
+                "top_senders": [],
+                "key_takeaways": ["Error generating structured news"]
+            }
 
     def generate_report_insights(
         self,

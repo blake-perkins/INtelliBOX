@@ -12,7 +12,7 @@ from sqlalchemy import desc, func, case, or_
 
 from emailtools.database import get_session
 from emailtools.models import Action, Assignment, Email, ProcessingLog
-from emailtools.reporter.generator import generate_report_data, get_cached_program_news, generate_enhanced_report
+from emailtools.reporter.generator import generate_report_data, get_cached_program_news, get_cached_structured_program_news, generate_enhanced_report
 from emailtools.config import settings
 from emailtools.settings_service import SettingsService
 
@@ -102,8 +102,8 @@ async def dashboard(request: Request):
             Assignment.status == "completed"
         ).order_by(desc(Assignment.assigned_at)).limit(5).all()
 
-        # Get cached program news
-        program_news_data = get_cached_program_news(session)
+        # Get cached structured program news
+        program_news_data = get_cached_structured_program_news(session)
 
         # Get latest email date for "last updated" info
         latest_email = session.query(Email).order_by(desc(Email.received_date)).first()

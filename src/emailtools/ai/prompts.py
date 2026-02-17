@@ -75,6 +75,58 @@ Create a 2-3 paragraph summary that a team lead can read in 30 seconds during mo
 
 Summary:"""
 
+STRUCTURED_PROGRAM_NEWS_PROMPT = """Analyze the following emails from the past {days} days and generate a structured program news summary.
+
+## Email Activity Summary
+Total emails: {email_count}
+Date range: Past {days} days
+
+## Emails to analyze:
+{email_summaries}
+
+## Generate Structured Output
+
+Provide a JSON response with the following structure:
+
+{{
+  "critical_updates": [
+    "Brief critical item 1 (if any)",
+    "Brief critical item 2 (if any)"
+  ],
+  "trending_topics": [
+    {{
+      "topic": "Topic name",
+      "count": number,
+      "trend": "up|down|stable",
+      "description": "One sentence about this topic"
+    }}
+  ],
+  "volume_summary": {{
+    "total_emails": {email_count},
+    "trend_description": "Brief comparison to typical volume (e.g., '20% above average')",
+    "notable_pattern": "Any notable pattern in timing or volume"
+  }},
+  "top_senders": [
+    {{
+      "sender": "email@example.com or name",
+      "count": number,
+      "context": "Brief note about their emails"
+    }}
+  ],
+  "key_takeaways": [
+    "Most important takeaway 1",
+    "Most important takeaway 2",
+    "Most important takeaway 3"
+  ]
+}}
+
+Focus on being concise and actionable. If a section has no relevant data, use empty arrays or appropriate defaults.
+Critical updates should only include truly urgent items requiring immediate attention.
+Trending topics should identify the 2-3 most common themes.
+Top senders should list the 3-4 most active senders.
+
+JSON response:"""
+
 REPORT_INSIGHTS_PROMPT = """Analyze the following action items and recent email activity to generate actionable insights.
 
 ## Current Action Items ({total_actions} total)
