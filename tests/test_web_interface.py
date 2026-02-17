@@ -178,14 +178,13 @@ class TestWebInterface:
         assert data["total_emails"] == 3
         assert data["total_actions"] == 4
         assert data["unassigned_actions"] == 3  # action1 is assigned
-        assert data["high_priority"] == 1  # Only action2 is high priority AND unassigned (action1 is assigned)
+        assert data["unassigned_high"] == 1  # Only action2 is high priority AND unassigned (action1 is assigned)
 
     def test_dashboard(self, setup_database):
         """Test dashboard page loads."""
         response = client.get("/")
         assert response.status_code == 200
         assert b"Dashboard" in response.content  # Updated to match current branding
-        assert b"Total Emails" in response.content or b"total emails" in response.content
         assert b"Actions" in response.content
 
     def test_actions_list(self, setup_database):
@@ -372,7 +371,7 @@ class TestEmptyDatabase:
         assert data["total_emails"] == 0
         assert data["total_actions"] == 0
         assert data["unassigned_actions"] == 0
-        assert data["high_priority"] == 0
+        assert data["unassigned_high"] == 0
 
 
 class TestDataIntegrity:

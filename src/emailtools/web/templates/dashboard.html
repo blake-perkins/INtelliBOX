@@ -6,7 +6,7 @@
 <!-- PRIORITY 1: Immediate Attention Required -->
 {% if overdue_actions %}
 <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #c0392b;">
-    <div class="card-header" style="background: #e74c3c; color: white; font-weight: 700; margin: -1.5rem -1.5rem 1rem -1.5rem; padding: 1rem 1.5rem;">
+    <div class="card-header" style="background: #a93226; color: white; font-weight: 700; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 2px solid rgba(0,0,0,0.15);">
         ⚠️ Overdue — Needs Immediate Attention ({{ overdue_actions|length }})
     </div>
     <table style="margin: 0 -1.5rem -1.5rem -1.5rem; width: calc(100% + 3rem);">
@@ -14,7 +14,7 @@
             <tr>
                 <th style="padding-left: 1.5rem;">Action</th>
                 <th style="width: 140px;">Due Date</th>
-                <th style="width: 160px;">Assigned To</th>
+                <th style="width: 300px;">Assigned To</th>
             </tr>
         </thead>
         <tbody>
@@ -22,21 +22,40 @@
             <tr style="cursor: pointer; background-color: #fde8e8;" onclick="window.location='/actions/{{ action.id }}'">
                 <td style="padding-left: 1.5rem;">
                     <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
-                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem;">
+                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
                         {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
+                        <span style="color: #ccc;">|</span>
+                        <select onclick="event.stopPropagation()" onchange="changePriority({{ action.id }}, this, false)"
+                                autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.78rem; background: white; cursor: pointer; color: #555;">
+                            <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
+                        </select>
                     </div>
                 </td>
                 <td style="white-space: nowrap;">
-                    <span style="color: white; font-weight: 700; background: #e74c3c; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.82rem;">
+                    <span style="color: white; font-weight: 700; background: #a93226; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.82rem;">
                         ⚠️ {{ action.due_date.strftime('%b %d') }}
                     </span>
                 </td>
-                <td style="font-size: 0.9rem;">
-                    {% if action.assignments %}
-                        <span style="font-weight: 600; color: #27ae60;">{{ action.assignments[0].assigned_to }}</span>
-                    {% else %}
-                        <span style="color: #e67e22; font-weight: 600;">Unassigned</span>
-                    {% endif %}
+                <td onclick="event.stopPropagation()" style="white-space: nowrap;">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
+                                style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
+                                onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
+                            <option value="" {% if not action.assignments %}selected{% endif %}>Unassigned</option>
+                            {% for member in roster %}
+                            <option value="{{ member.full_name }}"
+                                {% if action.assignments and action.assignments[0].assigned_to == member.full_name %}selected{% endif %}>
+                                {{ member.last_name }}, {{ member.first_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, false)"
+                                style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">
+                            Assign
+                        </button>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
@@ -48,7 +67,7 @@
 <!-- PRIORITY 2: High Priority Needs Assignment -->
 {% if high_priority_actions %}
 <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #f39c12;">
-    <div class="card-header" style="background-color: #fff9e6; color: #d68910; font-weight: 600; margin: -1.5rem -1.5rem 1rem -1.5rem; padding: 1rem 1.5rem;">
+    <div class="card-header" style="background-color: #fff9e6; color: #d68910; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 2px solid rgba(0,0,0,0.08);">
         🔥 High Priority - Needs Assignment ({{ high_priority }})
     </div>
     <table style="margin: 0 -1.5rem -1.5rem -1.5rem; width: calc(100% + 3rem);">
@@ -56,7 +75,7 @@
             <tr>
                 <th style="padding-left: 1.5rem;">Action</th>
                 <th style="width: 140px;">Due Date</th>
-                <th style="width: 160px;">Assigned To</th>
+                <th style="width: 300px;">Assigned To</th>
             </tr>
         </thead>
         <tbody>
@@ -66,14 +85,21 @@
             <tr style="cursor: pointer; background-color: #fffcf5;" onclick="window.location='/actions/{{ action.id }}'">
                 <td style="padding-left: 1.5rem;">
                     <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
-                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem;">
+                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
                         {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
+                        <span style="color: #ccc;">|</span>
+                        <select onclick="event.stopPropagation()" onchange="changePriority({{ action.id }}, this, true)"
+                                autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.78rem; background: white; cursor: pointer; color: #555;">
+                            <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
+                        </select>
                     </div>
                 </td>
                 <td style="white-space: nowrap;">
                     {% if action.due_date %}
                         {% if is_overdue %}
-                        <span style="color: white; font-weight: 700; background: #e74c3c; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.82rem;">
+                        <span style="color: white; font-weight: 700; background: #a93226; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.82rem;">
                             ⚠️ {{ action.due_date.strftime('%b %d') }}
                         </span>
                         {% else %}
@@ -83,12 +109,24 @@
                         <span style="color: #999;">No date</span>
                     {% endif %}
                 </td>
-                <td style="font-size: 0.9rem;">
-                    {% if hp_assignment %}
-                        <span style="font-weight: 600; color: #27ae60;">{{ hp_assignment.assigned_to }}</span>
-                    {% else %}
-                        <span style="color: #e67e22; font-weight: 600;">Unassigned</span>
-                    {% endif %}
+                <td onclick="event.stopPropagation()" style="white-space: nowrap;">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
+                                style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
+                                onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
+                            <option value="" {% if not hp_assignment %}selected{% endif %}>Unassigned</option>
+                            {% for member in roster %}
+                            <option value="{{ member.full_name }}"
+                                {% if hp_assignment and hp_assignment.assigned_to == member.full_name %}selected{% endif %}>
+                                {{ member.last_name }}, {{ member.first_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, true)"
+                                style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">
+                            Assign
+                        </button>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
@@ -106,43 +144,136 @@
 </div>
 {% endif %}
 
-<!-- Stats Overview -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-    <a href="/actions?assigned=false" style="text-decoration: none; color: inherit;">
-        <div class="stat-card" style="background: white; border: 1px solid #e1e8ed; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.borderColor='#3498db'" onmouseout="this.style.boxShadow='';this.style.borderColor='#e1e8ed'">
-            <div class="stat-value" style="color: #2c3e50; font-size: 2rem;">{{ unassigned_actions }}</div>
-            <div class="stat-label" style="color: #7f8c8d;">Unassigned</div>
-        </div>
-    </a>
-
-    <a href="/actions?assigned=true" style="text-decoration: none; color: inherit;">
-        <div class="stat-card" style="background: white; border: 1px solid #e1e8ed; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.borderColor='#27ae60'" onmouseout="this.style.boxShadow='';this.style.borderColor='#e1e8ed'">
-            <div class="stat-value" style="color: #27ae60; font-size: 2rem;">{{ completed_actions }}</div>
-            <div class="stat-label" style="color: #7f8c8d;">Completed</div>
-        </div>
-    </a>
-
-    <a href="/actions" style="text-decoration: none; color: inherit;">
-        <div class="stat-card" style="background: white; border: 1px solid #e1e8ed; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.borderColor='#3498db'" onmouseout="this.style.boxShadow='';this.style.borderColor='#e1e8ed'">
-            <div class="stat-value" style="color: #2c3e50; font-size: 2rem;">{{ total_actions }}</div>
-            <div class="stat-label" style="color: #7f8c8d;">Total Actions</div>
-        </div>
-    </a>
-
-    <a href="/emails" style="text-decoration: none; color: inherit;">
-        <div class="stat-card" style="background: white; border: 1px solid #e1e8ed; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.borderColor='#3498db'" onmouseout="this.style.boxShadow='';this.style.borderColor='#e1e8ed'">
-            <div class="stat-value" style="color: #2c3e50; font-size: 2rem;">{{ total_emails }}</div>
-            <div class="stat-label" style="color: #7f8c8d;">Total Emails</div>
-        </div>
-    </a>
+<!-- MEDIUM PRIORITY: Top 3 visible, rest collapsible -->
+{% if medium_priority_actions %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #f39c12;" id="card-medium">
+    <div class="card-header" style="background-color: #fffbf0; color: #b7770d; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.06);">
+        📋 Medium Priority — Unassigned ({{ medium_priority_actions|length }})
+    </div>
+    <table style="margin: 0 -1.5rem 0 -1.5rem; width: calc(100% + 3rem);">
+        <thead>
+            <tr>
+                <th style="padding-left: 1.5rem;">Action</th>
+                <th style="width: 140px;">Due Date</th>
+                <th style="width: 300px;">Assign To</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for action in medium_priority_actions %}
+            <tr class="med-row{% if loop.index > 3 %} med-extra{% endif %}"
+                style="cursor: pointer;{% if loop.index > 3 %} display: none;{% endif %}"
+                onclick="window.location='/actions/{{ action.id }}'">
+                <td style="padding-left: 1.5rem;">
+                    <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
+                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
+                        {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
+                        <span style="color: #ccc;">|</span>
+                        <select onclick="event.stopPropagation()" onchange="changePriority({{ action.id }}, this, true)"
+                                autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.78rem; background: white; cursor: pointer; color: #555;">
+                            <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
+                        </select>
+                    </div>
+                </td>
+                <td style="white-space: nowrap; font-size: 0.9rem; color: #555;">
+                    {% if action.due_date %}{{ action.due_date.strftime('%b %d, %Y') }}{% else %}<span style="color: #999;">No date</span>{% endif %}
+                </td>
+                <td onclick="event.stopPropagation()" style="white-space: nowrap;">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
+                                style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
+                                onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
+                            <option value="" selected>Unassigned</option>
+                            {% for member in roster %}
+                            <option value="{{ member.full_name }}">{{ member.last_name }}, {{ member.first_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, true)"
+                                style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">Assign</button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if medium_priority_actions|length > 3 %}
+    <div style="padding: 0.6rem 1.5rem; border-top: 1px solid #f0f0f0; text-align: center;">
+        <button id="btn-med-expand" onclick="toggleMedium()"
+                style="background: none; border: none; color: #f39c12; font-size: 0.85rem; cursor: pointer; font-weight: 600;">
+            ▼ Show {{ medium_priority_actions|length - 3 }} more
+        </button>
+    </div>
+    {% endif %}
 </div>
+{% endif %}
+
+<!-- LOW PRIORITY: Collapsed by default -->
+{% if low_priority_actions %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #95a5a6;" id="card-low">
+    <div class="card-header" style="background-color: #f9f9f9; color: #666; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.06); cursor: pointer; user-select: none;"
+         onclick="toggleLow()">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>📌 Low Priority — Unassigned ({{ low_priority_actions|length }})</span>
+            <span id="btn-low-icon" style="font-size: 0.8rem; color: #999;">▶ Show</span>
+        </div>
+    </div>
+    <div id="low-body" style="display: none;">
+        <table style="margin: 0 -1.5rem 0 -1.5rem; width: calc(100% + 3rem);">
+            <thead>
+                <tr>
+                    <th style="padding-left: 1.5rem;">Action</th>
+                    <th style="width: 140px;">Due Date</th>
+                    <th style="width: 300px;">Assign To</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for action in low_priority_actions %}
+                <tr style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+                    <td style="padding-left: 1.5rem;">
+                        <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
+                        <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
+                            {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
+                            <span style="color: #ccc;">|</span>
+                            <select onclick="event.stopPropagation()" onchange="changePriority({{ action.id }}, this, true)"
+                                    autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.78rem; background: white; cursor: pointer; color: #555;">
+                                <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
+                                <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td style="white-space: nowrap; font-size: 0.9rem; color: #555;">
+                        {% if action.due_date %}{{ action.due_date.strftime('%b %d, %Y') }}{% else %}<span style="color: #999;">No date</span>{% endif %}
+                    </td>
+                    <td onclick="event.stopPropagation()" style="white-space: nowrap;">
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
+                                    style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
+                                    onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
+                                <option value="" selected>Unassigned</option>
+                                {% for member in roster %}
+                                <option value="{{ member.full_name }}">{{ member.last_name }}, {{ member.first_name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, true)"
+                                    style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">Assign</button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 
 <!-- Priority Breakdown - Compact -->
 <div class="card" style="margin-bottom: 1.5rem;">
     <div class="card-header">Priority Distribution (Unassigned)</div>
     <div style="display: flex; justify-content: space-around; padding: 1rem;">
         <div style="text-align: center;">
-            <div style="font-size: 1.75rem; font-weight: bold; color: #e74c3c;">{{ high_priority }}</div>
+            <div style="font-size: 1.75rem; font-weight: bold; color: #a93226;">{{ high_priority }}</div>
             <div style="color: #7f8c8d; font-size: 0.85rem; margin-bottom: 0.5rem;">High</div>
             <a href="/actions?priority=high&assigned=false" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">View</a>
         </div>
@@ -156,129 +287,6 @@
             <div style="color: #7f8c8d; font-size: 0.85rem; margin-bottom: 0.5rem;">Low</div>
             <a href="/actions?priority=low&assigned=false" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">View</a>
         </div>
-    </div>
-</div>
-
-<!-- Program News Summary - Enhanced Structured View -->
-<div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin: -1.5rem -1.5rem 1rem -1.5rem; padding: 1rem 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span>📰 Program News (Last 7 Days)</span>
-            <span style="font-size: 0.75rem; opacity: 0.9;">
-                {% if program_news['is_cached'] %}
-                    💾 Cached {{ ((current_time - program_news['generated_at']).total_seconds() / 3600)|round(1) }}h ago
-                {% else %}
-                    ✨ Just generated
-                {% endif %}
-            </span>
-        </div>
-    </div>
-
-    <!-- Quick Stats Bar -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; border-bottom: 2px solid #e1e8ed;">
-        <div style="padding: 0.75rem 1rem; text-align: center; border-right: 1px solid #e1e8ed;">
-            <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">{{ program_news['email_count'] }}</div>
-            <div style="font-size: 0.75rem; color: #666;">Emails</div>
-        </div>
-        <div style="padding: 0.75rem 1rem; text-align: center; border-right: 1px solid #e1e8ed;">
-            <div style="font-size: 1.5rem; font-weight: bold; color: {{ 'e74c3c' if program_news['structured_data']['critical_updates']|length > 0 else '95a5a6' }};">
-                {{ program_news['structured_data']['critical_updates']|length }}
-            </div>
-            <div style="font-size: 0.75rem; color: #666;">Critical</div>
-        </div>
-        <div style="padding: 0.75rem 1rem; text-align: center; border-right: 1px solid #e1e8ed;">
-            <div style="font-size: 1.5rem; font-weight: bold; color: #f39c12;">{{ program_news['structured_data']['trending_topics']|length }}</div>
-            <div style="font-size: 0.75rem; color: #666;">Topics</div>
-        </div>
-        <div style="padding: 0.75rem 1rem; text-align: center;">
-            <div style="font-size: 1.5rem; font-weight: bold; color: #3498db;">{{ program_news['structured_data']['top_senders']|length }}</div>
-            <div style="font-size: 0.75rem; color: #666;">Top Senders</div>
-        </div>
-    </div>
-
-    <div style="padding: 1.5rem; background: white;">
-        <!-- Critical Updates Section -->
-        {% if program_news['structured_data']['critical_updates'] %}
-        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #fef5f5; border-left: 4px solid #e74c3c; border-radius: 4px;">
-            <h4 style="margin: 0 0 0.75rem 0; color: #e74c3c; font-size: 0.95rem; font-weight: 600;">
-                🔴 Critical Updates
-            </h4>
-            <ul style="margin: 0; padding-left: 1.5rem; color: #333;">
-                {% for update in program_news['structured_data']['critical_updates'] %}
-                <li style="margin-bottom: 0.5rem;">{{ update }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-
-        <!-- Key Takeaways -->
-        {% if program_news['structured_data']['key_takeaways'] %}
-        <div style="margin-bottom: 1.5rem;">
-            <h4 style="margin: 0 0 0.75rem 0; color: #2c3e50; font-size: 0.95rem; font-weight: 600;">
-                💡 Key Takeaways
-            </h4>
-            <ul style="margin: 0; padding-left: 1.5rem; color: #444; line-height: 1.7;">
-                {% for takeaway in program_news['structured_data']['key_takeaways'] %}
-                <li style="margin-bottom: 0.5rem;">{{ takeaway }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-
-        <!-- Two Column Layout for Topics and Senders -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-            <!-- Trending Topics -->
-            {% if program_news['structured_data']['trending_topics'] %}
-            <div>
-                <h4 style="margin: 0 0 0.75rem 0; color: #2c3e50; font-size: 0.95rem; font-weight: 600;">
-                    📊 Trending Topics
-                </h4>
-                {% for topic in program_news['structured_data']['trending_topics'] %}
-                <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #f39c12;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-                        <strong style="color: #333; font-size: 0.9rem;">{{ topic['topic'] }}</strong>
-                        <span style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: white; border-radius: 3px; color: #666;">
-                            {{ topic['count'] }} {% if topic['trend'] == 'up' %}📈{% elif topic['trend'] == 'down' %}📉{% else %}➡️{% endif %}
-                        </span>
-                    </div>
-                    <div style="font-size: 0.85rem; color: #666;">{{ topic['description'] }}</div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- Top Senders -->
-            {% if program_news['structured_data']['top_senders'] %}
-            <div>
-                <h4 style="margin: 0 0 0.75rem 0; color: #2c3e50; font-size: 0.95rem; font-weight: 600;">
-                    👥 Most Active Senders
-                </h4>
-                {% for sender in program_news['structured_data']['top_senders'] %}
-                <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #3498db;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-                        <strong style="color: #333; font-size: 0.85rem;">{{ sender['sender'] }}</strong>
-                        <span style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: white; border-radius: 3px; color: #666;">
-                            {{ sender['count'] }} email{{ 's' if sender['count'] != 1 else '' }}
-                        </span>
-                    </div>
-                    <div style="font-size: 0.85rem; color: #666;">{{ sender['context'] }}</div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Volume Summary Footer -->
-        {% if program_news['structured_data']['volume_summary'] %}
-        <div style="padding: 1rem; background: #f8f9fa; border-radius: 4px; border-top: 2px solid #e1e8ed;">
-            <div style="font-size: 0.9rem; color: #555; line-height: 1.6;">
-                <strong>Activity Pattern:</strong> {{ program_news['structured_data']['volume_summary']['trend_description'] }}
-                {% if program_news['structured_data']['volume_summary']['notable_pattern'] %}
-                <br><strong>Note:</strong> {{ program_news['structured_data']['volume_summary']['notable_pattern'] }}
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 
@@ -334,16 +342,105 @@
     </div>
 </div>
 
-<!-- Quick Navigation -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
-    <a href="/actions" class="btn btn-primary" style="text-align: center;">Browse All Actions</a>
-    <a href="/emails" class="btn btn-primary" style="text-align: center;">Browse Emails</a>
-</div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
+async function quickAssign(actionId, btn, removeRow) {
+    const select = document.getElementById('sel-' + actionId);
+    const name = select.value;
+
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    const unassigning = !name;
+    const url = unassigning
+        ? '/actions/' + actionId + '/unassign'
+        : '/actions/' + actionId + '/assign';
+
+    const body = new FormData();
+    if (!unassigning) body.append('assigned_to', name);
+
+    try {
+        const resp = await fetch(url, { method: 'POST', body, redirect: 'manual' });
+        if (resp.ok || resp.type === 'opaqueredirect') {
+            refreshStats();
+            if (removeRow) {
+                const row = btn.closest('tr');
+                row.style.transition = 'opacity 0.3s';
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    const tbody = row.parentElement;
+                    row.remove();
+                    if (tbody && tbody.querySelectorAll('tr').length === 0) {
+                        const card = tbody.closest('.card');
+                        if (card) {
+                            card.style.transition = 'opacity 0.4s';
+                            card.style.opacity = '0';
+                            setTimeout(() => { card.style.display = 'none'; }, 400);
+                        }
+                    }
+                }, 300);
+            } else {
+                // Overdue rows stay — flash button green to confirm
+                btn.textContent = '✓ Saved';
+                btn.style.background = '#27ae60';
+                btn.style.borderColor = '#27ae60';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Assign';
+                    btn.style.background = '';
+                    btn.style.borderColor = '';
+                }, 1500);
+            }
+        } else {
+            btn.disabled = false;
+            btn.textContent = 'Assign';
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Assign';
+    }
+}
+
+async function changePriority(actionId, select, removeRow) {
+    const priority = select.value;
+    const body = new URLSearchParams({ priority });
+    const resp = await fetch(`/actions/${actionId}/priority`, {
+        method: 'POST', body, redirect: 'manual'
+    });
+    if (resp.ok || resp.type === 'opaqueredirect') {
+        if (removeRow) {
+            const row = select.closest('tr');
+            row.style.transition = 'opacity 0.3s';
+            row.style.opacity = '0';
+            setTimeout(() => { location.reload(); }, 350);
+        }
+    } else {
+        // Revert select on failure
+        select.value = select.dataset.original || select.value;
+    }
+}
+
+function toggleMedium() {
+    const extras = document.querySelectorAll('.med-extra');
+    const btn = document.getElementById('btn-med-expand');
+    const hidden = extras[0] && extras[0].style.display === 'none';
+    extras.forEach(r => r.style.display = hidden ? '' : 'none');
+    btn.textContent = hidden
+        ? '▲ Show less'
+        : '▼ Show ' + extras.length + ' more';
+}
+
+function toggleLow() {
+    const body = document.getElementById('low-body');
+    const icon = document.getElementById('btn-low-icon');
+    const visible = body.style.display !== 'none';
+    body.style.display = visible ? 'none' : '';
+    icon.textContent = visible ? '▶ Show' : '▲ Hide';
+}
+
     // Auto-refresh every 30 seconds
     setInterval(() => {
         location.reload();

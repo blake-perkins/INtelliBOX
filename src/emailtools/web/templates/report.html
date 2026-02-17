@@ -51,6 +51,111 @@
 </div>
 {% endif %}
 
+<!-- Program News Section -->
+{% if program_news and program_news['structured_data'] %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>📰 Program News (Last 7 Days)</span>
+        <span style="font-size: 0.75rem; color: #888;">
+            {% if program_news['is_cached'] %}
+                💾 Cached {{ ((current_time - program_news['generated_at']).total_seconds() / 3600)|round(1) }}h ago
+            {% else %}
+                ✨ Just generated
+            {% endif %}
+        </span>
+    </div>
+
+    <!-- Quick Stats Bar -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0; border-bottom: 1px solid #e1e8ed;">
+        <div style="padding: 0.65rem 1rem; text-align: center; border-right: 1px solid #e1e8ed;">
+            <div style="font-size: 1.4rem; font-weight: bold; color: #667eea;">{{ program_news['email_count'] }}</div>
+            <div style="font-size: 0.75rem; color: #666;">Emails Analyzed</div>
+        </div>
+        <div style="padding: 0.65rem 1rem; text-align: center; border-right: 1px solid #e1e8ed;">
+            <div style="font-size: 1.4rem; font-weight: bold; color: {% if program_news['structured_data']['critical_updates']|length > 0 %}#e74c3c{% else %}#95a5a6{% endif %};">
+                {{ program_news['structured_data']['critical_updates']|length }}
+            </div>
+            <div style="font-size: 0.75rem; color: #666;">Critical Updates</div>
+        </div>
+        <div style="padding: 0.65rem 1rem; text-align: center; border-right: 1px solid #e1e8ed;">
+            <div style="font-size: 1.4rem; font-weight: bold; color: #f39c12;">{{ program_news['structured_data']['trending_topics']|length }}</div>
+            <div style="font-size: 0.75rem; color: #666;">Trending Topics</div>
+        </div>
+        <div style="padding: 0.65rem 1rem; text-align: center;">
+            <div style="font-size: 1.4rem; font-weight: bold; color: #3498db;">{{ program_news['structured_data']['top_senders']|length }}</div>
+            <div style="font-size: 0.75rem; color: #666;">Top Senders</div>
+        </div>
+    </div>
+
+    <div style="padding: 1.5rem; background: white;">
+        {% if program_news['structured_data']['critical_updates'] %}
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #fef5f5; border-left: 4px solid #a93226; border-radius: 4px;">
+            <h4 style="margin: 0 0 0.75rem 0; color: #a93226; font-size: 0.95rem; font-weight: 600;">🔴 Critical Updates</h4>
+            <ul style="margin: 0; padding-left: 1.5rem; color: #333;">
+                {% for update in program_news['structured_data']['critical_updates'] %}
+                <li style="margin-bottom: 0.5rem;">{{ update }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if program_news['structured_data']['key_takeaways'] %}
+        <div style="margin-bottom: 1.5rem;">
+            <h4 style="margin: 0 0 0.75rem 0; color: #2c3e50; font-size: 0.95rem; font-weight: 600;">💡 Key Takeaways</h4>
+            <ul style="margin: 0; padding-left: 1.5rem; color: #444; line-height: 1.7;">
+                {% for takeaway in program_news['structured_data']['key_takeaways'] %}
+                <li style="margin-bottom: 0.5rem;">{{ takeaway }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            {% if program_news['structured_data']['trending_topics'] %}
+            <div>
+                <h4 style="margin: 0 0 0.75rem 0; color: #2c3e50; font-size: 0.95rem; font-weight: 600;">📊 Trending Topics</h4>
+                {% for topic in program_news['structured_data']['trending_topics'] %}
+                <div style="margin-bottom: 0.75rem; padding: 0.65rem 0.75rem; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #f39c12;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                        <strong style="color: #333; font-size: 0.9rem;">{{ topic['topic'] }}</strong>
+                        <span style="font-size: 0.75rem; color: #666;">{{ topic['count'] }} {% if topic['trend'] == 'up' %}📈{% elif topic['trend'] == 'down' %}📉{% else %}➡️{% endif %}</span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #666;">{{ topic['description'] }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if program_news['structured_data']['top_senders'] %}
+            <div>
+                <h4 style="margin: 0 0 0.75rem 0; color: #2c3e50; font-size: 0.95rem; font-weight: 600;">👥 Most Active Senders</h4>
+                {% for sender in program_news['structured_data']['top_senders'] %}
+                <div style="margin-bottom: 0.75rem; padding: 0.65rem 0.75rem; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #3498db;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                        <strong style="color: #333; font-size: 0.85rem;">{{ sender['sender'] }}</strong>
+                        <span style="font-size: 0.75rem; color: #666;">{{ sender['count'] }} email{{ 's' if sender['count'] != 1 else '' }}</span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #666;">{{ sender['context'] }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if program_news['structured_data']['volume_summary'] %}
+        <div style="padding: 0.85rem 1rem; background: #f8f9fa; border-radius: 4px; border-top: 2px solid #e1e8ed;">
+            <div style="font-size: 0.9rem; color: #555; line-height: 1.6;">
+                <strong>Activity Pattern:</strong> {{ program_news['structured_data']['volume_summary']['trend_description'] }}
+                {% if program_news['structured_data']['volume_summary']['notable_pattern'] %}
+                <br><strong>Note:</strong> {{ program_news['structured_data']['volume_summary']['notable_pattern'] }}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Executive Summary Section -->
 {% if report.insights and report.insights.executive_summary %}
 <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 1.5rem;">

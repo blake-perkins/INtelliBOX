@@ -133,27 +133,24 @@
             {% endif %}
         </td>
         <td onclick="event.stopPropagation();">
-            {% if not assignment %}
-            <form method="POST" action="/actions/{{ action.id }}/assign" style="display: flex; gap: 0.25rem;">
+            <form onsubmit="quickAssign(event, {{ action.id }})" style="display: flex; gap: 0.25rem;">
                 {% if roster %}
                 <select name="assigned_to"
                         style="flex: 1; padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;" required>
-                    <option value="" disabled selected>Select...</option>
+                    <option value="" disabled {% if not assignment %}selected{% endif %}>Select...</option>
                     {% for member in roster %}
-                    <option value="{{ member.full_name }}">{{ member.last_name }}, {{ member.first_name }}</option>
+                    <option value="{{ member.full_name }}" {% if assignment and assignment.assigned_to == member.full_name %}selected{% endif %}>{{ member.last_name }}, {{ member.first_name }}</option>
                     {% endfor %}
                 </select>
                 {% else %}
                 <input type="text" name="assigned_to" placeholder="Name..." list="assignees"
+                       value="{{ assignment.assigned_to if assignment else '' }}"
                        style="flex: 1; padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;" required>
                 {% endif %}
                 <button type="submit" class="btn btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; white-space: nowrap;">
-                    Assign
+                    {% if assignment %}Re-assign{% else %}Assign{% endif %}
                 </button>
             </form>
-            {% else %}
-                <span style="color: #999; font-size: 0.85rem;">—</span>
-            {% endif %}
         </td>
     </tr>
     {% endmacro %}
@@ -245,4 +242,47 @@
     {% endif %}
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function quickAssign(event, actionId) {
+    event.preventDefault();
+    const form = event.target;
+    const btn = form.querySelector('button[type="submit"]');
+    const select = form.querySelector('select, input[name="assigned_to"]');
+    if (!select.value) return;
+
+    btn.disabled = true;
+    const body = new URLSearchParams({ assigned_to: select.value });
+    const resp = await fetch(`/actions/${actionId}/assign`, {
+        method: 'POST', body, redirect: 'manual'
+    });
+
+    if (resp.ok || resp.type === 'opaqueredirect') {
+        // Update the assignee cell
+        const row = form.closest('tr');
+        const assigneeCell = row.querySelector('td:nth-child(5)');
+        if (assigneeCell) {
+            assigneeCell.innerHTML = `
+                <div style="font-weight: 600; color: #27ae60;">${select.options ? select.options[select.selectedIndex].text.replace(/,\s*/, ' ').split(' ').reverse().join(' ') : select.value}</div>
+                <div style="margin-top: 0.15rem;"><span style="font-size: 0.75rem; background: #e2e8f0; color: #555; padding: 0.1rem 0.4rem; border-radius: 10px;">assigned</span></div>
+            `;
+        }
+        // Flash button green
+        btn.textContent = '✓ Saved';
+        btn.style.background = '#27ae60';
+        btn.style.borderColor = '#27ae60';
+        btn.disabled = false;
+        // Update button label back to "Re-assign"
+        setTimeout(() => {
+            btn.textContent = 'Re-assign';
+            btn.style.background = '';
+            btn.style.borderColor = '';
+        }, 1500);
+    } else {
+        btn.disabled = false;
+    }
+}
+</script>
 {% endblock %}

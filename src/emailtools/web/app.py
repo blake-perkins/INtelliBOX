@@ -1,5 +1,7 @@
 """FastAPI web application for INtelliBOX."""
 
+import threading
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
@@ -16,11 +18,40 @@ from emailtools.reporter.generator import generate_report_data, get_cached_progr
 from emailtools.config import settings
 from emailtools.settings_service import SettingsService
 
+
+def _start_background_watcher():
+    """Start the file watcher in a background daemon thread."""
+    from emailtools.ingestion.file_watcher import watch_inbox
+    from emailtools.ingestion.parser import parse_and_store_email
+
+    inbox_dir = Path("data/inbox")
+
+    def callback(eml_path: Path):
+        with get_session() as session:
+            parse_and_store_email(eml_path, session)
+
+    thread = threading.Thread(
+        target=watch_inbox,
+        args=(inbox_dir, callback),
+        kwargs={"interval": 5},
+        daemon=True,
+        name="inbox-watcher",
+    )
+    thread.start()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _start_background_watcher()
+    yield
+
+
 # Create FastAPI app
 app = FastAPI(
     title="INtelliBOX",
     description="AI-Powered Email Action Tracking System",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Setup templates and static files
@@ -85,6 +116,17 @@ async def dashboard(request: Request):
             Action.priority == "high"
         ).order_by(Action.due_date.asc().nullslast()).limit(5).all()
 
+        # Get medium and low priority unassigned actions
+        medium_priority_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
+            Assignment.id.is_(None),
+            Action.priority == "medium"
+        ).order_by(Action.due_date.asc().nullslast()).all()
+
+        low_priority_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
+            Assignment.id.is_(None),
+            Action.priority == "low"
+        ).order_by(Action.due_date.asc().nullslast()).all()
+
         # Get recent assignments (last 5, exclude completed)
         recent_assignments = session.query(Assignment, Action).join(
             Action
@@ -99,8 +141,10 @@ async def dashboard(request: Request):
             Assignment.status == "completed"
         ).order_by(desc(Assignment.assigned_at)).limit(5).all()
 
-        # Get cached structured program news
-        program_news_data = get_cached_structured_program_news(session)
+        # Get roster for quick-assign dropdowns
+        roster = session.query(RosterMember).filter_by(active=True).order_by(
+            RosterMember.last_name, RosterMember.first_name
+        ).all()
 
         # Get latest email date for "last updated" info
         latest_email = session.query(Email).order_by(desc(Email.received_date)).first()
@@ -130,9 +174,11 @@ async def dashboard(request: Request):
             "overdue_count": overdue_count,
             "overdue_actions": overdue_actions,
             "high_priority_actions": high_priority_actions,
+            "medium_priority_actions": medium_priority_actions,
+            "low_priority_actions": low_priority_actions,
+            "roster": roster,
             "recent_assignments": recent_assignments,
             "recent_completions": recent_completions,
-            "program_news": program_news_data,
             "last_email_date": last_email_date,
             "time_since_last_email": time_since_last_email,
             "current_time": datetime.utcnow(),
@@ -281,6 +327,9 @@ async def view_action(request: Request, action_id: int):
         ).limit(10).all()
         recent_assignee_list = [a[0] for a in recent_assignees if a[0]]
 
+        ai_config = SettingsService.get_ai_config()
+        categories = ai_config.get('categories', SettingsService.DEFAULT_CATEGORIES)
+
         return templates.TemplateResponse("action_detail.html", {
             "request": request,
             "action": action,
@@ -288,7 +337,8 @@ async def view_action(request: Request, action_id: int):
             "related_actions": related_actions,
             "roster": roster,
             "recent_assignees": recent_assignee_list,
-            "current_time": datetime.utcnow()
+            "current_time": datetime.utcnow(),
+            "categories": categories,
         })
 
 
@@ -437,11 +487,15 @@ async def view_report(request: Request, refresh: bool = False):
         else:
             cache_age_minutes = 0
 
+        program_news_data = get_cached_structured_program_news(session)
+
         return templates.TemplateResponse("report.html", {
             "request": request,
             "report": report_data,
             "cache_age_minutes": cache_age_minutes,
-            "datetime": datetime  # Make datetime available in template
+            "program_news": program_news_data,
+            "current_time": datetime.utcnow(),
+            "datetime": datetime
         })
 
 
@@ -468,27 +522,39 @@ async def get_stats():
             "last_sync": last_sync,
             "total_emails": session.query(Email).count(),
             "total_actions": session.query(Action).count(),
+            # To Do (unassigned)
             "unassigned_actions": session.query(Action).outerjoin(Assignment).filter(
                 Assignment.id.is_(None)
             ).count(),
-            "in_progress": session.query(Assignment).filter(
-                Assignment.status == "in_progress"
+            "unassigned_high": session.query(Action).outerjoin(Assignment).filter(
+                Assignment.id.is_(None), Action.priority == "high"
+            ).count(),
+            "unassigned_medium": session.query(Action).outerjoin(Assignment).filter(
+                Assignment.id.is_(None), Action.priority == "medium"
+            ).count(),
+            "unassigned_low": session.query(Action).outerjoin(Assignment).filter(
+                Assignment.id.is_(None), Action.priority == "low"
             ).count(),
             "overdue_count": session.query(Action).outerjoin(Assignment).filter(
                 Action.due_date < today,
                 (Assignment.id.is_(None)) | (Assignment.status != "completed")
             ).count(),
-            "high_priority": session.query(Action).outerjoin(Assignment).filter(
-                Assignment.id.is_(None),
-                Action.priority == "high"
+            # In Progress (assigned, not completed)
+            "assigned_actions": session.query(Assignment).filter(
+                Assignment.status != "completed"
             ).count(),
-            "medium_priority": session.query(Action).outerjoin(Assignment).filter(
-                Assignment.id.is_(None),
-                Action.priority == "medium"
+            "assigned_high": session.query(Action).join(Assignment).filter(
+                Assignment.status != "completed", Action.priority == "high"
             ).count(),
-            "low_priority": session.query(Action).outerjoin(Assignment).filter(
-                Assignment.id.is_(None),
-                Action.priority == "low"
+            "assigned_medium": session.query(Action).join(Assignment).filter(
+                Assignment.status != "completed", Action.priority == "medium"
+            ).count(),
+            "assigned_low": session.query(Action).join(Assignment).filter(
+                Assignment.status != "completed", Action.priority == "low"
+            ).count(),
+            # Done
+            "completed_actions": session.query(Assignment).filter(
+                Assignment.status == "completed"
             ).count(),
         }
 
@@ -621,7 +687,7 @@ async def update_assignment_status(
         if not assignment:
             raise HTTPException(status_code=404, detail="Action not assigned")
 
-        if status not in ["assigned", "completed"]:
+        if status not in ["assigned", "in_progress", "completed"]:
             raise HTTPException(status_code=400, detail="Invalid status")
 
         assignment.status = status
@@ -637,8 +703,9 @@ async def edit_action(
     description: str = Form(""),
     priority: str = Form("medium"),
     due_date: str = Form(""),
+    category: str = Form(""),
 ):
-    """Update title, description, priority, and due date in one submit."""
+    """Update title, description, priority, due date, and category in one submit."""
     with get_session() as session:
         action = session.query(Action).filter_by(id=action_id).first()
         if not action:
@@ -646,6 +713,7 @@ async def edit_action(
 
         action.title = title.strip()
         action.description = description.strip() if description.strip() else None
+        action.category = category.strip() if category.strip() else None
 
         if priority in ["high", "medium", "low"]:
             action.priority = priority
@@ -693,6 +761,23 @@ async def update_action_description(
             raise HTTPException(status_code=404, detail="Action not found")
 
         action.description = description if description.strip() else None
+        session.commit()
+
+    return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
+
+@app.post("/actions/{action_id}/category")
+async def update_action_category(
+    action_id: int,
+    category: str = Form("")
+):
+    """Update action category."""
+    with get_session() as session:
+        action = session.query(Action).filter_by(id=action_id).first()
+        if not action:
+            raise HTTPException(status_code=404, detail="Action not found")
+
+        action.category = category.strip() if category.strip() else None
         session.commit()
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
@@ -778,9 +863,6 @@ async def settings_page(request: Request, success: bool = False):
     high_keywords = priority_config.get('high_keywords', [])
     categories = ai_config.get('categories', SettingsService.DEFAULT_CATEGORIES)
 
-    # Format categories as "name: description" lines for the textarea
-    categories_text = '\n'.join(f"{c['name']}: {c['description']}" for c in categories)
-
     with get_session() as session:
         roster = session.query(RosterMember).order_by(
             RosterMember.last_name, RosterMember.first_name
@@ -795,7 +877,7 @@ async def settings_page(request: Request, success: bool = False):
                 "priority_high_senders_text": '\n'.join(high_senders),
                 "priority_high_keywords_text": '\n'.join(high_keywords),
                 "confidence_threshold": ai_config.get('confidence_threshold', 0.5),
-                "categories_text": categories_text,
+                "categories": categories,
                 "timezone": SettingsService.get_timezone(),
                 "program_name": SettingsService.get_setting('program_name', ''),
                 "success": success,
@@ -812,7 +894,6 @@ async def save_settings(
     priority_high_senders: str = Form(""),
     priority_high_keywords: str = Form(""),
     confidence_threshold: float = Form(0.5),
-    ai_categories: str = Form(""),
     timezone: str = Form("America/Chicago"),
     program_name: str = Form("")
 ):
@@ -821,21 +902,42 @@ async def save_settings(
     senders = [s.strip() for s in priority_high_senders.split('\n') if s.strip()]
     keywords = [k.strip() for k in priority_high_keywords.split('\n') if k.strip()]
 
-    # Parse categories using shared service method
-    categories = SettingsService.parse_categories_text(ai_categories)
-
     # Save settings
     SettingsService.set_setting('priority_default', priority_default)
     SettingsService.set_setting('priority_days_threshold', priority_days_threshold)
     SettingsService.set_setting('priority_high_senders', senders)
     SettingsService.set_setting('priority_high_keywords', keywords)
     SettingsService.set_setting('ai_confidence_threshold', round(float(confidence_threshold), 2))
-    SettingsService.set_setting('ai_categories', categories)
     SettingsService.set_setting('timezone', timezone)
     SettingsService.set_setting('program_name', program_name.strip())
 
     # Redirect with success flag
     return RedirectResponse(url="/settings?success=true", status_code=303)
+
+
+@app.post("/categories/add")
+async def add_category(name: str = Form(...), description: str = Form("")):
+    """Add a new action category."""
+    name = name.strip()
+    if not name:
+        return RedirectResponse(url="/settings?tab=categories&cat_error=Name+is+required", status_code=303)
+    ai_config = SettingsService.get_ai_config()
+    categories = ai_config.get('categories', list(SettingsService.DEFAULT_CATEGORIES))
+    if any(c['name'].lower() == name.lower() for c in categories):
+        return RedirectResponse(url=f"/settings?tab=categories&cat_error=Category+%27{name}%27+already+exists", status_code=303)
+    categories.append({"name": name, "description": description.strip()})
+    SettingsService.set_setting('ai_categories', categories)
+    return RedirectResponse(url=f"/settings?tab=categories&cat_added={name}", status_code=303)
+
+
+@app.post("/categories/delete")
+async def delete_category(name: str = Form(...)):
+    """Remove an action category."""
+    ai_config = SettingsService.get_ai_config()
+    categories = ai_config.get('categories', list(SettingsService.DEFAULT_CATEGORIES))
+    categories = [c for c in categories if c['name'] != name]
+    SettingsService.set_setting('ai_categories', categories)
+    return RedirectResponse(url=f"/settings?tab=categories&cat_deleted={name}", status_code=303)
 
 
 @app.get("/roster", response_class=HTMLResponse)
