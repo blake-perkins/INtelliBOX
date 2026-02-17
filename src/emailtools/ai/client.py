@@ -78,7 +78,9 @@ class AIClient:
             current_date = datetime.utcnow()
 
         # Prepare email body (prefer plain text, fallback to HTML)
+        from emailtools.ingestion.chain_stripper import strip_quoted_text
         body = email.body_text or email.body_html or "(No body content)"
+        body = strip_quoted_text(body)
 
         # Format the prompt with dynamic categories
         ai_config = SettingsService.get_ai_config()

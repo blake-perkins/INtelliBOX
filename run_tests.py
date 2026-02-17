@@ -33,6 +33,8 @@ TEST_MODULES = [
     "tests/test_settings_service.py",
     "tests/test_priority_rules.py",
     "tests/test_ai/test_priority_integration.py",
+    "tests/test_chain_stripper.py",
+    "tests/test_email_processing.py",
 ]
 
 

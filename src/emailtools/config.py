@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     timezone: str = "America/New_York"
     program_news_days: int = 7
 
+    # AI Processing
+    ai_batch_size: int = 10
+    ai_batch_delay: float = 2.0  # seconds between batches
+
     # Logging
     log_level: str = "INFO"
 

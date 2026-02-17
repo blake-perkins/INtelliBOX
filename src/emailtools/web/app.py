@@ -23,12 +23,15 @@ def _start_background_watcher():
     """Start the file watcher in a background daemon thread."""
     from emailtools.ingestion.file_watcher import watch_inbox
     from emailtools.ingestion.parser import parse_and_store_email
+    from emailtools.ai.processor import process_email_with_ai
 
     inbox_dir = Path("data/inbox")
 
     def callback(eml_path: Path):
         with get_session() as session:
-            parse_and_store_email(eml_path, session)
+            email_record = parse_and_store_email(eml_path, session)
+            if email_record:
+                process_email_with_ai(email_record, session)
 
     thread = threading.Thread(
         target=watch_inbox,
@@ -466,6 +469,10 @@ async def view_email(request: Request, email_id: int):
         # Count by priority
         high_priority_count = sum(1 for action in actions if action.priority == 'high')
 
+        # Parse also_received_from JSON for template
+        import json as _json
+        also_received = _json.loads(email.also_received_from) if email.also_received_from else []
+
         return templates.TemplateResponse("email_detail.html", {
             "request": request,
             "email": email,
@@ -474,6 +481,7 @@ async def view_email(request: Request, email_id: int):
             "unassigned_count": unassigned_count,
             "completed_count": completed_count,
             "high_priority_count": high_priority_count,
+            "also_received": also_received,
             "current_time": datetime.utcnow()
         })
 

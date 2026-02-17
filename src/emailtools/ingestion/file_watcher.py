@@ -33,8 +33,8 @@ def watch_inbox(
 
     try:
         while True:
-            # Find all .eml files
-            current_files = set(inbox_dir.glob("*.eml"))
+            # Find all .eml and .msg files
+            current_files = set(inbox_dir.glob("*.eml")) | set(inbox_dir.glob("*.msg"))
 
             # Identify new files
             new_files = current_files - processed_files

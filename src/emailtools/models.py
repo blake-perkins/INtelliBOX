@@ -27,6 +27,7 @@ class Email(Base):
     body_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     body_html: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     raw_eml_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    also_received_from: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of {address, name}
     processed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

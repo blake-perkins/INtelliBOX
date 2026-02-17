@@ -193,16 +193,44 @@ def parse_and_store_email(email_path: Path, session: Session) -> Optional[Email]
             logger.error(f"Unsupported file type: {email_path.suffix}")
             return None
 
-        # Check if email already exists
+        # Check if email already exists — merge duplicate senders
         existing = session.query(Email).filter_by(message_id=message_id).first()
         if existing:
-            logger.info(f"Email already processed: {message_id}")
+            also = json.loads(existing.also_received_from or "[]")
+
+            # Determine if the new copy has more substantive content.
+            # If so, promote it to primary and demote the old primary.
+            new_body_len = len(body_text or "")
+            old_body_len = len(existing.body_text or "")
+
+            if new_body_len > old_body_len and from_address != existing.from_address:
+                # Demote current primary into also_received_from
+                old_sender = {"address": existing.from_address, "name": existing.from_name or ""}
+                if not any(s["address"] == existing.from_address for s in also):
+                    also.append(old_sender)
+
+                # Promote new email to primary
+                existing.from_address = from_address
+                existing.from_name = from_name
+                existing.subject = subject
+                existing.body_text = body_text
+                existing.body_html = body_html
+                existing.also_received_from = json.dumps(also)
+                logger.info(f"Duplicate email promoted — {from_address} has longer body ({new_body_len} > {old_body_len})")
+            elif from_address != existing.from_address and not any(s["address"] == from_address for s in also):
+                # New sender but shorter body — just add to also_received_from
+                also.append({"address": from_address, "name": from_name})
+                existing.also_received_from = json.dumps(also)
+                logger.info(f"Duplicate email merged — added sender {from_address}")
+            else:
+                logger.info(f"Duplicate email from same sender, skipped: {message_id}")
+
             log_entry = ProcessingLog(
                 email_id=existing.id,
                 event_type="email_received",
-                status="warning",
-                message="Duplicate email skipped",
-                event_metadata=json.dumps({"file_path": str(email_path)})
+                status="success",
+                message=f"Duplicate merged from {from_address}",
+                event_metadata=json.dumps({"file_path": str(email_path), "sender": from_address})
             )
             session.add(log_entry)
             session.commit()

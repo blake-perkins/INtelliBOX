@@ -1,6 +1,7 @@
 """AI processing pipeline for emails."""
 
 import json
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -91,17 +92,29 @@ def process_email_with_ai(email: Email, session: Session) -> int:
         return 0
 
 
-def process_unprocessed_emails(session: Session, limit: Optional[int] = None) -> tuple[int, int]:
+def process_unprocessed_emails(
+    session: Session,
+    limit: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    batch_delay: Optional[float] = None,
+) -> tuple[int, int]:
     """
-    Process all unprocessed emails with AI.
+    Process all unprocessed emails with AI in rate-limited batches.
 
     Args:
         session: Database session
         limit: Optional limit on number of emails to process
+        batch_size: Emails per batch before pausing (default from config)
+        batch_delay: Seconds to wait between batches (default from config)
 
     Returns:
         Tuple of (emails_processed, total_actions_created)
     """
+    if batch_size is None:
+        batch_size = settings.ai_batch_size
+    if batch_delay is None:
+        batch_delay = settings.ai_batch_delay
+
     # Query unprocessed emails
     query = session.query(Email).filter(Email.processed == False).order_by(Email.received_date)
 
@@ -114,16 +127,22 @@ def process_unprocessed_emails(session: Session, limit: Optional[int] = None) ->
         logger.info("No unprocessed emails found")
         return 0, 0
 
-    logger.info(f"Processing {len(unprocessed_emails)} unprocessed email(s) with AI")
+    total = len(unprocessed_emails)
+    logger.info(f"Processing {total} unprocessed email(s) with AI (batch_size={batch_size}, delay={batch_delay}s)")
 
     emails_processed = 0
     total_actions = 0
 
-    for email in unprocessed_emails:
+    for i, email in enumerate(unprocessed_emails):
         actions_count = process_email_with_ai(email, session)
         if actions_count >= 0:  # Successful processing (0 actions is valid)
             emails_processed += 1
             total_actions += actions_count
+
+        # Rate limit: pause between batches
+        if batch_size > 0 and (i + 1) % batch_size == 0 and (i + 1) < total:
+            logger.info(f"Batch {(i + 1) // batch_size} complete ({i + 1}/{total}), waiting {batch_delay}s...")
+            time.sleep(batch_delay)
 
     logger.info(f"AI processing complete: {emails_processed} emails, {total_actions} actions")
     return emails_processed, total_actions

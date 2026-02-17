@@ -33,7 +33,8 @@ def parse_msg_file(msg_path: Path) -> Tuple[str, str, str, str, List[str], List[
 
         # Extract sender
         from_name = msg.sender or ""
-        from_address = msg.senderEmail or "unknown@unknown.com"
+        # PidTagSenderEmailAddress (0x0C1F) — not exposed as a direct attribute
+        from_address = msg.getStringStream("__substg1.0_0C1F") or "unknown@unknown.com"
 
         # Extract recipients
         to_addresses = []
