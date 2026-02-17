@@ -3,25 +3,30 @@
 {% block title %}Insights - INtelliBOX{% endblock %}
 
 {% block content %}
-<div class="card-header" style="font-size: 1.75rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+<div class="card-header" style="font-size: 1.75rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
     <div>
         Insights
         <span style="font-size: 1rem; color: #666; font-weight: normal;">
-            {{ report.generated_at.strftime('%B %d, %Y') }}
+            {{ report.generated_at.strftime('%B %d, %Y at %I:%M %p') if report.generated_at else '' }}
         </span>
     </div>
-    <div style="font-size: 0.85rem;">
-        {% if report.is_cached %}
-        <span style="color: #28a745; margin-right: 1rem;">
-            <i class="fas fa-check-circle"></i> Cached ({{ cache_age_minutes }} min ago)
+    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; flex-wrap: wrap;">
+        {% if report.is_stale %}
+        <span style="background: #fff3cd; color: #856404; padding: 0.35rem 0.75rem; border-radius: 20px; border: 1px solid #ffc107;">
+            ⚠️ Insights are outdated — {{ cache_age_minutes }} min ago
         </span>
-        <button onclick="confirmRefresh()" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
-            <i class="fas fa-sync-alt"></i> Refresh
-        </button>
+        <a href="/report?refresh=true" class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.85rem;" onclick="startRefresh(this)">
+            🔄 Refresh Now
+        </a>
+        {% elif report.is_cached %}
+        <span style="color: #28a745;">
+            ✓ Up to date ({{ cache_age_minutes }} min ago)
+        </span>
+        <a href="/report?refresh=true" class="btn" style="padding: 0.4rem 1rem; font-size: 0.85rem; background: #e9ecef; color: #555;" onclick="startRefresh(this)">
+            🔄 Refresh
+        </a>
         {% else %}
-        <span style="color: #666;">
-            <i class="fas fa-clock"></i> Generated just now
-        </span>
+        <span style="color: #666;">Generated just now</span>
         {% endif %}
     </div>
 </div>
@@ -307,14 +312,9 @@
 </style>
 
 <script>
-function confirmRefresh() {
-    if (confirm('⚠️ Refreshing will regenerate insights using AI.\n\nThis will:\n• Take 20-30 seconds to complete\n• Use OpenAI API tokens (costs ~$0.02-0.05)\n• Generate fresh insights from current data\n\nContinue?')) {
-        // Show loading overlay
-        document.getElementById('loadingOverlay').style.display = 'flex';
-
-        // Navigate to refresh URL
-        window.location.href = '/report?refresh=true';
-    }
+function startRefresh(btn) {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    // Let the href navigate normally; overlay gives immediate feedback
 }
 </script>
 {% endblock %}

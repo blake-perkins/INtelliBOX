@@ -119,26 +119,33 @@
 
 <!-- Stats Overview -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-    <div class="stat-card" style="background: white; border: 1px solid #e1e8ed;">
-        <div class="stat-value" style="color: #2c3e50; font-size: 2rem;">{{ unassigned_actions }}</div>
-        <div class="stat-label" style="color: #7f8c8d;">Unassigned</div>
-        <a href="/actions?assigned=false" style="font-size: 0.75rem; color: #3498db; text-decoration: none; margin-top: 0.25rem; display: block;">View →</a>
-    </div>
+    <a href="/actions?assigned=false" style="text-decoration: none; color: inherit;">
+        <div class="stat-card" style="background: white; border: 1px solid #e1e8ed; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.borderColor='#3498db'" onmouseout="this.style.boxShadow='';this.style.borderColor='#e1e8ed'">
+            <div class="stat-value" style="color: #2c3e50; font-size: 2rem;">{{ unassigned_actions }}</div>
+            <div class="stat-label" style="color: #7f8c8d;">Unassigned</div>
+        </div>
+    </a>
 
-    <div class="stat-card" style="background: white; border: 1px solid #e1e8ed;">
-        <div class="stat-value" style="color: #27ae60; font-size: 2rem;">{{ completed_actions }}</div>
-        <div class="stat-label" style="color: #7f8c8d;">Completed</div>
-    </div>
+    <a href="/actions?assigned=true" style="text-decoration: none; color: inherit;">
+        <div class="stat-card" style="background: white; border: 1px solid #e1e8ed; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.borderColor='#27ae60'" onmouseout="this.style.boxShadow='';this.style.borderColor='#e1e8ed'">
+            <div class="stat-value" style="color: #27ae60; font-size: 2rem;">{{ completed_actions }}</div>
+            <div class="stat-label" style="color: #7f8c8d;">Completed</div>
+        </div>
+    </a>
 
-    <div class="stat-card" style="background: white; border: 1px solid #e1e8ed;">
-        <div class="stat-value" style="color: #2c3e50; font-size: 2rem;">{{ total_actions }}</div>
-        <div class="stat-label" style="color: #7f8c8d;">Total Actions</div>
-    </div>
+    <a href="/actions" style="text-decoration: none; color: inherit;">
+        <div class="stat-card" style="background: white; border: 1px solid #e1e8ed; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.borderColor='#3498db'" onmouseout="this.style.boxShadow='';this.style.borderColor='#e1e8ed'">
+            <div class="stat-value" style="color: #2c3e50; font-size: 2rem;">{{ total_actions }}</div>
+            <div class="stat-label" style="color: #7f8c8d;">Total Actions</div>
+        </div>
+    </a>
 
-    <div class="stat-card" style="background: white; border: 1px solid #e1e8ed;">
-        <div class="stat-value" style="color: #2c3e50; font-size: 2rem;">{{ total_emails }}</div>
-        <div class="stat-label" style="color: #7f8c8d;">Total Emails</div>
-    </div>
+    <a href="/emails" style="text-decoration: none; color: inherit;">
+        <div class="stat-card" style="background: white; border: 1px solid #e1e8ed; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.borderColor='#3498db'" onmouseout="this.style.boxShadow='';this.style.borderColor='#e1e8ed'">
+            <div class="stat-value" style="color: #2c3e50; font-size: 2rem;">{{ total_emails }}</div>
+            <div class="stat-label" style="color: #7f8c8d;">Total Emails</div>
+        </div>
+    </a>
 </div>
 
 <!-- Priority Breakdown - Compact -->

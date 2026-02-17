@@ -4,8 +4,10 @@
 
 {% block content %}
 <!-- Compact Metrics Bar -->
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
+<div style="background: linear-gradient(135deg, #0f9b8e 0%, #0b6e65 100%); color: white; padding: 1rem 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(15, 155, 142, 0.3);">
     <div style="display: flex; gap: 1.5rem; align-items: center; font-size: 0.95rem; flex-wrap: wrap;">
+        <span style="font-weight: 700; font-size: 1.05rem; letter-spacing: 0.03em;">📧 Emails</span>
+        <div style="opacity: 0.4;">|</div>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span style="opacity: 0.8;">📧</span>
             <span><strong>{% if time_since_last_email %}{{ time_since_last_email }}{% else %}N/A{% endif %}</strong> <span style="opacity: 0.7;">last email</span></span>

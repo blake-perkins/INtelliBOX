@@ -387,24 +387,13 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         ReportCache.generated_at.desc()
     ).first()
 
-    should_regenerate_insights = force_refresh
+    # Only regenerate when explicitly requested (force_refresh) or when no cache
+    # exists at all. Never auto-regenerate on normal page loads — that blocks the
+    # request on a slow AI call and makes the page appear frozen.
+    should_regenerate_insights = force_refresh or (not latest_cache)
 
-    if not should_regenerate_insights and latest_cache:
-        # Check if cache is older than 1 hour
-        cache_age = datetime.utcnow() - latest_cache.generated_at
-        if cache_age.total_seconds() > 3600:  # 1 hour
-            should_regenerate_insights = True
-            logger.info(f"Insights cache is {cache_age.total_seconds() / 60:.1f} minutes old, regenerating")
-
-        # Check if new actions have been created since cache
-        if not should_regenerate_insights:
-            newest_action = session.query(Action).order_by(Action.created_at.desc()).first()
-            if newest_action and newest_action.created_at > latest_cache.generated_at:
-                should_regenerate_insights = True
-                logger.info("New actions created since last insights cache, regenerating")
-    elif not latest_cache:
-        should_regenerate_insights = True
-        logger.info("No insights cache found, generating AI insights")
+    if not latest_cache:
+        logger.info("No insights cache found, generating AI insights for the first time")
 
     # Get or generate AI insights
     if not should_regenerate_insights and latest_cache:
@@ -449,10 +438,23 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         is_cached = False
         insights_generated_at = now
 
+    # Insights are considered stale if cached and older than 1 hour, or if new
+    # actions exist since the cache was generated.
+    is_stale = False
+    if is_cached:
+        cache_age_seconds = (now - insights_generated_at).total_seconds()
+        if cache_age_seconds > 3600:
+            is_stale = True
+        else:
+            newest_action = session.query(Action).order_by(Action.created_at.desc()).first()
+            if newest_action and newest_action.created_at > insights_generated_at:
+                is_stale = True
+
     # Build report data with fresh actions and cached/fresh insights
     report_data = {
         "generated_at": insights_generated_at,
         "is_cached": is_cached,
+        "is_stale": is_stale,
         "days_analyzed": days,
         "total_actions": len(unassigned_actions),
         "high_priority_count": high_priority_count,

@@ -91,6 +91,12 @@
             opacity: 0.8;
         }
 
+        .nav-links a.active {
+            opacity: 1;
+            border-bottom: 2px solid white;
+            padding-bottom: 2px;
+        }
+
         .container {
             max-width: 1400px;
             margin: 2rem auto;
@@ -266,6 +272,16 @@
         {% block content %}{% endblock %}
     </div>
 
+    <script>
+        // Highlight the active nav link based on the current path
+        const path = window.location.pathname;
+        document.querySelectorAll('.nav-links a').forEach(a => {
+            const href = a.getAttribute('href');
+            if (href === '/' ? path === '/' : path.startsWith(href)) {
+                a.classList.add('active');
+            }
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
