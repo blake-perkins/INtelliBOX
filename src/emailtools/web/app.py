@@ -29,8 +29,8 @@ static_dir = Path(__file__).parent / "static"
 templates = Jinja2Templates(directory=str(template_dir))
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-# Inject program_name into every template render without touching each route
-templates.env.globals['program_name'] = lambda: SettingsService.get_setting('program_name', '')
+# Inject as get_program_name to avoid clashing with context vars named program_name
+templates.env.globals['get_program_name'] = lambda: SettingsService.get_setting('program_name', '')
 
 
 @app.get("/", response_class=HTMLResponse)
