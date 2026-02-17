@@ -1,5 +1,6 @@
 """Report generation for daily email summaries."""
 
+import json
 from datetime import datetime, timedelta
 from typing import Dict, List
 
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from emailtools.ai.processor import get_ai_client
 from emailtools.config import settings
-from emailtools.models import Action, Email, ProgramNewsCache
+from emailtools.models import Action, Email, ProgramNewsCache, ReportCache
 from emailtools.utils.logging import logger
 
 
@@ -226,5 +227,136 @@ def generate_report_data(session: Session) -> Dict:
         f"Report generated: {len(unassigned_actions)} unassigned actions "
         f"({high_priority_count} high, {medium_priority_count} medium, {low_priority_count} low)"
     )
+
+    return report_data
+
+
+def generate_enhanced_report(session: Session, days: int = 7, force_refresh: bool = False) -> Dict:
+    """
+    Generate enhanced report with AI insights and caching.
+
+    Cache is refreshed when:
+    - force_refresh is True
+    - No cache exists
+    - Cache is older than 1 hour
+    - New actions have been created since last generation
+
+    Args:
+        session: Database session
+        days: Number of days to analyze for insights
+        force_refresh: Force regeneration even if cache is valid
+
+    Returns:
+        Dictionary with comprehensive report data and insights
+    """
+    # Always get fresh action data (cheap query)
+    unassigned_actions = get_unassigned_actions(session)
+
+    # Calculate basic statistics
+    now = datetime.utcnow()
+    high_priority_count = sum(1 for a in unassigned_actions if a.priority == "high")
+    medium_priority_count = sum(1 for a in unassigned_actions if a.priority == "medium")
+    low_priority_count = sum(1 for a in unassigned_actions if a.priority == "low")
+
+    # Calculate overdue and due this week
+    week_from_now = now + timedelta(days=7)
+    overdue_count = sum(1 for a in unassigned_actions if a.due_date and a.due_date < now)
+    due_this_week_count = sum(
+        1 for a in unassigned_actions
+        if a.due_date and now <= a.due_date <= week_from_now
+    )
+
+    # Get count of emails processed today
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    emails_today = session.query(Email).filter(Email.created_at >= today_start).count()
+
+    # Get cached program news
+    program_news_data = get_cached_program_news(session, days)
+
+    # Check cache for AI insights (expensive operation)
+    latest_cache = session.query(ReportCache).order_by(
+        ReportCache.generated_at.desc()
+    ).first()
+
+    should_regenerate_insights = force_refresh
+
+    if not should_regenerate_insights and latest_cache:
+        # Check if cache is older than 1 hour
+        cache_age = datetime.utcnow() - latest_cache.generated_at
+        if cache_age.total_seconds() > 3600:  # 1 hour
+            should_regenerate_insights = True
+            logger.info(f"Insights cache is {cache_age.total_seconds() / 60:.1f} minutes old, regenerating")
+
+        # Check if new actions have been created since cache
+        if not should_regenerate_insights:
+            newest_action = session.query(Action).order_by(Action.created_at.desc()).first()
+            if newest_action and newest_action.created_at > latest_cache.generated_at:
+                should_regenerate_insights = True
+                logger.info("New actions created since last insights cache, regenerating")
+    elif not latest_cache:
+        should_regenerate_insights = True
+        logger.info("No insights cache found, generating AI insights")
+
+    # Get or generate AI insights
+    if not should_regenerate_insights and latest_cache:
+        logger.info(f"Using cached AI insights (generated {latest_cache.generated_at})")
+        cached_data = json.loads(latest_cache.report_data)
+        insights = cached_data.get("insights", {})
+        is_cached = True
+        insights_generated_at = latest_cache.generated_at
+    else:
+        # Generate new AI insights
+        logger.info("Generating new AI insights")
+        recent_emails = get_recent_emails(session, days)
+
+        client = get_ai_client()
+        try:
+            insights = client.generate_report_insights(unassigned_actions, recent_emails, days)
+        except Exception as e:
+            logger.error(f"Failed to generate AI insights: {e}")
+            insights = {
+                "executive_summary": "Unable to generate insights at this time.",
+                "trends": {},
+                "category_insights": [],
+                "urgent_items": [],
+                "bottlenecks": "",
+                "recommendations": []
+            }
+
+        # Save insights to cache
+        cache_data = {
+            "insights": insights,
+            "email_count": len(recent_emails) if 'recent_emails' in locals() else 0
+        }
+
+        cache_entry = ReportCache(
+            report_data=json.dumps(cache_data),
+            generated_at=now
+        )
+        session.add(cache_entry)
+        session.commit()
+
+        logger.info(f"AI insights cached")
+        is_cached = False
+        insights_generated_at = now
+
+    # Build report data with fresh actions and cached/fresh insights
+    report_data = {
+        "generated_at": insights_generated_at,
+        "is_cached": is_cached,
+        "days_analyzed": days,
+        "total_actions": len(unassigned_actions),
+        "high_priority_count": high_priority_count,
+        "medium_priority_count": medium_priority_count,
+        "low_priority_count": low_priority_count,
+        "overdue_count": overdue_count,
+        "due_this_week_count": due_this_week_count,
+        "emails_today": emails_today,
+        "email_count": cached_data.get("email_count", 0) if is_cached else len(recent_emails) if 'recent_emails' in locals() else 0,
+        "program_news": program_news_data["summary"],
+        "program_news_generated_at": program_news_data["generated_at"],
+        "insights": insights,
+        "unassigned_actions": unassigned_actions  # Keep as ORM objects for template
+    }
 
     return report_data

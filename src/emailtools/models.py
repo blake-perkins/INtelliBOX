@@ -210,3 +210,21 @@ class Settings(Base):
 
     def __repr__(self) -> str:
         return f"<Settings(key='{self.key}', value='{self.value[:50]}')>"
+
+
+class ReportCache(Base):
+    """Cache for generated reports to avoid expensive AI calls."""
+
+    __tablename__ = "report_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    report_data: Mapped[str] = mapped_column(Text, nullable=False)  # JSON-encoded report
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+
+    def __repr__(self) -> str:
+        return f"<ReportCache(id={self.id}, generated_at='{self.generated_at}')>"

@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from openai import OpenAI
 from openai import APIError, APIConnectionError, RateLimitError
 
-from emailtools.ai.prompts import ACTION_EXTRACTION_PROMPT, PROGRAM_NEWS_PROMPT, SYSTEM_PROMPT
+from emailtools.ai.prompts import ACTION_EXTRACTION_PROMPT, PROGRAM_NEWS_PROMPT, REPORT_INSIGHTS_PROMPT, SYSTEM_PROMPT
 from emailtools.config import settings
 from emailtools.models import Action, Email
 from emailtools.utils.logging import logger
@@ -249,6 +249,131 @@ class AIClient:
         except Exception as e:
             logger.error(f"Failed to generate program news: {e}")
             return "Error generating program news summary."
+
+    def generate_report_insights(
+        self,
+        actions: List,
+        emails: List[Email],
+        days: int = 7
+    ) -> Dict:
+        """
+        Generate comprehensive insights for the report dashboard.
+
+        Args:
+            actions: List of Action objects to analyze
+            emails: List of recent Email objects
+            days: Number of days covered
+
+        Returns:
+            Dictionary with structured insights
+        """
+        if not actions and not emails:
+            return {
+                "executive_summary": "No recent activity to report.",
+                "trends": {},
+                "category_insights": [],
+                "urgent_items": [],
+                "bottlenecks": "Insufficient data for analysis.",
+                "recommendations": []
+            }
+
+        # Calculate metrics
+        from datetime import datetime, timedelta
+        now = datetime.utcnow()
+        week_from_now = now + timedelta(days=7)
+
+        total_actions = len(actions)
+        high_priority_count = sum(1 for a in actions if a.priority == "high")
+        medium_priority_count = sum(1 for a in actions if a.priority == "medium")
+        low_priority_count = sum(1 for a in actions if a.priority == "low")
+
+        overdue_count = sum(1 for a in actions if a.due_date and a.due_date < now)
+        due_this_week_count = sum(
+            1 for a in actions
+            if a.due_date and now <= a.due_date <= week_from_now
+        )
+
+        # Category breakdown
+        category_counts = {}
+        for action in actions:
+            cat = action.category or "uncategorized"
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+
+        category_breakdown = "\n".join(
+            f"- {cat}: {count}" for cat, count in sorted(
+                category_counts.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )
+        )
+
+        # Email summaries (limit to 15 most recent)
+        email_summaries = []
+        for email in emails[:15]:
+            summary = f"- From {email.from_address}: {email.subject}"
+            email_summaries.append(summary)
+        email_summaries_text = "\n".join(email_summaries) if email_summaries else "No recent emails"
+
+        # Format the prompt
+        prompt = REPORT_INSIGHTS_PROMPT.format(
+            total_actions=total_actions,
+            high_priority_count=high_priority_count,
+            medium_priority_count=medium_priority_count,
+            low_priority_count=low_priority_count,
+            overdue_count=overdue_count,
+            due_this_week_count=due_this_week_count,
+            category_breakdown=category_breakdown or "- No categories",
+            days=days,
+            email_summaries=email_summaries_text
+        )
+
+        try:
+            logger.info(f"Generating report insights from {total_actions} actions and {len(emails)} emails")
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.4,  # Balanced for insights
+                max_tokens=1000,
+                timeout=self.timeout
+            )
+
+            raw_response = response.choices[0].message.content.strip()
+            logger.debug(f"Report insights response: {raw_response[:200]}...")
+
+            # Parse JSON response
+            try:
+                clean_json = strip_markdown_json(raw_response)
+                insights = json.loads(clean_json)
+                logger.info("Report insights generated successfully")
+                return insights
+
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse insights JSON: {e}")
+                logger.error(f"Raw response: {raw_response}")
+                # Return fallback structure
+                return {
+                    "executive_summary": "Unable to generate insights at this time.",
+                    "trends": {},
+                    "category_insights": [],
+                    "urgent_items": [],
+                    "bottlenecks": "Error parsing AI response.",
+                    "recommendations": []
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to generate report insights: {e}")
+            return {
+                "executive_summary": f"Error generating insights: {str(e)[:100]}",
+                "trends": {},
+                "category_insights": [],
+                "urgent_items": [],
+                "bottlenecks": "",
+                "recommendations": []
+            }
 
 
 # Singleton instance

@@ -3,35 +3,214 @@
 {% block title %}Daily Report - INtelliBOX{% endblock %}
 
 {% block content %}
-<div class="card-header" style="font-size: 1.75rem; margin-bottom: 1.5rem;">
-    Daily Report
-    <span style="font-size: 1rem; color: #666; font-weight: normal;">
-        {{ report.generated_at.strftime('%B %d, %Y') }}
-    </span>
+<div class="card-header" style="font-size: 1.75rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        Daily Report
+        <span style="font-size: 1rem; color: #666; font-weight: normal;">
+            {{ report.generated_at.strftime('%B %d, %Y') }}
+        </span>
+    </div>
+    <div style="font-size: 0.85rem;">
+        {% if report.is_cached %}
+        <span style="color: #28a745; margin-right: 1rem;">
+            <i class="fas fa-check-circle"></i> Cached ({{ (report.generated_at.timestamp() - datetime.now().timestamp()) | abs | int // 60 }} min ago)
+        </span>
+        <a href="/report?refresh=true" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </a>
+        {% else %}
+        <span style="color: #666;">
+            <i class="fas fa-clock"></i> Generated just now
+        </span>
+        {% endif %}
+    </div>
 </div>
 
-<div class="stats-grid">
+<!-- Executive Summary Section -->
+{% if report.insights and report.insights.executive_summary %}
+<div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 1.5rem;">
+    <div class="card-header" style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">
+        <i class="fas fa-chart-line"></i> Executive Summary
+    </div>
+    <div style="padding: 1.5rem; font-size: 1.05rem; line-height: 1.7;">
+        {{ report.insights.executive_summary }}
+    </div>
+</div>
+{% endif %}
+
+<!-- Metrics Grid -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="stat-card">
+        <div class="stat-value stat-primary">{{ report.total_actions }}</div>
+        <div class="stat-label">Total Unassigned</div>
+    </div>
     <div class="stat-card">
         <div class="stat-value stat-high">{{ report.high_priority_count }}</div>
-        <div class="stat-label">High Priority Unassigned</div>
+        <div class="stat-label">High Priority</div>
     </div>
     <div class="stat-card">
         <div class="stat-value stat-medium">{{ report.medium_priority_count }}</div>
-        <div class="stat-label">Medium Priority Unassigned</div>
+        <div class="stat-label">Medium Priority</div>
     </div>
     <div class="stat-card">
         <div class="stat-value stat-low">{{ report.low_priority_count }}</div>
-        <div class="stat-label">Low Priority Unassigned</div>
+        <div class="stat-label">Low Priority</div>
     </div>
     <div class="stat-card">
-        <div class="stat-value stat-primary">{{ report.total_actions }}</div>
-        <div class="stat-label">Total Unassigned Actions</div>
+        <div class="stat-value" style="color: #e74c3c;">{{ report.overdue_count }}</div>
+        <div class="stat-label">Overdue</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" style="color: #f39c12;">{{ report.due_this_week_count }}</div>
+        <div class="stat-label">Due This Week</div>
     </div>
 </div>
 
-<div class="card">
+<!-- Priority Distribution Visual -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">Priority Distribution</div>
+    <div style="padding: 1.5rem;">
+        {% if report.total_actions > 0 %}
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 500;">High Priority</span>
+                <span>{{ report.high_priority_count }} ({{ (report.high_priority_count / report.total_actions * 100) | round | int }}%)</span>
+            </div>
+            <div style="background: #e0e0e0; height: 20px; border-radius: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(90deg, #e74c3c, #c0392b); height: 100%; width: {{ (report.high_priority_count / report.total_actions * 100) | round }}%;"></div>
+            </div>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 500;">Medium Priority</span>
+                <span>{{ report.medium_priority_count }} ({{ (report.medium_priority_count / report.total_actions * 100) | round | int }}%)</span>
+            </div>
+            <div style="background: #e0e0e0; height: 20px; border-radius: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(90deg, #f39c12, #d68910); height: 100%; width: {{ (report.medium_priority_count / report.total_actions * 100) | round }}%;"></div>
+            </div>
+        </div>
+        <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 500;">Low Priority</span>
+                <span>{{ report.low_priority_count }} ({{ (report.low_priority_count / report.total_actions * 100) | round | int }}%)</span>
+            </div>
+            <div style="background: #e0e0e0; height: 20px; border-radius: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(90deg, #3498db, #2980b9); height: 100%; width: {{ (report.low_priority_count / report.total_actions * 100) | round }}%;"></div>
+            </div>
+        </div>
+        {% else %}
+        <p style="text-align: center; color: #999; padding: 2rem;">No unassigned actions</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Two Column Layout for Insights -->
+{% if report.insights %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Trends Section -->
+    {% if report.insights.trends %}
+    <div class="card">
+        <div class="card-header"><i class="fas fa-chart-area"></i> Trends & Patterns</div>
+        <div style="padding: 1.5rem;">
+            {% if report.insights.trends.action_volume %}
+            <div style="margin-bottom: 1rem;">
+                <strong style="color: #667eea;">Action Volume:</strong>
+                <p style="margin-top: 0.5rem; line-height: 1.6;">{{ report.insights.trends.action_volume }}</p>
+            </div>
+            {% endif %}
+            {% if report.insights.trends.priority_distribution %}
+            <div style="margin-bottom: 1rem;">
+                <strong style="color: #667eea;">Priority Distribution:</strong>
+                <p style="margin-top: 0.5rem; line-height: 1.6;">{{ report.insights.trends.priority_distribution }}</p>
+            </div>
+            {% endif %}
+            {% if report.insights.trends.response_patterns %}
+            <div>
+                <strong style="color: #667eea;">Response Patterns:</strong>
+                <p style="margin-top: 0.5rem; line-height: 1.6;">{{ report.insights.trends.response_patterns }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Category Insights -->
+    {% if report.insights.category_insights %}
+    <div class="card">
+        <div class="card-header"><i class="fas fa-tags"></i> Category Insights</div>
+        <div style="padding: 1.5rem;">
+            {% for cat_insight in report.insights.category_insights[:4] %}
+            <div style="margin-bottom: 1.2rem; {% if not loop.last %}border-bottom: 1px solid #e0e0e0; padding-bottom: 1.2rem;{% endif %}">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <strong style="color: #333;">{{ cat_insight.category }}</strong>
+                    <span class="badge badge-{{ cat_insight.urgency or 'medium' }}" style="font-size: 0.75rem;">
+                        {{ (cat_insight.urgency or 'medium').upper() }}
+                    </span>
+                </div>
+                <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.3rem;">
+                    {{ cat_insight.count }} action{% if cat_insight.count != 1 %}s{% endif %}
+                </div>
+                <p style="margin: 0; line-height: 1.5; font-size: 0.95rem;">{{ cat_insight.insight }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Urgent Items Section -->
+{% if report.insights.urgent_items %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #e74c3c;">
+    <div class="card-header" style="background-color: #fef5f5; color: #e74c3c;">
+        <i class="fas fa-exclamation-triangle"></i> Items Requiring Immediate Attention
+    </div>
+    <div style="padding: 1.5rem;">
+        {% for urgent in report.insights.urgent_items %}
+        <div style="margin-bottom: 1.5rem; {% if not loop.last %}border-bottom: 2px solid #fee; padding-bottom: 1.5rem;{% endif %}">
+            <h4 style="margin: 0 0 0.5rem 0; color: #e74c3c;">{{ urgent.action_title }}</h4>
+            <p style="margin: 0 0 0.5rem 0; color: #666;"><strong>Why urgent:</strong> {{ urgent.reason }}</p>
+            <p style="margin: 0; padding: 0.75rem; background: #fef5f5; border-radius: 5px; color: #333;">
+                <strong>Recommended action:</strong> {{ urgent.recommended_action }}
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Bottlenecks Section -->
+{% if report.insights.bottlenecks %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #f39c12;">
+    <div class="card-header" style="color: #f39c12;">
+        <i class="fas fa-hourglass-half"></i> Bottlenecks & Challenges
+    </div>
+    <div style="padding: 1.5rem; line-height: 1.7;">
+        {{ report.insights.bottlenecks }}
+    </div>
+</div>
+{% endif %}
+
+<!-- Recommendations Section -->
+{% if report.insights.recommendations %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #28a745;">
+    <div class="card-header" style="color: #28a745;">
+        <i class="fas fa-lightbulb"></i> Recommendations
+    </div>
+    <div style="padding: 1.5rem;">
+        <ul style="margin: 0; padding-left: 1.5rem; line-height: 2;">
+            {% for rec in report.insights.recommendations %}
+            <li style="margin-bottom: 0.5rem;">{{ rec }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Unassigned Actions Table -->
+<div class="card" style="margin-bottom: 1.5rem;">
     <div class="card-header">
-        Unassigned Actions
+        Unassigned Actions ({{ report.total_actions }})
     </div>
 
     {% if report.unassigned_actions %}
@@ -40,9 +219,9 @@
                 <tr>
                     <th>Priority</th>
                     <th>Title</th>
+                    <th>Category</th>
                     <th>From</th>
                     <th>Due Date</th>
-                    <th>Confidence</th>
                 </tr>
             </thead>
             <tbody>
@@ -53,20 +232,29 @@
                             {{ (action.priority or 'medium').upper() }}
                         </span>
                     </td>
-                    <td>{{ action.title }}</td>
-                    <td>{{ action.email.from_address }}</td>
+                    <td>
+                        <strong>{{ action.title }}</strong>
+                        {% if action.description %}
+                        <div style="font-size: 0.85rem; color: #666; margin-top: 0.3rem;">
+                            {{ action.description[:100] }}{% if action.description|length > 100 %}...{% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if action.category %}
+                        <span style="font-size: 0.85rem; padding: 0.2rem 0.5rem; background: #f0f0f0; border-radius: 3px;">
+                            {{ action.category }}
+                        </span>
+                        {% else %}
+                        <span style="color: #999;">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.9rem;">{{ action.email.from_address if action.email else 'Unknown' }}</td>
                     <td>
                         {% if action.due_date %}
                             {{ action.due_date.strftime('%Y-%m-%d') }}
                         {% else %}
                             <span style="color: #999;">No due date</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if action.confidence_score %}
-                            {{ (action.confidence_score * 100)|round|int }}%
-                        {% else %}
-                            <span style="color: #999;">N/A</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -75,20 +263,24 @@
         </table>
     {% else %}
     <div style="text-align: center; padding: 3rem; color: #999;">
-        <p style="font-size: 1.1rem;">No unassigned actions</p>
+        <p style="font-size: 1.1rem;">✓ No unassigned actions</p>
         <p style="font-size: 0.9rem; margin-top: 0.5rem;">All actions have been assigned</p>
     </div>
     {% endif %}
 </div>
 
+<!-- Program News Section -->
 {% if report.program_news %}
 <div class="card">
     <div class="card-header">
-        Program News Summary
+        <i class="fas fa-newspaper"></i> Program News Summary (Last {{ report.days_analyzed }} Days)
     </div>
 
-    <div style="padding: 1.5rem; line-height: 1.7;">
+    <div style="padding: 1.5rem; line-height: 1.7; background: #f9f9f9;">
         {{ report.program_news }}
+    </div>
+    <div style="padding: 0.75rem 1.5rem; border-top: 1px solid #e0e0e0; font-size: 0.85rem; color: #999;">
+        Based on {{ report.email_count }} email{% if report.email_count != 1 %}s{% endif %}
     </div>
 </div>
 {% endif %}

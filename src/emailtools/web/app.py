@@ -12,7 +12,7 @@ from sqlalchemy import desc, func, case, or_
 
 from emailtools.database import get_session
 from emailtools.models import Action, Assignment, Email, ProcessingLog
-from emailtools.reporter.generator import generate_report_data, get_cached_program_news
+from emailtools.reporter.generator import generate_report_data, get_cached_program_news, generate_enhanced_report
 from emailtools.config import settings
 from emailtools.settings_service import SettingsService
 
@@ -384,10 +384,11 @@ async def view_email(request: Request, email_id: int):
 
 
 @app.get("/report", response_class=HTMLResponse)
-async def view_report(request: Request):
-    """View the daily report."""
+async def view_report(request: Request, refresh: bool = False):
+    """View the enhanced daily report with AI insights."""
     with get_session() as session:
-        report_data = generate_report_data(session)
+        # Use enhanced report with caching
+        report_data = generate_enhanced_report(session, days=7, force_refresh=refresh)
 
         return templates.TemplateResponse("report.html", {
             "request": request,

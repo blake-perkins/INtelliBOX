@@ -74,3 +74,58 @@ Emails to summarize:
 Create a 2-3 paragraph summary that a team lead can read in 30 seconds during morning scrum.
 
 Summary:"""
+
+REPORT_INSIGHTS_PROMPT = """Analyze the following action items and recent email activity to generate actionable insights.
+
+## Current Action Items ({total_actions} total)
+Priority breakdown:
+- High priority: {high_priority_count}
+- Medium priority: {medium_priority_count}
+- Low priority: {low_priority_count}
+
+Overdue actions: {overdue_count}
+Due this week: {due_this_week_count}
+
+Actions by category:
+{category_breakdown}
+
+Recent email activity ({days} days):
+{email_summaries}
+
+## Generate Structured Insights
+
+Provide a JSON response with the following structure:
+
+{{
+  "executive_summary": "2-3 sentence overview of current workload and key priorities",
+  "trends": {{
+    "action_volume": "Are actions increasing or decreasing? Any patterns?",
+    "priority_distribution": "Is the high-priority ratio concerning or healthy?",
+    "response_patterns": "How quickly are actions being addressed?"
+  }},
+  "category_insights": [
+    {{
+      "category": "category_name",
+      "count": number,
+      "insight": "Key observation about this category",
+      "urgency": "high|medium|low"
+    }}
+  ],
+  "urgent_items": [
+    {{
+      "action_title": "title",
+      "reason": "Why this needs immediate attention",
+      "recommended_action": "Specific next step"
+    }}
+  ],
+  "bottlenecks": "Identify any patterns of delayed responses or recurring request types",
+  "recommendations": [
+    "Specific actionable recommendation 1",
+    "Specific actionable recommendation 2",
+    "Specific actionable recommendation 3"
+  ]
+}}
+
+Focus on actionable insights that help the team prioritize and respond effectively.
+
+JSON response:"""
