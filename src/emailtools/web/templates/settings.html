@@ -70,7 +70,7 @@
                 </div>
 
                 <!-- High Priority Keywords -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; align-items: start;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: start;">
                     <div>
                         <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">High Priority Keywords</div>
                         <div style="font-size: 0.85rem; color: #888; line-height: 1.6;">
@@ -81,6 +81,39 @@
                     <textarea name="priority_high_keywords" rows="5"
                               placeholder="URGENT&#10;CRITICAL&#10;ACTION REQUIRED"
                               style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; font-family: monospace; resize: vertical; line-height: 1.6;">{{ priority_high_keywords_text }}</textarea>
+                </div>
+
+                <!-- Confidence Threshold -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Confidence Threshold</div>
+                        <div style="font-size: 0.85rem; color: #888; line-height: 1.6;">
+                            Actions with AI confidence below this score are discarded.<br>
+                            0.0 = keep everything &nbsp;·&nbsp; 1.0 = only certain actions.
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <input type="range" name="confidence_threshold" id="conf-slider"
+                               min="0" max="1" step="0.05"
+                               value="{{ confidence_threshold }}"
+                               oninput="document.getElementById('conf-value').textContent = parseFloat(this.value).toFixed(2)"
+                               style="flex: 1; accent-color: #3498db;">
+                        <span id="conf-value" style="font-size: 1rem; font-weight: 600; color: #2c3e50; min-width: 2.5rem; text-align: right;">{{ '%.2f'|format(confidence_threshold) }}</span>
+                    </div>
+                </div>
+
+                <!-- Action Categories -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; align-items: start;">
+                    <div>
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Action Categories</div>
+                        <div style="font-size: 0.85rem; color: #888; line-height: 1.6;">
+                            Categories the AI uses to classify each action.<br>
+                            One per line, format: <code style="background:#f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px;">name: description</code>
+                        </div>
+                    </div>
+                    <textarea name="ai_categories" rows="7"
+                              placeholder="RFI: Request for Information&#10;data_call: Request for data or report"
+                              style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; font-family: monospace; resize: vertical; line-height: 1.8;">{{ categories_text }}</textarea>
                 </div>
             </div>
 

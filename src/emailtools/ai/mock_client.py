@@ -8,6 +8,7 @@ from typing import Dict, List, Tuple
 from emailtools.models import Action, Email
 from emailtools.utils.logging import logger
 from emailtools.priority_rules import PriorityRuleEngine
+from emailtools.settings_service import SettingsService
 
 
 class MockAIClient:
@@ -222,10 +223,17 @@ class MockAIClient:
         Convert action dictionaries to Action ORM objects.
         (Same implementation as real AI client)
         """
+        confidence_threshold = SettingsService.get_ai_config()['confidence_threshold']
         actions = []
 
         for action_dict in action_dicts:
             try:
+                # Skip actions below confidence threshold
+                confidence = action_dict.get("confidence")
+                if confidence is not None and confidence < confidence_threshold:
+                    logger.info(f"Skipping low-confidence action (score={confidence:.2f} < threshold={confidence_threshold}): '{action_dict.get('title', '')[:60]}'")
+                    continue
+
                 # Parse due_date if present
                 due_date = None
                 if action_dict.get("due_date"):

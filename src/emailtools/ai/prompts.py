@@ -34,7 +34,8 @@ For each action item, extract:
    - Medium: Important, deadline 3-7 days
    - Low: No urgency, deadline > 7 days or flexible
 4. **due_date**: Extract from text (e.g., "by Friday" → actual date), null if not mentioned
-5. **category**: Classify as "RFI", "data_call", "stakeholder_request", "meeting_action", "deliverable", or "other"
+5. **category**: Classify using one of the defined categories:
+{categories}
 6. **confidence**: Your confidence (0.0-1.0) that this is truly an action item
 
 Respond ONLY with valid JSON in this exact format:

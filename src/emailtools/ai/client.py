@@ -12,6 +12,7 @@ from emailtools.config import settings
 from emailtools.models import Action, Email
 from emailtools.utils.logging import logger
 from emailtools.priority_rules import PriorityRuleEngine
+from emailtools.settings_service import SettingsService
 
 
 def strip_markdown_json(text: str) -> str:
@@ -79,14 +80,17 @@ class AIClient:
         # Prepare email body (prefer plain text, fallback to HTML)
         body = email.body_text or email.body_html or "(No body content)"
 
-        # Format the prompt
+        # Format the prompt with dynamic categories
+        ai_config = SettingsService.get_ai_config()
+        categories_text = SettingsService.format_categories_for_prompt(ai_config['categories'])
         prompt = ACTION_EXTRACTION_PROMPT.format(
             subject=email.subject,
             from_name=email.from_name or email.from_address,
             from_address=email.from_address,
             date=email.received_date.strftime("%Y-%m-%d %H:%M"),
             body=body[:4000],  # Limit body to 4000 chars to stay within token limits
-            current_date=current_date.strftime("%Y-%m-%d")
+            current_date=current_date.strftime("%Y-%m-%d"),
+            categories=categories_text
         )
 
         try:
@@ -150,10 +154,17 @@ class AIClient:
         Returns:
             List of Action ORM objects
         """
+        confidence_threshold = SettingsService.get_ai_config()['confidence_threshold']
         actions = []
 
         for action_dict in action_dicts:
             try:
+                # Skip actions below confidence threshold
+                confidence = action_dict.get("confidence")
+                if confidence is not None and confidence < confidence_threshold:
+                    logger.info(f"Skipping low-confidence action (score={confidence:.2f} < threshold={confidence_threshold}): '{action_dict.get('title', '')[:60]}'")
+                    continue
+
                 # Parse due_date if present
                 due_date = None
                 if action_dict.get("due_date"):

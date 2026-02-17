@@ -192,3 +192,101 @@ def test_setting_updated_at_changes(setup_database):
     # Verify updated value
     value2 = SettingsService.get_setting('test_key_update')
     assert value2 == 'updated'
+
+
+# ── AI config & category parsing ────────────────────────────────────────────
+
+def test_ai_config_defaults(setup_database):
+    """get_ai_config returns expected defaults when nothing is saved."""
+    config = SettingsService.get_ai_config()
+    assert config['confidence_threshold'] == 0.5
+    assert config['categories'] == SettingsService.DEFAULT_CATEGORIES
+
+
+def test_ai_config_roundtrip(setup_database):
+    """Saving and loading ai_config values preserves them exactly."""
+    SettingsService.set_setting('ai_confidence_threshold', 0.75)
+    custom = [{"name": "custom", "description": "A custom category"}]
+    SettingsService.set_setting('ai_categories', custom)
+
+    config = SettingsService.get_ai_config()
+    assert config['confidence_threshold'] == 0.75
+    assert config['categories'] == custom
+
+
+def test_parse_categories_normal(setup_database):
+    """Standard name: description lines are parsed correctly."""
+    text = "RFI: Request for Information\ndata_call: Data request"
+    result = SettingsService.parse_categories_text(text)
+    assert result == [
+        {"name": "RFI", "description": "Request for Information"},
+        {"name": "data_call", "description": "Data request"},
+    ]
+
+
+def test_parse_categories_colon_in_description(setup_database):
+    """A colon inside the description is preserved (only first colon splits)."""
+    text = "RFI: See docs: section 3"
+    result = SettingsService.parse_categories_text(text)
+    assert result == [{"name": "RFI", "description": "See docs: section 3"}]
+
+
+def test_parse_categories_blank_lines_ignored(setup_database):
+    """Blank and whitespace-only lines are silently skipped."""
+    text = "\n  \nRFI: Request for Information\n\ndata_call: Data request\n"
+    result = SettingsService.parse_categories_text(text)
+    assert len(result) == 2
+    assert result[0]["name"] == "RFI"
+    assert result[1]["name"] == "data_call"
+
+
+def test_parse_categories_no_colon_skipped(setup_database):
+    """Lines without a colon are ignored, valid lines still parsed."""
+    text = "this line has no colon\nRFI: Request for Information"
+    result = SettingsService.parse_categories_text(text)
+    assert result == [{"name": "RFI", "description": "Request for Information"}]
+
+
+def test_parse_categories_empty_name_skipped(setup_database):
+    """A line starting with a colon (empty name) is skipped."""
+    text = ": some description\nRFI: Request for Information"
+    result = SettingsService.parse_categories_text(text)
+    assert result == [{"name": "RFI", "description": "Request for Information"}]
+
+
+def test_parse_categories_empty_description_skipped(setup_database):
+    """A line with a name but empty description is skipped."""
+    text = "RFI:\ndata_call: Data request"
+    result = SettingsService.parse_categories_text(text)
+    assert result == [{"name": "data_call", "description": "Data request"}]
+
+
+def test_parse_categories_empty_input_returns_defaults(setup_database):
+    """An empty string falls back to DEFAULT_CATEGORIES."""
+    result = SettingsService.parse_categories_text("")
+    assert result == SettingsService.DEFAULT_CATEGORIES
+
+
+def test_parse_categories_all_invalid_returns_defaults(setup_database):
+    """All-invalid lines (no colons) fall back to DEFAULT_CATEGORIES."""
+    text = "no colon here\nalso no colon"
+    result = SettingsService.parse_categories_text(text)
+    assert result == SettingsService.DEFAULT_CATEGORIES
+
+
+def test_parse_categories_whitespace_trimmed(setup_database):
+    """Leading/trailing whitespace on name and description is stripped."""
+    text = "  RFI  :   Request for Information   "
+    result = SettingsService.parse_categories_text(text)
+    assert result == [{"name": "RFI", "description": "Request for Information"}]
+
+
+def test_format_categories_for_prompt(setup_database):
+    """format_categories_for_prompt produces bullet lines for the AI prompt."""
+    cats = [
+        {"name": "RFI", "description": "Request for Information"},
+        {"name": "other", "description": "Everything else"},
+    ]
+    prompt_text = SettingsService.format_categories_for_prompt(cats)
+    assert '   - "RFI": Request for Information' in prompt_text
+    assert '   - "other": Everything else' in prompt_text

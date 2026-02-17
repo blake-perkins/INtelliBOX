@@ -60,6 +60,15 @@ class SettingsService:
                     result[setting.key] = setting.value
             return result
 
+    DEFAULT_CATEGORIES = [
+        {"name": "RFI",                  "description": "Request for Information requiring a data or document response"},
+        {"name": "data_call",            "description": "Request to provide specific data, metrics, or a report"},
+        {"name": "stakeholder_request",  "description": "Request from an executive, client, or external stakeholder"},
+        {"name": "meeting_action",       "description": "Action item assigned during or following a meeting"},
+        {"name": "deliverable",          "description": "A work product or artifact that must be produced and submitted"},
+        {"name": "other",                "description": "Any action item that does not fit the above categories"},
+    ]
+
     @staticmethod
     def get_priority_config() -> dict:
         """Get priority-related configuration settings."""
@@ -69,3 +78,40 @@ class SettingsService:
             'high_keywords': SettingsService.get_setting('priority_high_keywords', []),
             'default_priority': SettingsService.get_setting('priority_default', 'medium')
         }
+
+    @staticmethod
+    def get_ai_config() -> dict:
+        """Get AI processing configuration settings."""
+        return {
+            'confidence_threshold': SettingsService.get_setting('ai_confidence_threshold', 0.5),
+            'categories': SettingsService.get_setting('ai_categories', SettingsService.DEFAULT_CATEGORIES),
+        }
+
+    @staticmethod
+    def format_categories_for_prompt(categories: list) -> str:
+        """Format category list into a prompt-ready bulleted string."""
+        return '\n'.join(f'   - "{c["name"]}": {c["description"]}' for c in categories)
+
+    @staticmethod
+    def parse_categories_text(text: str) -> list:
+        """
+        Parse a categories textarea value into a list of {name, description} dicts.
+
+        Each line should be "name: description". Lines without a colon or with an
+        empty name/description are skipped. If the description itself contains colons,
+        only the first colon is used as the separator (partition behaviour).
+        Returns DEFAULT_CATEGORIES if no valid lines are found.
+        """
+        categories = []
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if ':' not in line:
+                continue
+            name, _, description = line.partition(':')
+            name = name.strip()
+            description = description.strip()
+            if name and description:
+                categories.append({"name": name, "description": description})
+        return categories if categories else SettingsService.DEFAULT_CATEGORIES

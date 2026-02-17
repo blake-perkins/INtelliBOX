@@ -712,8 +712,13 @@ async def create_action(
 async def settings_page(request: Request, success: bool = False):
     """Settings page for configuring priority rules."""
     priority_config = SettingsService.get_priority_config()
+    ai_config = SettingsService.get_ai_config()
     high_senders = priority_config.get('high_senders', [])
     high_keywords = priority_config.get('high_keywords', [])
+    categories = ai_config.get('categories', SettingsService.DEFAULT_CATEGORIES)
+
+    # Format categories as "name: description" lines for the textarea
+    categories_text = '\n'.join(f"{c['name']}: {c['description']}" for c in categories)
 
     with get_session() as session:
         roster = session.query(RosterMember).order_by(
@@ -728,6 +733,8 @@ async def settings_page(request: Request, success: bool = False):
                 "priority_days_threshold": priority_config.get('days_threshold', 5),
                 "priority_high_senders_text": '\n'.join(high_senders),
                 "priority_high_keywords_text": '\n'.join(high_keywords),
+                "confidence_threshold": ai_config.get('confidence_threshold', 0.5),
+                "categories_text": categories_text,
                 "success": success,
                 "roster": roster,
             }
@@ -740,18 +747,25 @@ async def save_settings(
     priority_default: str = Form(...),
     priority_days_threshold: int = Form(...),
     priority_high_senders: str = Form(""),
-    priority_high_keywords: str = Form("")
+    priority_high_keywords: str = Form(""),
+    confidence_threshold: float = Form(0.5),
+    ai_categories: str = Form("")
 ):
-    """Save priority settings."""
+    """Save priority and AI settings."""
     # Parse textarea inputs (newline-separated) into lists
     senders = [s.strip() for s in priority_high_senders.split('\n') if s.strip()]
     keywords = [k.strip() for k in priority_high_keywords.split('\n') if k.strip()]
+
+    # Parse categories using shared service method
+    categories = SettingsService.parse_categories_text(ai_categories)
 
     # Save settings
     SettingsService.set_setting('priority_default', priority_default)
     SettingsService.set_setting('priority_days_threshold', priority_days_threshold)
     SettingsService.set_setting('priority_high_senders', senders)
     SettingsService.set_setting('priority_high_keywords', keywords)
+    SettingsService.set_setting('ai_confidence_threshold', round(float(confidence_threshold), 2))
+    SettingsService.set_setting('ai_categories', categories)
 
     # Redirect with success flag
     return RedirectResponse(url="/settings?success=true", status_code=303)
