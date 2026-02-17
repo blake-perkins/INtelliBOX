@@ -26,6 +26,20 @@
         <form method="POST" action="/settings">
             <div style="padding: 0 1.5rem;">
 
+                <!-- Program Name -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Program / Project Name</div>
+                        <div style="font-size: 0.85rem; color: #888;">Shown in the navigation banner alongside INtelliBOX. Leave blank to hide.</div>
+                    </div>
+                    <div>
+                        <input type="text" name="program_name" value="{{ program_name }}"
+                               placeholder="e.g. Excalibur"
+                               maxlength="40"
+                               style="width: 240px; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem;">
+                    </div>
+                </div>
+
                 <!-- Default Priority -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
                     <div>

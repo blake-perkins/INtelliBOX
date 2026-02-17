@@ -29,6 +29,9 @@ static_dir = Path(__file__).parent / "static"
 templates = Jinja2Templates(directory=str(template_dir))
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
+# Inject program_name into every template render without touching each route
+templates.env.globals['program_name'] = lambda: SettingsService.get_setting('program_name', '')
+
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
@@ -724,6 +727,7 @@ async def settings_page(request: Request, success: bool = False):
                 "confidence_threshold": ai_config.get('confidence_threshold', 0.5),
                 "categories_text": categories_text,
                 "timezone": SettingsService.get_timezone(),
+                "program_name": SettingsService.get_setting('program_name', ''),
                 "success": success,
                 "roster": roster,
             }
@@ -739,7 +743,8 @@ async def save_settings(
     priority_high_keywords: str = Form(""),
     confidence_threshold: float = Form(0.5),
     ai_categories: str = Form(""),
-    timezone: str = Form("America/Chicago")
+    timezone: str = Form("America/Chicago"),
+    program_name: str = Form("")
 ):
     """Save priority and AI settings."""
     # Parse textarea inputs (newline-separated) into lists
@@ -757,6 +762,7 @@ async def save_settings(
     SettingsService.set_setting('ai_confidence_threshold', round(float(confidence_threshold), 2))
     SettingsService.set_setting('ai_categories', categories)
     SettingsService.set_setting('timezone', timezone)
+    SettingsService.set_setting('program_name', program_name.strip())
 
     # Redirect with success flag
     return RedirectResponse(url="/settings?success=true", status_code=303)
