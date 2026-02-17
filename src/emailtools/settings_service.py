@@ -69,6 +69,13 @@ class SettingsService:
         {"name": "other",                "description": "Any action item that does not fit the above categories"},
     ]
 
+    DEFAULT_TIMEZONE = "America/Chicago"
+
+    @staticmethod
+    def get_timezone() -> str:
+        """Get the configured timezone (IANA name), defaulting to America/Chicago."""
+        return SettingsService.get_setting('timezone', SettingsService.DEFAULT_TIMEZONE)
+
     @staticmethod
     def get_priority_config() -> dict:
         """Get priority-related configuration settings."""

@@ -723,6 +723,7 @@ async def settings_page(request: Request, success: bool = False):
                 "priority_high_keywords_text": '\n'.join(high_keywords),
                 "confidence_threshold": ai_config.get('confidence_threshold', 0.5),
                 "categories_text": categories_text,
+                "timezone": SettingsService.get_timezone(),
                 "success": success,
                 "roster": roster,
             }
@@ -737,7 +738,8 @@ async def save_settings(
     priority_high_senders: str = Form(""),
     priority_high_keywords: str = Form(""),
     confidence_threshold: float = Form(0.5),
-    ai_categories: str = Form("")
+    ai_categories: str = Form(""),
+    timezone: str = Form("America/Chicago")
 ):
     """Save priority and AI settings."""
     # Parse textarea inputs (newline-separated) into lists
@@ -754,6 +756,7 @@ async def save_settings(
     SettingsService.set_setting('priority_high_keywords', keywords)
     SettingsService.set_setting('ai_confidence_threshold', round(float(confidence_threshold), 2))
     SettingsService.set_setting('ai_categories', categories)
+    SettingsService.set_setting('timezone', timezone)
 
     # Redirect with success flag
     return RedirectResponse(url="/settings?success=true", status_code=303)

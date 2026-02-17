@@ -1,8 +1,9 @@
 """Report generation for daily email summaries."""
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from typing import Dict, List
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -11,6 +12,18 @@ from emailtools.ai.processor import get_ai_client
 from emailtools.config import settings
 from emailtools.models import Action, Email, ProgramNewsCache, ReportCache
 from emailtools.utils.logging import logger
+
+
+def to_local_time(dt: datetime, tz_name: str) -> datetime:
+    """Convert a naive UTC datetime to the given IANA timezone."""
+    if dt is None:
+        return dt
+    try:
+        tz = ZoneInfo(tz_name)
+    except ZoneInfoNotFoundError:
+        logger.warning(f"Unknown timezone '{tz_name}', falling back to UTC")
+        tz = dt_timezone.utc
+    return dt.replace(tzinfo=dt_timezone.utc).astimezone(tz)
 
 
 def get_unassigned_actions(session: Session) -> List[Action]:
@@ -321,8 +334,11 @@ def generate_report_data(session: Session) -> Dict:
         .count()
     )
 
+    from emailtools.settings_service import SettingsService
+    tz_name = SettingsService.get_timezone()
+
     report_data = {
-        "generated_at": datetime.utcnow(),
+        "generated_at": to_local_time(datetime.utcnow(), tz_name),
         "unassigned_actions": unassigned_actions,
         "total_actions": len(unassigned_actions),
         "high_priority_count": high_priority_count,

@@ -117,6 +117,32 @@
                 </div>
             </div>
 
+                <!-- Timezone -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Timezone</div>
+                        <div style="font-size: 0.85rem; color: #888;">Used for timestamps in email reports.</div>
+                    </div>
+                    <div>
+                        <select name="timezone" style="width: 260px; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; background: white; cursor: pointer;">
+                            <optgroup label="US &amp; Canada">
+                                <option value="America/New_York"    {% if timezone == 'America/New_York'    %}selected{% endif %}>Eastern (ET)</option>
+                                <option value="America/Chicago"     {% if timezone == 'America/Chicago'     %}selected{% endif %}>Central (CT)</option>
+                                <option value="America/Denver"      {% if timezone == 'America/Denver'      %}selected{% endif %}>Mountain (MT)</option>
+                                <option value="America/Phoenix"     {% if timezone == 'America/Phoenix'     %}selected{% endif %}>Mountain – no DST (AZ)</option>
+                                <option value="America/Los_Angeles" {% if timezone == 'America/Los_Angeles' %}selected{% endif %}>Pacific (PT)</option>
+                                <option value="America/Anchorage"   {% if timezone == 'America/Anchorage'   %}selected{% endif %}>Alaska (AKT)</option>
+                                <option value="Pacific/Honolulu"    {% if timezone == 'Pacific/Honolulu'    %}selected{% endif %}>Hawaii (HT)</option>
+                            </optgroup>
+                            <optgroup label="Other">
+                                <option value="UTC"                 {% if timezone == 'UTC'                 %}selected{% endif %}>UTC</option>
+                                <option value="Europe/London"       {% if timezone == 'Europe/London'       %}selected{% endif %}>London (GMT/BST)</option>
+                                <option value="Europe/Berlin"       {% if timezone == 'Europe/Berlin'       %}selected{% endif %}>Central Europe (CET)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
             <!-- Save Bar -->
             <div style="padding: 1rem 1.5rem; background: #f8f9fa; border-top: 1px solid #ecf0f1; display: flex; align-items: center; gap: 1rem;">
                 <button type="submit" class="btn btn-primary" style="padding: 0.55rem 1.5rem;">💾 Save Settings</button>
