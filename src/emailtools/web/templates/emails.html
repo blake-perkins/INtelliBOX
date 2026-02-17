@@ -5,41 +5,30 @@
 {% block content %}
 <!-- Compact Metrics Bar -->
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-        <!-- Metrics -->
-        <div style="display: flex; gap: 2rem; align-items: center; font-size: 0.95rem; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="opacity: 0.8;">📧</span>
-                <span><strong>{{ total_emails }}</strong> <span style="opacity: 0.7;">total</span></span>
-            </div>
-            <div style="opacity: 0.4;">|</div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="opacity: 0.8;">✓</span>
-                <span><strong>{{ processed_emails }}</strong> <span style="opacity: 0.7;">processed</span></span>
-            </div>
-            <div style="opacity: 0.4;">|</div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="opacity: 0.8;">⏳</span>
-                <span style="{% if unprocessed_emails > 0 %}background: rgba(241, 196, 15, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
-                    <strong>{{ unprocessed_emails }}</strong> <span style="opacity: 0.7;">pending</span>
-                </span>
-            </div>
-            <div style="opacity: 0.4;">|</div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="opacity: 0.8;">🔥</span>
-                <span><strong>{{ emails_with_high_priority }}</strong> <span style="opacity: 0.7;">high priority</span></span>
-            </div>
+    <div style="display: flex; gap: 1.5rem; align-items: center; font-size: 0.95rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="opacity: 0.8;">📧</span>
+            <span><strong>{% if time_since_last_email %}{{ time_since_last_email }}{% else %}N/A{% endif %}</strong> <span style="opacity: 0.7;">last email</span></span>
         </div>
-
-        <!-- Quick filters -->
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <a href="/emails?processed=false" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,{% if processed == 'false' %}0.4{% else %}0.2{% endif %}); border: 1px solid rgba(255,255,255,0.3);">
-                Unprocessed
-            </a>
-            <a href="/emails?processed=true" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,{% if processed == 'true' %}0.4{% else %}0.2{% endif %}); border: 1px solid rgba(255,255,255,0.3);">
-                Processed
-            </a>
-        </div>
+        <div style="opacity: 0.4;">|</div>
+        <a href="/actions?assigned=false" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px;" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
+            <span style="opacity: 0.8;">📋</span>
+            <span><strong>{{ unassigned_actions }}</strong> <span style="opacity: 0.7;">unassigned</span></span>
+        </a>
+        <div style="opacity: 0.4;">|</div>
+        <a href="/actions?priority=high" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px;" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
+            <span style="opacity: 0.8;">🔥</span>
+            <span style="{% if high_priority > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                <strong>{{ high_priority }}</strong> <span style="opacity: 0.7;">high</span>
+            </span>
+        </a>
+        <div style="opacity: 0.4;">|</div>
+        <a href="/actions?overdue=true" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px;" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
+            <span style="opacity: 0.8;">⚠️</span>
+            <span style="{% if overdue_count > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                <strong>{{ overdue_count }}</strong> <span style="opacity: 0.7;">overdue</span>
+            </span>
+        </a>
     </div>
 </div>
 

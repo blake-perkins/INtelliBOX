@@ -212,6 +212,30 @@ class Settings(Base):
         return f"<Settings(key='{self.key}', value='{self.value[:50]}')>"
 
 
+class RosterMember(Base):
+    """Program roster member for assignment dropdown."""
+
+    __tablename__ = "roster"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
+    def __repr__(self) -> str:
+        return f"<RosterMember(id={self.id}, name='{self.full_name}', email='{self.email}')>"
+
+
 class ReportCache(Base):
     """Cache for generated reports to avoid expensive AI calls."""
 

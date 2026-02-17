@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Roster - INtelliBOX{% endblock %}
+
+{% block content %}
+<!-- Compact Metrics Bar -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
+    <div style="display: flex; gap: 1.5rem; align-items: center; font-size: 0.95rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="opacity: 0.8;">👥</span>
+            <span><strong>{{ members|length }}</strong> <span style="opacity: 0.7;">members</span></span>
+        </div>
+        <div style="opacity: 0.4;">|</div>
+        <a href="/actions?assigned=false" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px;" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
+            <span style="opacity: 0.8;">📋</span>
+            <span><strong>{{ unassigned_actions }}</strong> <span style="opacity: 0.7;">unassigned</span></span>
+        </a>
+        <div style="opacity: 0.4;">|</div>
+        <a href="/actions?priority=high" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px;" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
+            <span style="opacity: 0.8;">🔥</span>
+            <span style="{% if high_priority > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                <strong>{{ high_priority }}</strong> <span style="opacity: 0.7;">high</span>
+            </span>
+        </a>
+        <div style="opacity: 0.4;">|</div>
+        <a href="/actions?overdue=true" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px;" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
+            <span style="opacity: 0.8;">⚠️</span>
+            <span style="{% if overdue_count > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                <strong>{{ overdue_count }}</strong> <span style="opacity: 0.7;">overdue</span>
+            </span>
+        </a>
+    </div>
+</div>
+
+<!-- Flash messages -->
+{% if request.query_params.get('error') %}
+<div style="background: #fee; border: 1px solid #e74c3c; color: #c0392b; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem;">
+    ⚠️ {{ request.query_params.get('error') }}
+</div>
+{% endif %}
+{% if request.query_params.get('added') %}
+<div style="background: #f0fdf4; border: 1px solid #27ae60; color: #1e8449; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem;">
+    ✓ Added {{ request.query_params.get('added') }} new member(s).
+    {% if request.query_params.get('skipped') %} {{ request.query_params.get('skipped') }} skipped (already exist or invalid rows).{% endif %}
+</div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start;">
+
+    <!-- Upload Panel -->
+    <div class="card">
+        <div class="card-header">📤 Import from Excel</div>
+        <div style="padding: 1.25rem;">
+            <p style="font-size: 0.9rem; color: #555; margin: 0 0 1rem 0;">
+                Upload an <strong>.xlsx</strong> file with columns:
+            </p>
+            <ul style="font-size: 0.85rem; color: #666; margin: 0 0 1.25rem 1.25rem; line-height: 1.8;">
+                <li><code>first_name</code></li>
+                <li><code>last_name</code></li>
+                <li><code>email</code></li>
+            </ul>
+            <p style="font-size: 0.82rem; color: #888; margin: 0 0 1rem 0;">
+                Column headers must be in row 1. Existing members (matched by email) will be updated.
+            </p>
+            <form method="POST" action="/roster/upload" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".xlsx,.xls" required
+                       style="display: block; width: 100%; margin-bottom: 0.75rem; font-size: 0.9rem;">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Upload Roster
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Roster Table -->
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>👥 Current Roster ({{ members|length }})</span>
+        </div>
+        {% if members %}
+        <table style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>Last Name</th>
+                    <th>First Name</th>
+                    <th>Email</th>
+                    <th style="width: 80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                <tr>
+                    <td style="font-weight: 600;">{{ member.last_name }}</td>
+                    <td>{{ member.first_name }}</td>
+                    <td style="font-size: 0.875rem; color: #555;">{{ member.email }}</td>
+                    <td>
+                        <form method="POST" action="/roster/{{ member.id }}/delete"
+                              onsubmit="return confirm('Remove {{ member.full_name }} from the roster?')">
+                            <button type="submit" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 0.85rem; padding: 0.25rem 0.5rem;" title="Remove">
+                                ✕
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #999;">
+            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No roster members yet</p>
+            <p style="font-size: 0.9rem;">Upload an Excel file to get started</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

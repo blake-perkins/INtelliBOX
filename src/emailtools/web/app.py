@@ -4,14 +4,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, Request, HTTPException, Query, Form
+from fastapi import FastAPI, Request, HTTPException, Query, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc, func, case, or_
 
 from emailtools.database import get_session
-from emailtools.models import Action, Assignment, Email, ProcessingLog
+from emailtools.models import Action, Assignment, Email, ProcessingLog, RosterMember
 from emailtools.reporter.generator import generate_report_data, get_cached_program_news, get_cached_structured_program_news, generate_enhanced_report
 from emailtools.config import settings
 from emailtools.settings_service import SettingsService
@@ -77,6 +77,10 @@ async def dashboard(request: Request):
 
         # Get overdue actions (assigned or unassigned, exclude completed)
         today = datetime.utcnow().date()
+        overdue_count = session.query(Action).outerjoin(Assignment).filter(
+            Action.due_date < today,
+            (Assignment.id.is_(None)) | (Assignment.status != "completed")
+        ).count()
         overdue_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
             Action.due_date < today,
             (Assignment.id.is_(None)) | (Assignment.status != "completed")
@@ -132,6 +136,7 @@ async def dashboard(request: Request):
             "medium_priority": medium_priority,
             "low_priority": low_priority,
             "recent_actions_count": recent_actions_count,
+            "overdue_count": overdue_count,
             "overdue_actions": overdue_actions,
             "high_priority_actions": high_priority_actions,
             "recent_assignments": recent_assignments,
@@ -150,6 +155,7 @@ async def list_actions(
     assigned: Optional[str] = None,
     assignee: Optional[str] = None,
     search: Optional[str] = None,
+    overdue: Optional[str] = None,
     page: int = Query(1, ge=1)
 ):
     """List all actions with filtering."""
@@ -194,6 +200,9 @@ async def list_actions(
         if assignee:
             query = query.filter(Assignment.assigned_to == assignee)
 
+        if overdue == "true":
+            query = query.filter(Action.due_date < today)
+
         if search:
             search_term = f"%{search}%"
             query = query.filter(
@@ -224,6 +233,11 @@ async def list_actions(
         assignees = session.query(Assignment.assigned_to).distinct().order_by(Assignment.assigned_to).all()
         assignee_list = [a[0] for a in assignees if a[0]]
 
+        # Get roster members for Quick Assign dropdown
+        roster = session.query(RosterMember).filter_by(active=True).order_by(
+            RosterMember.last_name, RosterMember.first_name
+        ).all()
+
         return templates.TemplateResponse("actions.html", {
             "request": request,
             "actions": actions,
@@ -240,7 +254,9 @@ async def list_actions(
             "medium_priority": medium_priority,
             "low_priority": low_priority,
             "overdue_count": overdue_count,
+            "overdue": overdue,
             "assignee_list": assignee_list,
+            "roster": roster,
             "current_time": datetime.utcnow()
         })
 
@@ -290,6 +306,31 @@ async def list_emails(
 ):
     """List all emails."""
     with get_session() as session:
+        # Shared banner stats (same as all pages)
+        unassigned_actions = session.query(Action).outerjoin(Assignment).filter(
+            Assignment.id.is_(None)
+        ).count()
+        high_priority = session.query(Action).outerjoin(Assignment).filter(
+            Action.priority == "high",
+            Assignment.id.is_(None)
+        ).count()
+        today = datetime.utcnow().date()
+        overdue_count = session.query(Action).outerjoin(Assignment).filter(
+            Action.due_date < today,
+            (Assignment.id.is_(None)) | (Assignment.status != "completed")
+        ).count()
+        latest_email = session.query(Email).order_by(desc(Email.received_date)).first()
+        last_email_date = latest_email.received_date if latest_email else None
+        time_since_last_email = None
+        if last_email_date:
+            delta = datetime.utcnow() - last_email_date
+            if delta.total_seconds() < 3600:
+                time_since_last_email = f"{int(delta.total_seconds() / 60)}m ago"
+            elif delta.total_seconds() < 86400:
+                time_since_last_email = f"{int(delta.total_seconds() / 3600)}h ago"
+            else:
+                time_since_last_email = f"{int(delta.total_seconds() / 86400)}d ago"
+
         # Get stats
         total_emails = session.query(Email).count()
         processed_emails = session.query(Email).filter(Email.processed == True).count()
@@ -347,6 +388,10 @@ async def list_emails(
             "processed_emails": processed_emails,
             "unprocessed_emails": unprocessed_emails,
             "emails_with_high_priority": emails_with_high_priority,
+            "unassigned_actions": unassigned_actions,
+            "high_priority": high_priority,
+            "overdue_count": overdue_count,
+            "time_since_last_email": time_since_last_email,
             "current_time": datetime.utcnow()
         })
 
@@ -385,7 +430,7 @@ async def view_email(request: Request, email_id: int):
 
 @app.get("/report", response_class=HTMLResponse)
 async def view_report(request: Request, refresh: bool = False):
-    """View the enhanced daily report with AI insights."""
+    """View AI-powered insights dashboard."""
     with get_session() as session:
         # Use enhanced report with caching
         report_data = generate_enhanced_report(session, days=7, force_refresh=refresh)
@@ -666,24 +711,27 @@ async def create_action(
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, success: bool = False):
     """Settings page for configuring priority rules."""
-    # Get current settings
     priority_config = SettingsService.get_priority_config()
-
-    # Convert lists to newline-separated text for textarea
     high_senders = priority_config.get('high_senders', [])
     high_keywords = priority_config.get('high_keywords', [])
 
-    return templates.TemplateResponse(
-        "settings.html",
-        {
-            "request": request,
-            "priority_default": priority_config.get('default_priority', 'medium'),
-            "priority_days_threshold": priority_config.get('days_threshold', 5),
-            "priority_high_senders_text": '\n'.join(high_senders),
-            "priority_high_keywords_text": '\n'.join(high_keywords),
-            "success": success
-        }
-    )
+    with get_session() as session:
+        roster = session.query(RosterMember).order_by(
+            RosterMember.last_name, RosterMember.first_name
+        ).all()
+
+        return templates.TemplateResponse(
+            "settings.html",
+            {
+                "request": request,
+                "priority_default": priority_config.get('default_priority', 'medium'),
+                "priority_days_threshold": priority_config.get('days_threshold', 5),
+                "priority_high_senders_text": '\n'.join(high_senders),
+                "priority_high_keywords_text": '\n'.join(high_keywords),
+                "success": success,
+                "roster": roster,
+            }
+        )
 
 
 @app.post("/settings")
@@ -707,6 +755,147 @@ async def save_settings(
 
     # Redirect with success flag
     return RedirectResponse(url="/settings?success=true", status_code=303)
+
+
+@app.get("/roster", response_class=HTMLResponse)
+async def view_roster(request: Request):
+    """View and manage the program roster."""
+    with get_session() as session:
+        members = session.query(RosterMember).order_by(
+            RosterMember.last_name, RosterMember.first_name
+        ).all()
+        unassigned_actions = session.query(Action).outerjoin(Assignment).filter(
+            Assignment.id.is_(None)
+        ).count()
+        high_priority = session.query(Action).outerjoin(Assignment).filter(
+            Action.priority == "high", Assignment.id.is_(None)
+        ).count()
+        today = datetime.utcnow().date()
+        overdue_count = session.query(Action).outerjoin(Assignment).filter(
+            Action.due_date < today,
+            (Assignment.id.is_(None)) | (Assignment.status != "completed")
+        ).count()
+        return templates.TemplateResponse("roster.html", {
+            "request": request,
+            "members": members,
+            "unassigned_actions": unassigned_actions,
+            "high_priority": high_priority,
+            "overdue_count": overdue_count,
+            "current_time": datetime.utcnow(),
+        })
+
+
+@app.post("/roster/add")
+async def add_roster_member(
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    email: str = Form(...),
+    force: str = Form(""),
+):
+    """Manually add a single roster member with duplicate and fuzzy-name checking."""
+    import difflib
+
+    first_name = first_name.strip()
+    last_name = last_name.strip()
+    email = email.strip().lower()
+    full_name = f"{first_name} {last_name}".lower()
+
+    with get_session() as session:
+        # Exact email duplicate
+        if session.query(RosterMember).filter_by(email=email).first():
+            return RedirectResponse(
+                f"/settings?roster_error={email}+is+already+in+the+roster#roster",
+                status_code=303
+            )
+
+        # Fuzzy name check (skip if user confirmed with force=true)
+        if not force:
+            existing_names = [
+                (m.id, f"{m.first_name} {m.last_name}")
+                for m in session.query(RosterMember).all()
+            ]
+            for mid, name in existing_names:
+                ratio = difflib.SequenceMatcher(None, full_name, name.lower()).ratio()
+                if ratio >= 0.8:
+                    return RedirectResponse(
+                        f"/settings?roster_fuzzy={name}&roster_fn={first_name}"
+                        f"&roster_ln={last_name}&roster_em={email}#roster",
+                        status_code=303
+                    )
+
+        session.add(RosterMember(first_name=first_name, last_name=last_name, email=email))
+        session.commit()
+
+    return RedirectResponse("/settings?roster_added=1&roster_skipped=0", status_code=303)
+
+
+@app.post("/roster/upload", response_class=HTMLResponse)
+async def upload_roster(request: Request, file: UploadFile = File(...)):
+    """Upload an Excel file to populate the roster."""
+    import io
+    import openpyxl
+
+    if not file.filename.endswith((".xlsx", ".xls")):
+        return RedirectResponse("/settings?roster_error=Please+upload+an+Excel+file+(.xlsx)", status_code=303)
+
+    contents = await file.read()
+    wb = openpyxl.load_workbook(io.BytesIO(contents))
+    ws = wb.active
+
+    # Find header row — look for first_name/last_name/email columns (case-insensitive)
+    headers = {}
+    for col_idx, cell in enumerate(ws[1], start=1):
+        val = str(cell.value or "").strip().lower().replace(" ", "_")
+        if val in ("first_name", "firstname", "first"):
+            headers["first_name"] = col_idx
+        elif val in ("last_name", "lastname", "last"):
+            headers["last_name"] = col_idx
+        elif val in ("email", "email_address", "work_email"):
+            headers["email"] = col_idx
+
+    if not all(k in headers for k in ("first_name", "last_name", "email")):
+        return RedirectResponse(
+            "/settings?roster_error=Excel+must+have+columns:+first_name,+last_name,+email",
+            status_code=303
+        )
+
+    added = 0
+    skipped = 0
+    with get_session() as session:
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            first = str(row[headers["first_name"] - 1] or "").strip()
+            last = str(row[headers["last_name"] - 1] or "").strip()
+            email = str(row[headers["email"] - 1] or "").strip().lower()
+
+            if not first or not last or not email or "@" not in email:
+                skipped += 1
+                continue
+
+            existing = session.query(RosterMember).filter_by(email=email).first()
+            if existing:
+                existing.first_name = first
+                existing.last_name = last
+                existing.active = True
+                skipped += 1
+            else:
+                session.add(RosterMember(first_name=first, last_name=last, email=email))
+                added += 1
+        session.commit()
+
+    return RedirectResponse(f"/settings?roster_added={added}&roster_skipped={skipped}", status_code=303)
+
+
+@app.post("/roster/{member_id}/delete")
+async def delete_roster_member(member_id: int):
+    """Remove a member from the roster."""
+    with get_session() as session:
+        member = session.query(RosterMember).filter_by(id=member_id).first()
+        if member:
+            name = member.full_name
+            session.delete(member)
+            session.commit()
+            return RedirectResponse(f"/settings?roster_deleted={name}#roster", status_code=303)
+    return RedirectResponse("/settings#roster", status_code=303)
 
 
 @app.get("/health")

@@ -3,124 +3,292 @@
 {% block title %}Settings - INtelliBOX{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        ⚙️ Priority Settings
+<div class="card" style="padding: 0; overflow: hidden;">
+
+    <!-- Page Header + Tabs -->
+    <div style="padding: 1.25rem 1.5rem 0; border-bottom: 2px solid #ecf0f1;">
+        <div style="font-size: 1.1rem; font-weight: 600; color: #2c3e50; margin-bottom: 1rem;">⚙️ Settings</div>
+        <div style="display: flex; gap: 0; margin-bottom: -2px;">
+            <button onclick="switchTab('priority')" id="tab-priority"
+                    style="padding: 0.55rem 1.25rem; border: none; background: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid #3498db; color: #3498db;">
+                Priority Rules
+            </button>
+            <button onclick="switchTab('roster')" id="tab-roster"
+                    style="padding: 0.55rem 1.25rem; border: none; background: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; color: #999;">
+                Program Roster
+                <span style="background: #ecf0f1; color: #666; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 10px; margin-left: 0.25rem;">{{ roster|length }}</span>
+            </button>
+        </div>
     </div>
 
-    <form method="POST" action="/settings" style="padding: 1rem;">
-        <!-- Default Priority -->
-        <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #ecf0f1;">
-            <h3 style="margin-bottom: 1rem; color: #2c3e50; font-size: 1.1rem;">Default Priority</h3>
-            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
-                The base priority assigned to all actions unless overridden by rules below.
-            </p>
-            <select name="priority_default" style="width: 100%; max-width: 300px; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
-                <option value="high" {% if priority_default == 'high' %}selected{% endif %}>High</option>
-                <option value="medium" {% if priority_default == 'medium' %}selected{% endif %}>Medium</option>
-                <option value="low" {% if priority_default == 'low' %}selected{% endif %}>Low</option>
-            </select>
-        </div>
+    <!-- ── Priority Rules Pane ── -->
+    <div id="pane-priority">
+        <form method="POST" action="/settings">
+            <div style="padding: 0 1.5rem;">
 
-        <!-- Due Date Threshold -->
-        <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #ecf0f1;">
-            <h3 style="margin-bottom: 1rem; color: #2c3e50; font-size: 1.1rem;">Due Date Priority Rule</h3>
-            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
-                Automatically set priority to <strong style="color: #e74c3c;">HIGH</strong> if due date is within this many days.
-            </p>
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <input type="number"
-                       name="priority_days_threshold"
-                       value="{{ priority_days_threshold }}"
-                       min="1"
-                       max="30"
-                       style="width: 100px; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
-                <span style="color: #666;">days</span>
+                <!-- Default Priority -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Default Priority</div>
+                        <div style="font-size: 0.85rem; color: #888;">Fallback for actions that don't match any rule below.</div>
+                    </div>
+                    <div>
+                        <select name="priority_default" style="width: 160px; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; background: white; cursor: pointer;">
+                            <option value="high"   {% if priority_default == 'high'   %}selected{% endif %}>🔴 High</option>
+                            <option value="medium" {% if priority_default == 'medium' %}selected{% endif %}>🟡 Medium</option>
+                            <option value="low"    {% if priority_default == 'low'    %}selected{% endif %}>🟢 Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Due Date Threshold -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Due Date Threshold</div>
+                        <div style="font-size: 0.85rem; color: #888;">Escalate to <strong style="color: #e74c3c;">HIGH</strong> when due date is within this many days.</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <input type="number" name="priority_days_threshold"
+                               value="{{ priority_days_threshold }}" min="1" max="30"
+                               style="width: 72px; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; text-align: center;">
+                        <span style="color: #666; font-size: 0.9rem;">days or fewer</span>
+                    </div>
+                </div>
+
+                <!-- High Priority Senders -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: start;">
+                    <div>
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">High Priority Senders</div>
+                        <div style="font-size: 0.85rem; color: #888; line-height: 1.6;">
+                            Emails from these addresses always escalate to <strong style="color: #e74c3c;">HIGH</strong>.<br>
+                            One per line — full address or <code style="background:#f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px;">@domain.com</code>.
+                        </div>
+                    </div>
+                    <textarea name="priority_high_senders" rows="5"
+                              placeholder="user@company.com&#10;@vip-client.com"
+                              style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; font-family: monospace; resize: vertical; line-height: 1.6;">{{ priority_high_senders_text }}</textarea>
+                </div>
+
+                <!-- High Priority Keywords -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; align-items: start;">
+                    <div>
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">High Priority Keywords</div>
+                        <div style="font-size: 0.85rem; color: #888; line-height: 1.6;">
+                            Subject or body containing these words escalates to <strong style="color: #e74c3c;">HIGH</strong>.<br>
+                            One per line. Case-insensitive.
+                        </div>
+                    </div>
+                    <textarea name="priority_high_keywords" rows="5"
+                              placeholder="URGENT&#10;CRITICAL&#10;ACTION REQUIRED"
+                              style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; font-family: monospace; resize: vertical; line-height: 1.6;">{{ priority_high_keywords_text }}</textarea>
+                </div>
+            </div>
+
+            <!-- Save Bar -->
+            <div style="padding: 1rem 1.5rem; background: #f8f9fa; border-top: 1px solid #ecf0f1; display: flex; align-items: center; gap: 1rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.55rem 1.5rem;">💾 Save Settings</button>
+                <span style="font-size: 0.83rem; color: #aaa;">Changes apply to the next email processed.</span>
+            </div>
+        </form>
+
+        <!-- How it works (collapsed by default) -->
+        <details style="margin: 1rem 1.5rem 1.25rem; border: 1px solid #e8e8e8; border-radius: 6px; overflow: hidden;">
+            <summary style="padding: 0.6rem 1rem; font-size: 0.85rem; color: #666; cursor: pointer; background: #fafafa; list-style: none; display: flex; align-items: center; gap: 0.5rem; user-select: none;">
+                <span>▸</span> How priority rules are evaluated
+            </summary>
+            <ol style="margin: 0.75rem 1rem 0.75rem 2.25rem; color: #555; font-size: 0.875rem; line-height: 2;">
+                <li><strong>AI analyzes the email</strong> and suggests an initial priority</li>
+                <li><strong>Rules are checked in order:</strong> sender match → keyword match → due date threshold → default</li>
+                <li>The first matching rule wins and sets the final priority</li>
+            </ol>
+        </details>
+    </div>
+
+    <!-- ── Program Roster Pane ── -->
+    <div id="pane-roster" style="display: none;">
+
+        <!-- Flash messages -->
+        {% if request.query_params.get('roster_deleted') %}
+        <div class="roster-flash" style="margin: 1rem 1.5rem 0; background: #f8f9fa; border: 1px solid #ddd; color: #555; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>✓ Removed {{ request.query_params.get('roster_deleted') }} from the roster.</span>
+            <button onclick="this.closest('.roster-flash').remove()" style="background: none; border: none; color: #aaa; cursor: pointer; font-size: 1rem; padding: 0 0.25rem; line-height: 1;" title="Dismiss">×</button>
+        </div>
+        {% endif %}
+        {% if request.query_params.get('roster_error') %}
+        <div class="roster-flash" style="margin: 1rem 1.5rem 0; background: #fee; border: 1px solid #e74c3c; color: #c0392b; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>⚠️ {{ request.query_params.get('roster_error') }}</span>
+            <button onclick="this.closest('.roster-flash').remove()" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 1rem; padding: 0 0.25rem; line-height: 1; opacity: 0.6;" title="Dismiss">×</button>
+        </div>
+        {% endif %}
+        {% if request.query_params.get('roster_added') %}
+        <div class="roster-flash" style="margin: 1rem 1.5rem 0; background: #f0fdf4; border: 1px solid #27ae60; color: #1e8449; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>✓ Added {{ request.query_params.get('roster_added') }} member(s).{% if request.query_params.get('roster_skipped') %} {{ request.query_params.get('roster_skipped') }} skipped.{% endif %}</span>
+            <button onclick="this.closest('.roster-flash').remove()" style="background: none; border: none; color: #27ae60; cursor: pointer; font-size: 1rem; padding: 0 0.25rem; line-height: 1; opacity: 0.6;" title="Dismiss">×</button>
+        </div>
+        {% endif %}
+        {% if request.query_params.get('roster_fuzzy') %}
+        {% set fuzzy_match = request.query_params.get('roster_fuzzy') %}
+        <div class="roster-flash" style="margin: 1rem 1.5rem 0; background: #fff9e6; border: 1px solid #f39c12; color: #7d5a00; padding: 0.7rem 1rem; border-radius: 6px; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.9rem;">
+            <span>⚠️ <strong>Possible duplicate:</strong> "{{ fuzzy_match }}" is already in the roster and looks similar.</span>
+            <div style="display: flex; gap: 0.5rem; margin-left: auto; align-items: center;">
+                <form method="POST" action="/roster/add" style="display: inline;">
+                    <input type="hidden" name="first_name" value="{{ request.query_params.get('roster_fn') }}">
+                    <input type="hidden" name="last_name"  value="{{ request.query_params.get('roster_ln') }}">
+                    <input type="hidden" name="email"      value="{{ request.query_params.get('roster_em') }}">
+                    <input type="hidden" name="force"      value="true">
+                    <button type="submit" style="background: #f39c12; color: white; border: none; padding: 0.3rem 0.75rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Add Anyway</button>
+                </form>
+                <button onclick="this.closest('.roster-flash').remove()" style="background: none; border: 1px solid #c8a038; color: #7d5a00; padding: 0.3rem 0.75rem; border-radius: 4px; font-size: 0.85rem; cursor: pointer;">Dismiss</button>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Action Bar -->
+        <div style="padding: 0.875rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0;">
+            <span style="font-size: 0.875rem; color: #888;">{{ roster|length }} member{% if roster|length != 1 %}s{% endif %}</span>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="toggleAddForm()" id="btn-add" class="btn btn-primary"
+                        style="font-size: 0.85rem; padding: 0.4rem 0.9rem;">+ Add Member</button>
+                <!-- Excel import: pick file → auto-submit -->
+                <form id="import-form" method="POST" action="/roster/upload" enctype="multipart/form-data" style="display: inline;">
+                    <input type="file" id="import-input" name="file" accept=".xlsx,.xls" style="display: none;"
+                           onchange="this.form.submit()">
+                </form>
+                <button type="button" onclick="document.getElementById('import-input').click()"
+                        style="font-size: 0.85rem; padding: 0.4rem 0.9rem; background: #f8f9fa; color: #555; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                    ↑ Import Excel
+                </button>
             </div>
         </div>
 
-        <!-- High Priority Senders -->
-        <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #ecf0f1;">
-            <h3 style="margin-bottom: 1rem; color: #2c3e50; font-size: 1.1rem;">High Priority Senders</h3>
-            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
-                Emails from these addresses/domains will always be marked as <strong style="color: #e74c3c;">HIGH</strong> priority.
-                <br>
-                <span style="font-size: 0.85rem; opacity: 0.8;">Enter one per line. Use full email (user@domain.com) or domain only (@domain.com).</span>
-            </p>
-            <textarea name="priority_high_senders"
-                      rows="6"
-                      placeholder="customer@company.com&#10;@importantclient.com&#10;director@yourcompany.com"
-                      style="width: 100%; max-width: 600px; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; font-family: monospace;">{{ priority_high_senders_text }}</textarea>
+        <!-- Inline Add Member Form -->
+        <div id="add-form-panel" style="display: none; padding: 0.875rem 1.5rem; background: #f8f9fa; border-bottom: 1px solid #ecf0f1;">
+            <form method="POST" action="/roster/add"
+                  style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.78rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.03em;">First Name</label>
+                    <input type="text" name="first_name" placeholder="Jane" required
+                           style="padding: 0.45rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem; width: 140px;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.78rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.03em;">Last Name</label>
+                    <input type="text" name="last_name" placeholder="Smith" required
+                           style="padding: 0.45rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem; width: 140px;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.78rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.03em;">Email</label>
+                    <input type="email" name="email" placeholder="jane.smith@example.com" required
+                           style="padding: 0.45rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem; width: 240px;">
+                </div>
+                <button type="submit" class="btn btn-primary"
+                        style="font-size: 0.875rem; padding: 0.45rem 1rem;">Add</button>
+                <button type="button" onclick="toggleAddForm()"
+                        style="font-size: 0.875rem; padding: 0.45rem 0.75rem; background: none; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; color: #666;">Cancel</button>
+            </form>
         </div>
 
-        <!-- High Priority Keywords -->
-        <div style="margin-bottom: 2rem;">
-            <h3 style="margin-bottom: 1rem; color: #2c3e50; font-size: 1.1rem;">High Priority Keywords</h3>
-            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
-                If subject or body contains any of these keywords, mark as <strong style="color: #e74c3c;">HIGH</strong> priority.
-                <br>
-                <span style="font-size: 0.85rem; opacity: 0.8;">Enter one per line. Matching is case-insensitive.</span>
-            </p>
-            <textarea name="priority_high_keywords"
-                      rows="6"
-                      placeholder="URGENT&#10;CRITICAL&#10;RFI&#10;ACTION REQUIRED&#10;IMMEDIATE"
-                      style="width: 100%; max-width: 600px; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; font-family: monospace;">{{ priority_high_keywords_text }}</textarea>
+        <!-- Roster Table -->
+        {% if roster %}
+        <table style="margin: 0;">
+            <thead>
+                <tr>
+                    <th>Last Name</th>
+                    <th>First Name</th>
+                    <th>Email</th>
+                    <th style="width: 48px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in roster %}
+                {% set is_fuzzy = request.query_params.get('roster_fuzzy') and member.full_name|lower == request.query_params.get('roster_fuzzy')|lower %}
+                <tr style="{% if is_fuzzy %}background-color: #fff3cd;{% endif %}">
+                    <td style="font-weight: 600;">
+                        {{ member.last_name }}
+                        {% if is_fuzzy %}
+                        <span style="font-size: 0.7rem; background: #f39c12; color: white; padding: 0.1rem 0.35rem; border-radius: 3px; margin-left: 0.35rem; vertical-align: middle;">match</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ member.first_name }}</td>
+                    <td style="font-size: 0.875rem; color: #555;">{{ member.email }}</td>
+                    <td>
+                        <form method="POST" action="/roster/{{ member.id }}/delete"
+                              onsubmit="return confirm('Remove {{ member.full_name }}?')">
+                            <button type="submit" title="Remove"
+                                    style="background: none; border: none; color: #ccc; cursor: pointer; font-size: 1rem; padding: 0.2rem 0.5rem; transition: color 0.15s;"
+                                    onmouseover="this.style.color='#e74c3c'" onmouseout="this.style.color='#ccc'">✕</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #bbb;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">👥</div>
+            <div style="font-size: 0.95rem; color: #999; margin-bottom: 0.25rem;">No roster members yet.</div>
+            <div style="font-size: 0.85rem;">Add members manually or import an Excel file.</div>
         </div>
+        {% endif %}
 
-        <!-- Action Buttons -->
-        <div style="display: flex; gap: 1rem; padding-top: 1.5rem; border-top: 2px solid #ecf0f1;">
-            <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem;">
-                💾 Save Settings
-            </button>
-            <a href="/" class="btn" style="padding: 0.75rem 1.5rem; font-size: 1rem; background: #95a5a6; color: white; text-decoration: none;">
-                Cancel
-            </a>
-        </div>
-    </form>
-</div>
+    </div><!-- /pane-roster -->
 
-<!-- Info Box -->
-<div class="card" style="background: #e8f5e9; border-left: 4px solid #27ae60;">
-    <h3 style="color: #27ae60; margin-bottom: 0.5rem; font-size: 1rem;">ℹ️ How Priority Rules Work</h3>
-    <ol style="margin-left: 1.5rem; color: #555; font-size: 0.9rem; line-height: 1.8;">
-        <li><strong>AI analyzes the email</strong> and suggests an initial priority</li>
-        <li><strong>Rules are checked</strong> in this order:
-            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
-                <li>If sender matches high-priority list → <strong style="color: #e74c3c;">HIGH</strong></li>
-                <li>If keywords found in subject/body → <strong style="color: #e74c3c;">HIGH</strong></li>
-                <li>If due date within threshold → <strong style="color: #e74c3c;">HIGH</strong></li>
-                <li>Otherwise → Use default priority</li>
-            </ul>
-        </li>
-        <li><strong>Priority is applied</strong> to the action and shown in the actions list</li>
-    </ol>
-</div>
+</div><!-- /card -->
 
 {% if success %}
-<div style="position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slideIn 0.3s ease-out;">
-    ✓ Settings saved successfully!
+<div id="save-toast" style="position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 0.875rem 1.25rem; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); animation: toastIn 0.25s ease-out; font-size: 0.9rem;">
+    ✓ Settings saved
 </div>
+{% endif %}
+
 <style>
-    @keyframes slideIn {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+    @keyframes toastIn {
+        from { transform: translateX(320px); opacity: 0; }
+        to   { transform: translateX(0);     opacity: 1; }
+    }
+    details > summary { outline: none; }
+    details[open] > summary span:first-child { transform: rotate(90deg); display: inline-block; }
+    #pane-priority input:focus,
+    #pane-priority select:focus,
+    #pane-priority textarea:focus,
+    #add-form-panel input:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52,152,219,0.12);
     }
 </style>
+
 <script>
-    setTimeout(() => {
-        const notification = document.querySelector('[style*="position: fixed"]');
-        if (notification) {
-            notification.style.transition = 'opacity 0.3s ease-out';
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300);
+    function switchTab(tab) {
+        ['priority', 'roster'].forEach(t => {
+            document.getElementById('pane-' + t).style.display = (t === tab) ? 'block' : 'none';
+            const btn = document.getElementById('tab-' + t);
+            btn.style.borderBottom = (t === tab) ? '3px solid #3498db' : '3px solid transparent';
+            btn.style.color        = (t === tab) ? '#3498db' : '#999';
+        });
+    }
+
+    function toggleAddForm() {
+        const panel = document.getElementById('add-form-panel');
+        const btn   = document.getElementById('btn-add');
+        const open  = panel.style.display !== 'none';
+        panel.style.display = open ? 'none' : 'block';
+        btn.textContent     = open ? '+ Add Member' : '✕ Cancel';
+        if (!open) panel.querySelector('input[name="first_name"]').focus();
+    }
+
+    (function init() {
+        const params = new URLSearchParams(window.location.search);
+        const rosterTriggers = ['roster_error', 'roster_added', 'roster_fuzzy', 'roster_deleted'];
+        if (window.location.hash === '#roster' || rosterTriggers.some(p => params.has(p))) {
+            switchTab('roster');
         }
-    }, 3000);
+        {% if success %}
+        setTimeout(() => {
+            const t = document.getElementById('save-toast');
+            if (t) { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }
+        }, 3000);
+        {% endif %}
+    })();
 </script>
-{% endif %}
+
 {% endblock %}

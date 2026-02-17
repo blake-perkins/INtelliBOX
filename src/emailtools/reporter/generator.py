@@ -379,8 +379,8 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     emails_today = session.query(Email).filter(Email.created_at >= today_start).count()
 
-    # Get cached program news
-    program_news_data = get_cached_program_news(session, days)
+    # Get cached structured program news
+    program_news_data = get_cached_structured_program_news(session, days)
 
     # Check cache for AI insights (expensive operation)
     latest_cache = session.query(ReportCache).order_by(
@@ -462,8 +462,9 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         "due_this_week_count": due_this_week_count,
         "emails_today": emails_today,
         "email_count": cached_data.get("email_count", 0) if is_cached else len(recent_emails) if 'recent_emails' in locals() else 0,
-        "program_news": program_news_data["summary"],
+        "program_news": program_news_data["structured_data"],  # Structured data instead of plain summary
         "program_news_generated_at": program_news_data["generated_at"],
+        "program_news_email_count": program_news_data["email_count"],
         "insights": insights,
         "unassigned_actions": unassigned_actions  # Keep as ORM objects for template
     }

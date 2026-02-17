@@ -149,7 +149,7 @@ Recent email activity ({days} days):
 Provide a JSON response with the following structure:
 
 {{
-  "executive_summary": "2-3 sentence overview of current workload and key priorities",
+  "executive_summary": "Write a 2-3 sentence executive briefing that: (1) States the current workload status in concrete terms (e.g., 'Team has 27 unassigned actions with 5 overdue'), (2) Highlights the single most urgent concern or bottleneck requiring leadership attention, (3) Provides one clear actionable recommendation. Write as if briefing a team lead who needs to make decisions quickly.",
   "trends": {{
     "action_volume": "Are actions increasing or decreasing? Any patterns?",
     "priority_distribution": "Is the high-priority ratio concerning or healthy?",

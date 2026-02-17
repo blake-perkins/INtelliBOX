@@ -5,41 +5,31 @@
 {% block content %}
 <!-- Compact Metrics Bar -->
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 1rem;">
         <!-- Metrics -->
-        <div style="display: flex; gap: 2rem; align-items: center; font-size: 0.95rem; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <div style="display: flex; gap: 1.5rem; align-items: center; font-size: 0.95rem; flex-wrap: wrap;">
+            <a href="/actions" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px; {% if not priority and not assigned and not overdue %}background: rgba(255,255,255,0.25); outline: 1px solid rgba(255,255,255,0.4);{% endif %}" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
                 <span style="opacity: 0.8;">📋</span>
                 <span><strong>{{ total_actions }}</strong> <span style="opacity: 0.7;">total</span></span>
-            </div>
+            </a>
             <div style="opacity: 0.4;">|</div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="opacity: 0.8;">📝</span>
+            <a href="/actions?assigned=false" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px; {% if assigned == 'false' %}background: rgba(255,255,255,0.25); outline: 1px solid rgba(255,255,255,0.4);{% endif %}" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
+                <span style="opacity: 0.8;">📋</span>
                 <span><strong>{{ unassigned_actions }}</strong> <span style="opacity: 0.7;">unassigned</span></span>
-            </div>
+            </a>
             <div style="opacity: 0.4;">|</div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <a href="/actions?priority=high" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px; {% if priority == 'high' %}background: rgba(255,255,255,0.25); outline: 1px solid rgba(255,255,255,0.4);{% endif %}" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
                 <span style="opacity: 0.8;">🔥</span>
-                <span style="{% if high_priority > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                <span style="{% if high_priority > 0 and priority != 'high' %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
                     <strong>{{ high_priority }}</strong> <span style="opacity: 0.7;">high</span>
                 </span>
-            </div>
+            </a>
             <div style="opacity: 0.4;">|</div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <a href="/actions?overdue=true" style="display: flex; align-items: center; gap: 0.5rem; color: white; text-decoration: none; padding: 0.2rem 0.6rem; border-radius: 12px; {% if overdue == 'true' %}background: rgba(255,255,255,0.25); outline: 1px solid rgba(255,255,255,0.4);{% endif %}" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
                 <span style="opacity: 0.8;">⚠️</span>
-                <span style="{% if overdue_count > 0 %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
+                <span style="{% if overdue_count > 0 and overdue != 'true' %}background: rgba(231, 76, 60, 0.4); padding: 0.2rem 0.6rem; border-radius: 12px;{% endif %}">
                     <strong>{{ overdue_count }}</strong> <span style="opacity: 0.7;">overdue</span>
                 </span>
-            </div>
-        </div>
-
-        <!-- Quick filters -->
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <a href="/actions?assigned=false" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,{% if assigned == 'false' %}0.4{% else %}0.2{% endif %}); border: 1px solid rgba(255,255,255,0.3);">
-                Unassigned
-            </a>
-            <a href="/actions?priority=high" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; background: rgba(255,255,255,{% if priority == 'high' %}0.4{% else %}0.2{% endif %}); border: 1px solid rgba(255,255,255,0.3);">
-                High Priority
             </a>
         </div>
     </div>
@@ -116,78 +106,145 @@
         </span>
     </div>
 
-    {% if actions %}
+    {% macro action_row(action) %}
+    {% set is_overdue = action.due_date and action.due_date < current_time %}
+    {% set is_due_soon = action.due_date and not is_overdue and (action.due_date - current_time).days <= 3 %}
+    {% set assignment = action.assignments[0] if action.assignments else None %}
+    {% set is_complete = assignment and assignment.status == 'completed' %}
+    {% set is_not_complete = not is_complete %}
+    {% set is_urgent = (is_overdue or is_due_soon) and is_not_complete %}
+    <tr style="{% if is_urgent %}background-color: #fff5f5;{% elif is_complete %}background-color: #f8f9fa; opacity: 0.7;{% endif %}">
+        <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+            <span class="badge badge-{{ action.priority }}">{{ action.priority }}</span>
+        </td>
+        <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+            <div style="font-weight: 600; margin-bottom: 0.25rem;">
+                {{ action.title[:80] }}{% if action.title|length > 80 %}...{% endif %}
+            </div>
+            <div style="font-size: 0.85rem; color: #666;">
+                {{ action.email.subject[:60] }}{% if action.email.subject|length > 60 %}...{% endif %}
+            </div>
+        </td>
+        <td style="font-size: 0.9rem; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+            {{ action.email.from_address.split('@')[0] if '@' in action.email.from_address else action.email.from_address }}
+        </td>
+        <td style="font-size: 0.85rem; color: #666; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+            {{ action.email.received_date.strftime('%b %d, %Y') if action.email.received_date else '—' }}
+        </td>
+        <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+            {% if assignment %}
+                <div style="font-weight: 600; {% if is_complete %}color: #888;{% else %}color: #27ae60;{% endif %}">
+                    {{ assignment.assigned_to }}
+                </div>
+                <div style="margin-top: 0.15rem;">
+                    {% if assignment.status == 'completed' %}
+                        <span style="font-size: 0.75rem; background: #d4edda; color: #155724; padding: 0.1rem 0.4rem; border-radius: 10px;">✓ completed</span>
+                    {% elif assignment.status == 'in_progress' %}
+                        <span style="font-size: 0.75rem; background: #cce5ff; color: #004085; padding: 0.1rem 0.4rem; border-radius: 10px;">⚙ in progress</span>
+                    {% else %}
+                        <span style="font-size: 0.75rem; background: #e2e8f0; color: #555; padding: 0.1rem 0.4rem; border-radius: 10px;">assigned</span>
+                    {% endif %}
+                </div>
+            {% else %}
+                <span style="color: #f39c12; font-weight: 600;">Unassigned</span>
+            {% endif %}
+        </td>
+        <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+            {% if action.due_date %}
+                <span style="{% if is_urgent %}color: #e74c3c; font-weight: 600;{% endif %}">
+                    {{ action.due_date.strftime('%b %d, %Y') }}
+                    {% if is_overdue and is_not_complete %}⚠️{% elif is_due_soon and is_not_complete %}🕐{% endif %}
+                </span>
+            {% else %}
+                <span style="color: #999;">No date</span>
+            {% endif %}
+        </td>
+        <td onclick="event.stopPropagation();">
+            {% if not assignment %}
+            <form method="POST" action="/actions/{{ action.id }}/assign" style="display: flex; gap: 0.25rem;">
+                {% if roster %}
+                <select name="assigned_to"
+                        style="flex: 1; padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;" required>
+                    <option value="" disabled selected>Select...</option>
+                    {% for member in roster %}
+                    <option value="{{ member.full_name }}">{{ member.last_name }}, {{ member.first_name }}</option>
+                    {% endfor %}
+                </select>
+                {% else %}
+                <input type="text" name="assigned_to" placeholder="Name..." list="assignees"
+                       style="flex: 1; padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;" required>
+                {% endif %}
+                <button type="submit" class="btn btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; white-space: nowrap;">
+                    Assign
+                </button>
+            </form>
+            {% else %}
+                <span style="color: #999; font-size: 0.85rem;">—</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% endmacro %}
+
+    {% set thead %}
+    <thead>
+        <tr>
+            <th style="width: 90px;">Priority</th>
+            <th>Title</th>
+            <th style="width: 150px;">From</th>
+            <th style="width: 110px;">Received</th>
+            <th style="width: 130px;">Assignee</th>
+            <th style="width: 110px;">Due Date</th>
+            <th style="width: 180px;">Quick Assign</th>
+        </tr>
+    </thead>
+    {% endset %}
+
+    {# Count active vs completed #}
+    {% set ns = namespace(active=0, done=0) %}
+    {% for action in actions %}
+        {% set assignment = action.assignments[0] if action.assignments else None %}
+        {% if assignment and assignment.status == 'completed' %}
+            {% set ns.done = ns.done + 1 %}
+        {% else %}
+            {% set ns.active = ns.active + 1 %}
+        {% endif %}
+    {% endfor %}
+
+    {% if ns.active > 0 %}
+    <h3 style="font-size: 1rem; font-weight: 600; color: #333; margin: 1.5rem 0 0.5rem;">
+        Open Actions <span style="font-weight: 400; color: #888;">({{ ns.active }})</span>
+    </h3>
     <table>
-        <thead>
-            <tr>
-                <th style="width: 90px;">Priority</th>
-                <th>Title</th>
-                <th style="width: 150px;">From</th>
-                <th style="width: 130px;">Assignee</th>
-                <th style="width: 110px;">Due Date</th>
-                <th style="width: 180px;">Quick Assign</th>
-            </tr>
-        </thead>
+        {{ thead }}
         <tbody>
             {% for action in actions %}
-            {% set is_overdue = action.due_date and action.due_date < current_time %}
             {% set assignment = action.assignments[0] if action.assignments else None %}
-            <tr style="{% if is_overdue and (not assignment or assignment.status != 'completed') %}background-color: #fff5f5;{% endif %}">
-                <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
-                    <span class="badge badge-{{ action.priority }}">
-                        {{ action.priority }}
-                    </span>
-                </td>
-                <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
-                    <div style="font-weight: 600; margin-bottom: 0.25rem;">
-                        {{ action.title[:80] }}{% if action.title|length > 80 %}...{% endif %}
-                    </div>
-                    <div style="font-size: 0.85rem; color: #666;">
-                        {{ action.email.subject[:60] }}{% if action.email.subject|length > 60 %}...{% endif %}
-                    </div>
-                </td>
-                <td style="font-size: 0.9rem; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
-                    {{ action.email.from_address.split('@')[0] if '@' in action.email.from_address else action.email.from_address }}
-                </td>
-                <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
-                    {% if assignment %}
-                        <span style="color: #27ae60; font-weight: 600;">{{ assignment.assigned_to }}</span>
-                    {% else %}
-                        <span style="color: #f39c12; font-weight: 600;">Unassigned</span>
-                    {% endif %}
-                </td>
-                <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
-                    {% if action.due_date %}
-                        <span style="{% if is_overdue and (not assignment or assignment.status != 'completed') %}color: #e74c3c; font-weight: 600;{% endif %}">
-                            {{ action.due_date.strftime('%b %d, %Y') }}
-                            {% if is_overdue and (not assignment or assignment.status != 'completed') %}⚠️{% endif %}
-                        </span>
-                    {% else %}
-                        <span style="color: #999;">No date</span>
-                    {% endif %}
-                </td>
-                <td onclick="event.stopPropagation();">
-                    {% if not assignment %}
-                    <form method="POST" action="/actions/{{ action.id }}/assign" style="display: flex; gap: 0.25rem;">
-                        <input type="text"
-                               name="assigned_to"
-                               placeholder="Name..."
-                               list="assignees"
-                               style="flex: 1; padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;"
-                               required>
-                        <button type="submit" class="btn btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; white-space: nowrap;">
-                            Assign
-                        </button>
-                    </form>
-                    {% else %}
-                        <span style="color: #999; font-size: 0.85rem;">—</span>
-                    {% endif %}
-                </td>
-            </tr>
+            {% if not (assignment and assignment.status == 'completed') %}
+            {{ action_row(action) }}
+            {% endif %}
             {% endfor %}
         </tbody>
     </table>
-    {% else %}
+    {% endif %}
+
+    {% if ns.done > 0 %}
+    <h3 style="font-size: 1rem; font-weight: 600; color: #888; margin: 2rem 0 0.5rem;">
+        Completed <span style="font-weight: 400;">({{ ns.done }})</span>
+    </h3>
+    <table style="opacity: 0.75;">
+        {{ thead }}
+        <tbody>
+            {% for action in actions %}
+            {% set assignment = action.assignments[0] if action.assignments else None %}
+            {% if assignment and assignment.status == 'completed' %}
+            {{ action_row(action) }}
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if not actions %}
     <div style="text-align: center; padding: 3rem; color: #999;">
         <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No actions found</p>
         <p style="font-size: 0.9rem;">Try adjusting your filters or search terms</p>

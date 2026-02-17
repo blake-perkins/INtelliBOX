@@ -270,7 +270,7 @@ class TestWebInterface:
         """Test daily report page."""
         response = client.get("/report")
         assert response.status_code == 200
-        assert b"Daily Report" in response.content
+        assert b"Insights" in response.content
         # Should show unassigned actions
         assert b"Investigate production error" in response.content
 
@@ -329,7 +329,7 @@ class TestEmptyDatabase:
         """Test report with no data."""
         response = client.get("/report")
         assert response.status_code == 200
-        assert b"Daily Report" in response.content
+        assert b"Insights" in response.content
 
     def test_api_stats_empty(self, empty_db):
         """Test API stats with empty database."""
