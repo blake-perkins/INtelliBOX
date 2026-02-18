@@ -48,9 +48,41 @@ def _start_background_watcher():
     thread.start()
 
 
+def _start_imap_fetcher():
+    """Start the IMAP fetcher in a background daemon thread (if enabled)."""
+    from intellibox.config import settings
+    from intellibox.ingestion.imap_fetcher import supervised_imap_fetch
+
+    if not settings.imap_enabled:
+        return
+
+    inbox_dir = Path("data/inbox")
+
+    thread = threading.Thread(
+        target=supervised_imap_fetch,
+        args=(
+            settings.imap_host,
+            settings.imap_port,
+            settings.imap_user,
+            settings.imap_password,
+            inbox_dir,
+        ),
+        kwargs={
+            "use_ssl": settings.imap_use_ssl,
+            "folder": settings.imap_folder,
+            "interval": settings.imap_poll_interval,
+            "max_restarts": 5,
+        },
+        daemon=True,
+        name="imap-fetcher",
+    )
+    thread.start()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _start_background_watcher()
+    _start_imap_fetcher()
     yield
 
 
@@ -1329,14 +1361,21 @@ async def delete_roster_member(member_id: int):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint with watcher status."""
+    """Health check endpoint with watcher and IMAP status."""
+    from intellibox.config import settings
     from intellibox.ingestion.file_watcher import get_watcher_health
 
-    return {
+    result = {
         "status": "healthy",
         "timestamp": utcnow().isoformat(),
         "watcher": get_watcher_health(),
     }
+
+    if settings.imap_enabled:
+        from intellibox.ingestion.imap_fetcher import get_imap_health
+        result["imap"] = get_imap_health()
+
+    return result
 
 
 # --- Test-only endpoints (gated by TESTING env var) ---

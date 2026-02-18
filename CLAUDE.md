@@ -9,7 +9,7 @@ INtelliBOX is an automated email action tracking system for fast-paced software 
 ```
 INtelliBOX/
 ├── src/intellibox/          # Main application code
-│   ├── ingestion/          # Email parsing (.eml/.msg), file watching, chain stripping
+│   ├── ingestion/          # Email parsing (.eml/.msg), file watching, IMAP fetching, chain stripping
 │   ├── ai/                 # GPT-4 integration with retry logic, mock client for demo
 │   ├── reporter/           # Report generation, program news, email sending
 │   ├── knowledge/          # Knowledge base: document storage, embeddings, TF-IDF search
@@ -33,6 +33,7 @@ INtelliBOX/
 │   ├── logs/              # Rotating log files
 │   └── intellibox.db      # SQLite database
 ├── alembic/               # Database migrations
+├── deploy/                # Production deployment (nginx, setup.sh, env template)
 ├── docs/deployment/       # AWS, Azure, Podman guides
 ├── Dockerfile             # Production container image
 ├── Dockerfile.test        # Test runner container image
@@ -51,10 +52,12 @@ INtelliBOX/
   - Web dashboard: /, /actions, /emails, /insights, /settings, /knowledge-base, /roster, /analytics
   - Knowledge base with TF-IDF and embedding search
   - Database maintenance (cache cleanup, log retention, VACUUM/ANALYZE)
+  - IMAP email fetching (optional, polls remote mailbox for new emails)
   - File watcher with health monitoring and supervised restarts
   - AI client retry logic with exponential backoff
   - Rotating log files
   - Container support (Dockerfile, Dockerfile.test, docker-compose.yml)
+  - Production deployment (deploy/ — Podman, nginx, Certbot, DuckDNS)
 - **Primary branch**: `main`
 - **Python**: 3.12+
 - **Database**: SQLite (data/intellibox.db)
