@@ -102,8 +102,8 @@ class SettingsService:
     @staticmethod
     def update_last_sync_time() -> None:
         """Record the current UTC time as the last sync timestamp."""
-        from datetime import datetime
-        SettingsService.set_setting('last_sync_time', datetime.utcnow().isoformat())
+        from emailtools.utils.datetime_utils import utcnow
+        SettingsService.set_setting('last_sync_time', utcnow().isoformat())
 
     @staticmethod
     def parse_categories_text(text: str) -> list:

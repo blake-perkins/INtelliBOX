@@ -5,6 +5,8 @@ from typing import List, Optional
 from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from emailtools.utils.datetime_utils import utcnow
+
 
 class Base(DeclarativeBase):
     """Base class for all ORM models."""
@@ -32,7 +34,7 @@ class Email(Base):
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
 
@@ -76,7 +78,7 @@ class Action(Base):
     raw_ai_response: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
 
@@ -118,7 +120,7 @@ class Assignment(Base):
     assigned_to: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
     assigned_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -160,7 +162,7 @@ class ProcessingLog(Base):
     event_metadata: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON as TEXT
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False,
         index=True
     )
@@ -184,7 +186,7 @@ class ProgramNewsCache(Base):
     latest_email_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     generated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False,
         index=True
     )
@@ -204,8 +206,8 @@ class Settings(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utcnow,
+        onupdate=utcnow,
         nullable=False
     )
 
@@ -225,7 +227,7 @@ class RosterMember(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
 
@@ -246,7 +248,7 @@ class ReportCache(Base):
     report_data: Mapped[str] = mapped_column(Text, nullable=False)  # JSON-encoded report
     generated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False,
         index=True
     )
@@ -271,7 +273,7 @@ class KnowledgeDocument(Base):
     )  # success, failed, partial
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False,
         index=True
     )

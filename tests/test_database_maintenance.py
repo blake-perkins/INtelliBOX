@@ -2,7 +2,7 @@
 
 import tempfile
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import pytest
 from sqlalchemy import create_engine, text
@@ -140,7 +140,7 @@ class TestCacheCleanup:
 
     def test_cleanup_program_news_keeps_latest(self, db_session):
         """Cleanup keeps only the N most recent ProgramNewsCache rows."""
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         for i in range(5):
             db_session.add(ProgramNewsCache(
                 summary=f"summary_{i}",
@@ -168,7 +168,7 @@ class TestCacheCleanup:
 
     def test_cleanup_program_news_fewer_than_keep(self, db_session):
         """If fewer rows exist than keep count, nothing is deleted."""
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         db_session.add(ProgramNewsCache(
             summary="only_one", days_covered=7, email_count=1,
             generated_at=now,
@@ -181,7 +181,7 @@ class TestCacheCleanup:
 
     def test_cleanup_report_cache_keeps_latest(self, db_session):
         """Cleanup keeps only the N most recent ReportCache rows."""
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         for i in range(5):
             db_session.add(ReportCache(
                 report_data=f'{{"data": {i}}}',
@@ -203,7 +203,7 @@ class TestCacheCleanup:
 
     def test_cleanup_zero_keep_deletes_all(self, db_session):
         """keep=0 for a cache skips cleanup for that table (does NOT delete all)."""
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         db_session.add(ProgramNewsCache(
             summary="keep me", days_covered=7, email_count=1,
             generated_at=now,
@@ -223,7 +223,7 @@ class TestProcessingLogRetention:
 
     def test_cleanup_logs_by_age(self, db_session):
         """Logs older than retention_days are deleted."""
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         # Recent log (10 days ago)
         db_session.add(ProcessingLog(
             event_type="email_received", status="success",
@@ -246,7 +246,7 @@ class TestProcessingLogRetention:
 
     def test_cleanup_logs_preserves_recent(self, db_session):
         """All recent logs are preserved."""
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         for i in range(5):
             db_session.add(ProcessingLog(
                 event_type="test", status="success",
@@ -265,7 +265,7 @@ class TestProcessingLogRetention:
 
     def test_cleanup_logs_boundary(self, db_session):
         """Log exactly at retention boundary is preserved."""
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         # Exactly 90 days ago — should be kept (not strictly older)
         db_session.add(ProcessingLog(
             event_type="boundary", status="success",
@@ -297,7 +297,7 @@ class TestVacuumAnalyze:
         # Insert and delete some data to create space to reclaim
         db_session.add(ProgramNewsCache(
             summary="temp", days_covered=7, email_count=1,
-            generated_at=datetime.now(timezone.utc),
+            generated_at=datetime.utcnow(),
         ))
         db_session.commit()
         db_session.query(ProgramNewsCache).delete()
@@ -325,7 +325,7 @@ class TestRunMaintenance:
 
     def test_run_maintenance_cleans_all(self, db_session):
         """run_maintenance cleans caches, logs, and runs vacuum/analyze."""
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
 
         # Add old cache entries
         for i in range(10):

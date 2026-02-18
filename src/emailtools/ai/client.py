@@ -4,6 +4,8 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from emailtools.utils.datetime_utils import utcnow
+
 from openai import OpenAI
 from openai import APIError, APIConnectionError, RateLimitError
 
@@ -90,7 +92,7 @@ class AIClient:
             APIError: If OpenAI API fails
         """
         if current_date is None:
-            current_date = datetime.utcnow()
+            current_date = utcnow()
 
         # Prepare email body (prefer plain text, fallback to HTML)
         from emailtools.ingestion.chain_stripper import strip_quoted_text

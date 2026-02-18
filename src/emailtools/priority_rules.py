@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from .settings_service import SettingsService
+from .utils.datetime_utils import utcnow
 
 
 class PriorityRuleEngine:
@@ -53,7 +54,7 @@ class PriorityRuleEngine:
         # Rule 3: Check due date threshold
         if due_date:
             days_threshold = config.get('days_threshold', 5)
-            days_until_due = (due_date - datetime.utcnow()).days
+            days_until_due = (due_date - utcnow()).days
 
             if days_until_due <= days_threshold:
                 return "high"

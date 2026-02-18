@@ -2,6 +2,8 @@
 
 import json
 from datetime import datetime, timedelta, timezone as dt_timezone
+
+from emailtools.utils.datetime_utils import utcnow
 from typing import Dict, List
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -64,7 +66,7 @@ def get_recent_emails(session: Session, days: int = 7) -> List[Email]:
     Returns:
         List of Email objects
     """
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = utcnow() - timedelta(days=days)
 
     emails = (
         session.query(Email)
@@ -139,7 +141,7 @@ def get_cached_program_news(session: Session, days: int = None, force_refresh: b
 
     if not should_regenerate and latest_cache:
         # Check if cache is older than 12 hours
-        cache_age = datetime.utcnow() - latest_cache.generated_at
+        cache_age = utcnow() - latest_cache.generated_at
         if cache_age.total_seconds() > (12 * 3600):
             should_regenerate = True
             logger.info(f"Cache is {cache_age.total_seconds() / 3600:.1f} hours old, regenerating")
@@ -179,7 +181,7 @@ def get_cached_program_news(session: Session, days: int = None, force_refresh: b
         days_covered=days,
         email_count=len(recent_emails),
         latest_email_date=latest_email_date,
-        generated_at=datetime.utcnow()
+        generated_at=utcnow()
     )
     session.add(cache_entry)
     session.commit()
@@ -277,7 +279,7 @@ def get_cached_structured_program_news(session: Session, days: int = None, force
         days_covered=days,
         email_count=len(recent_emails),
         latest_email_date=latest_email_date,
-        generated_at=datetime.utcnow()
+        generated_at=utcnow()
     )
     session.add(cache_entry)
     session.commit()
@@ -316,7 +318,7 @@ def generate_report_data(session: Session) -> Dict:
     low_priority_count = sum(1 for a in unassigned_actions if a.priority == "low")
 
     # Get count of emails processed today
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     emails_today = (
         session.query(Email)
         .filter(Email.created_at >= today_start)
@@ -327,7 +329,7 @@ def generate_report_data(session: Session) -> Dict:
     tz_name = SettingsService.get_timezone()
 
     report_data = {
-        "generated_at": to_local_time(datetime.utcnow(), tz_name),
+        "generated_at": to_local_time(utcnow(), tz_name),
         "unassigned_actions": unassigned_actions,
         "total_actions": len(unassigned_actions),
         "high_priority_count": high_priority_count,
@@ -367,7 +369,7 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
     unassigned_actions = get_unassigned_actions(session)
 
     # Calculate basic statistics
-    now = datetime.utcnow()
+    now = utcnow()
     today = now.date()
     high_priority_count = sum(1 for a in unassigned_actions if a.priority == "high")
     medium_priority_count = sum(1 for a in unassigned_actions if a.priority == "medium")

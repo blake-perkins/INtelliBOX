@@ -162,11 +162,9 @@ def cleanup_processing_logs(session: Session, retention_days: int = 90) -> int:
     from emailtools.models import ProcessingLog
 
     cutoff = utcnow() - timedelta(days=retention_days)
-    # SQLite stores naive datetimes, so compare as naive
-    cutoff_naive = cutoff.replace(tzinfo=None)
     deleted = (
         session.query(ProcessingLog)
-        .filter(ProcessingLog.created_at < cutoff_naive)
+        .filter(ProcessingLog.created_at < cutoff)
         .delete(synchronize_session="fetch")
     )
     return deleted

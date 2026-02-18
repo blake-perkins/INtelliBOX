@@ -3,6 +3,8 @@
 import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
+
+from emailtools.utils.datetime_utils import utcnow
 from pathlib import Path
 from typing import List, Optional
 
@@ -114,7 +116,7 @@ async def dashboard(request: Request):
         ).count()
 
         # Get overdue actions (assigned or unassigned, exclude completed)
-        today = datetime.utcnow().date()
+        today = utcnow().date()
         overdue_count = session.query(Action).outerjoin(Assignment).filter(
             Action.due_date < today,
             (Assignment.id.is_(None)) | (Assignment.status != "completed")
@@ -167,7 +169,7 @@ async def dashboard(request: Request):
         # Calculate time since last email
         time_since_last_email = None
         if last_email_date:
-            delta = datetime.utcnow() - last_email_date
+            delta = utcnow() - last_email_date
             if delta.total_seconds() < 3600:
                 time_since_last_email = f"{int(delta.total_seconds() / 60)}m ago"
             elif delta.total_seconds() < 86400:
@@ -195,7 +197,7 @@ async def dashboard(request: Request):
             "recent_completions": recent_completions,
             "last_email_date": last_email_date,
             "time_since_last_email": time_since_last_email,
-            "current_time": datetime.utcnow(),
+            "current_time": utcnow(),
         })
 
 
@@ -231,7 +233,7 @@ async def list_actions(
         ).count()
 
         # Get overdue count
-        today = datetime.utcnow().date()
+        today = utcnow().date()
         overdue_count = session.query(Action).outerjoin(Assignment).filter(
             Action.due_date < today,
             (Assignment.id.is_(None)) | (Assignment.status != "completed")
@@ -312,7 +314,7 @@ async def list_actions(
             "overdue": overdue,
             "assignee_list": assignee_list,
             "roster": roster,
-            "current_time": datetime.utcnow()
+            "current_time": utcnow()
         })
 
 
@@ -363,7 +365,7 @@ async def view_action(request: Request, action_id: int):
             "related_actions": related_actions,
             "roster": roster,
             "recent_assignees": recent_assignee_list,
-            "current_time": datetime.utcnow(),
+            "current_time": utcnow(),
             "categories": categories,
             "kb_matches": kb_matches,
         })
@@ -387,7 +389,7 @@ async def list_emails(
             Action.priority == "high",
             Assignment.id.is_(None)
         ).count()
-        today = datetime.utcnow().date()
+        today = utcnow().date()
         overdue_count = session.query(Action).outerjoin(Assignment).filter(
             Action.due_date < today,
             (Assignment.id.is_(None)) | (Assignment.status != "completed")
@@ -396,7 +398,7 @@ async def list_emails(
         last_email_date = latest_email.received_date if latest_email else None
         time_since_last_email = None
         if last_email_date:
-            delta = datetime.utcnow() - last_email_date
+            delta = utcnow() - last_email_date
             if delta.total_seconds() < 3600:
                 time_since_last_email = f"{int(delta.total_seconds() / 60)}m ago"
             elif delta.total_seconds() < 86400:
@@ -435,7 +437,7 @@ async def list_emails(
 
         # Date range filter
         if days:
-            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            cutoff_date = utcnow() - timedelta(days=days)
             query = query.filter(Email.received_date >= cutoff_date)
 
         # Order by received date
@@ -465,7 +467,7 @@ async def list_emails(
             "high_priority": high_priority,
             "overdue_count": overdue_count,
             "time_since_last_email": time_since_last_email,
-            "current_time": datetime.utcnow()
+            "current_time": utcnow()
         })
 
 
@@ -502,7 +504,7 @@ async def view_email(request: Request, email_id: int):
             "completed_count": completed_count,
             "high_priority_count": high_priority_count,
             "also_received": also_received,
-            "current_time": datetime.utcnow()
+            "current_time": utcnow()
         })
 
 
@@ -521,7 +523,7 @@ async def view_insights(request: Request):
 
         # Calculate cache age in minutes for display
         if report_data.get("is_cached") and report_data.get("generated_at"):
-            cache_age_minutes = int((datetime.utcnow() - report_data["generated_at"]).total_seconds() / 60)
+            cache_age_minutes = int((utcnow() - report_data["generated_at"]).total_seconds() / 60)
         else:
             cache_age_minutes = 0
 
@@ -532,7 +534,7 @@ async def view_insights(request: Request):
             "report": report_data,
             "cache_age_minutes": cache_age_minutes,
             "program_news": program_news_data,
-            "current_time": datetime.utcnow(),
+            "current_time": utcnow(),
             "datetime": datetime,
             "selected_days": days
         })
@@ -555,13 +557,13 @@ async def refresh_insights(request: Request):
 async def get_stats():
     """API endpoint for statistics (for auto-refresh)."""
     with get_session() as session:
-        today = datetime.utcnow().date()
+        today = utcnow().date()
         last_sync = "never"
         last_sync_str = SettingsService.get_setting('last_sync_time', None)
         if last_sync_str:
             try:
                 last_sync_dt = datetime.fromisoformat(last_sync_str)
-                delta = datetime.utcnow() - last_sync_dt
+                delta = utcnow() - last_sync_dt
                 if delta.total_seconds() < 3600:
                     last_sync = f"{int(delta.total_seconds() / 60)}m ago"
                 elif delta.total_seconds() < 86400:
@@ -630,7 +632,7 @@ async def assign_action(
             # Update existing assignment
             existing.assigned_to = assigned_to
             existing.notes = notes
-            existing.assigned_at = datetime.utcnow()
+            existing.assigned_at = utcnow()
         else:
             # Create new assignment
             assignment = Assignment(
@@ -658,12 +660,12 @@ async def complete_action(action_id: int):
                 action_id=action_id,
                 assigned_to="Unknown",
                 status="completed",
-                completed_at=datetime.utcnow()
+                completed_at=utcnow()
             )
             session.add(assignment)
         else:
             assignment.status = "completed"
-            assignment.completed_at = datetime.utcnow()
+            assignment.completed_at = utcnow()
 
         session.commit()
 
@@ -712,7 +714,7 @@ async def update_assignment_status(
 
         assignment.status = status
         if status == "completed":
-            assignment.completed_at = datetime.utcnow()
+            assignment.completed_at = utcnow()
         else:
             assignment.completed_at = None
         session.commit()
@@ -764,7 +766,7 @@ async def edit_action(
             if existing:
                 existing.assigned_to = assigned_to.strip()
                 existing.notes = notes.strip() if notes.strip() else existing.notes
-                existing.assigned_at = datetime.utcnow()
+                existing.assigned_at = utcnow()
             else:
                 new_assignment = Assignment(
                     action_id=action_id,
@@ -981,7 +983,7 @@ async def delete_category(name: str = Form(...)):
 async def view_analytics(request: Request):
     """System analytics dashboard — all-time stats and activity trends."""
     with get_session() as session:
-        now = datetime.utcnow()
+        now = utcnow()
         today = now.date()
 
         # --- All-time counters ---
@@ -1191,7 +1193,7 @@ async def view_roster(request: Request):
         high_priority = session.query(Action).outerjoin(Assignment).filter(
             Action.priority == "high", Assignment.id.is_(None)
         ).count()
-        today = datetime.utcnow().date()
+        today = utcnow().date()
         overdue_count = session.query(Action).outerjoin(Assignment).filter(
             Action.due_date < today,
             (Assignment.id.is_(None)) | (Assignment.status != "completed")
@@ -1202,7 +1204,7 @@ async def view_roster(request: Request):
             "unassigned_actions": unassigned_actions,
             "high_priority": high_priority,
             "overdue_count": overdue_count,
-            "current_time": datetime.utcnow(),
+            "current_time": utcnow(),
         })
 
 
@@ -1329,7 +1331,7 @@ async def delete_roster_member(member_id: int):
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": utcnow().isoformat()}
 
 
 # --- Test-only endpoints (gated by TESTING env var) ---

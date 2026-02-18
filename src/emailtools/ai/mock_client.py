@@ -3,6 +3,8 @@
 import json
 import re
 from datetime import datetime, timedelta
+
+from emailtools.utils.datetime_utils import utcnow
 from typing import Dict, List, Tuple
 
 from emailtools.knowledge import get_knowledge_context
@@ -35,7 +37,7 @@ class MockAIClient:
             Tuple of (list of action dicts, simulated raw response)
         """
         if current_date is None:
-            current_date = datetime.utcnow()
+            current_date = utcnow()
 
         body = email.body_text or email.body_html or ""
         subject = email.subject.lower()

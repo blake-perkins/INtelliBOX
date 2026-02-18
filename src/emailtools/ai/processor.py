@@ -3,6 +3,8 @@
 import json
 import time
 from datetime import datetime
+
+from emailtools.utils.datetime_utils import utcnow
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -55,7 +57,7 @@ def process_email_with_ai(email: Email, session: Session) -> int:
 
         # Mark email as processed
         email.processed = True
-        email.processed_at = datetime.utcnow()
+        email.processed_at = utcnow()
 
         # Log success
         log_entry = ProcessingLog(

@@ -2,6 +2,8 @@
 
 import extract_msg
 from datetime import datetime
+
+from emailtools.utils.datetime_utils import utcnow
 from pathlib import Path
 from typing import Tuple, Optional, List
 
@@ -64,9 +66,9 @@ def parse_msg_file(msg_path: Path) -> Tuple[str, str, str, str, List[str], List[
             try:
                 received_date = datetime.fromisoformat(str(msg.date))
             except:
-                received_date = datetime.utcnow()
+                received_date = utcnow()
         else:
-            received_date = datetime.utcnow()
+            received_date = utcnow()
 
         # Extract body
         body_text = msg.body or None
