@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import case, desc, func, or_
 from sqlalchemy.orm import joinedload
 
+from intellibox import __version__
 from intellibox.database import get_session
 from intellibox.knowledge import search_knowledge_base
 from intellibox.models import Action, Assignment, Email, KnowledgeChunk, KnowledgeDocument, RosterMember
@@ -58,7 +59,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="INtelliBOX",
     description="AI-Powered Email Action Tracking System",
-    version="1.0.0",
+    version=__version__,
     lifespan=lifespan,
 )
 
@@ -70,6 +71,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Inject as get_program_name to avoid clashing with context vars named program_name
 templates.env.globals['get_program_name'] = lambda: SettingsService.get_setting('program_name', '')
+templates.env.globals['app_version'] = __version__
 
 
 @app.middleware("http")
@@ -1379,6 +1381,7 @@ async def health_check():
 
     return {
         "status": "healthy",
+        "version": __version__,
         "timestamp": utcnow().isoformat(),
         "watcher": get_watcher_health(),
     }
