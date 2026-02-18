@@ -10,6 +10,9 @@
 #
 set -euo pipefail
 
+# Print each command before executing (helps diagnose failures)
+trap 'echo ""; echo "ERROR: Setup failed at line $LINENO. See output above for details."; exit 1' ERR
+
 # ── Load config ─────────────────────────────────────────────────────────────
 
 if [ ! -f .env.production ]; then
@@ -37,6 +40,21 @@ SUBDOMAIN=$(echo "$DOMAIN" | sed 's/\.duckdns\.org$//')
 echo "=== INtelliBOX Deployment Setup ==="
 echo "Domain: $DOMAIN"
 echo ""
+
+# ── Create swap file (needed for t3.micro / 1GB instances) ────────────────
+
+if [ ! -f /swapfile ]; then
+    echo "=== Creating 2GB swap file ==="
+    fallocate -l 2G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    echo "Swap enabled: $(swapon --show)"
+else
+    echo "=== Swap already exists ==="
+    swapon /swapfile 2>/dev/null || true
+fi
 
 # ── Install Podman ──────────────────────────────────────────────────────────
 
@@ -117,10 +135,18 @@ echo "=== Building INtelliBOX container ==="
 
 cd "$REPO_ROOT"
 
+echo "Building container image (this may take a few minutes)..."
 podman build -t intellibox:prod -f Dockerfile .
+echo "Container image built successfully"
 
 # Create data directory on host for persistence
 mkdir -p /opt/intellibox/data/inbox /opt/intellibox/data/emails
+
+# Fix ownership from inside the container (host UID mapping may differ from container)
+podman run --rm --user root --entrypoint bash \
+    -v /opt/intellibox/data:/app/data:Z \
+    intellibox:prod \
+    -c "chown -R 1000:1000 /app/data"
 
 # Stop existing container if running
 podman stop intellibox 2>/dev/null || true
