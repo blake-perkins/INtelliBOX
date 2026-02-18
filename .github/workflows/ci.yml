@@ -68,6 +68,17 @@ jobs:
   container-integration:
     needs: container-build-and-test
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite:///./data/emailtools.db
+      OPENAI_API_KEY: sk-test-dummy-key
+      OPENAI_MODEL: gpt-4-turbo-preview
+      SMTP_HOST: smtp.test.invalid
+      SMTP_PORT: '587'
+      SMTP_USER: test@test.invalid
+      SMTP_PASSWORD: test-password
+      REPORT_FROM: test@test.invalid
+      REPORT_RECIPIENTS: test@test.invalid
+      TESTING: 'true'
     steps:
       - uses: actions/checkout@v4
       - name: Build production image
@@ -103,8 +114,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install BDD test dependencies
-        run: pip install behave requests
+      - name: Install project and BDD test dependencies
+        run: pip install -e ".[dev]"
       - name: Run BDD tests against live container
         env:
           TEST_BASE_URL: http://localhost:8000
