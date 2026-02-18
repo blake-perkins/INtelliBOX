@@ -37,6 +37,9 @@ fi
 
 SUBDOMAIN=$(echo "$DOMAIN" | sed 's/\.duckdns\.org$//')
 
+# REPO_ROOT can be set by cloud-init; defaults to parent of this script's directory
+REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+
 echo "=== INtelliBOX Deployment Setup ==="
 echo "Domain: $DOMAIN"
 echo ""
@@ -90,8 +93,6 @@ echo "DuckDNS cron installed"
 # ── Configure nginx ─────────────────────────────────────────────────────────
 
 echo "=== Configuring nginx ==="
-
-REPO_ROOT=$(cd .. && pwd)
 
 # Install nginx config with domain substituted
 sed "s/\${DOMAIN}/$DOMAIN/g" nginx/intellibox.conf > /etc/nginx/sites-available/intellibox

@@ -22,8 +22,9 @@ INtelliBOX/
 │   ├── settings_service.py # Settings CRUD (JSON serialization)
 │   ├── priority_rules.py   # Priority rule engine
 │   └── cli.py              # Click CLI commands
-├── tests/                  # 13 pytest test modules
+├── tests/                  # 13 pytest modules + 45 Playwright E2E tests
 │   ├── test_ai/            # AI-specific tests (priority integration)
+│   ├── e2e/                # Playwright browser E2E tests (10 files)
 │   └── fixtures/           # Sample .eml files
 ├── features/               # 165 BDD scenarios (Behave)
 │   └── steps/              # Step definitions
@@ -33,7 +34,7 @@ INtelliBOX/
 │   ├── logs/              # Rotating log files
 │   └── intellibox.db      # SQLite database
 ├── alembic/               # Database migrations
-├── deploy/                # Production deployment (nginx, setup.sh, env template)
+├── deploy/                # Production deployment (pilot.sh, setup.sh, nginx, env templates)
 ├── docs/deployment/       # AWS, Azure, Podman guides
 ├── Dockerfile             # Production container image
 ├── Dockerfile.test        # Test runner container image
@@ -58,6 +59,8 @@ INtelliBOX/
   - Rotating log files
   - Container support (Dockerfile, Dockerfile.test, docker-compose.yml)
   - Production deployment (deploy/ — Podman, nginx, Certbot, DuckDNS)
+  - Zero-touch pilot deployment (`bash deploy/pilot.sh`)
+  - CI/CD pipeline: lint, tests (unit + BDD + E2E), container build/test, auto-deploy
 - **Primary branch**: `main`
 - **Python**: 3.12+
 - **Database**: SQLite (data/intellibox.db)
@@ -73,7 +76,22 @@ python run_tests.py
 # NOT: pytest tests/  (causes cross-contamination errors)
 ```
 
-**Test suite**: 13 pytest modules + 165 BDD scenarios (Behave).
+**Test suite**: 13 pytest modules + 165 BDD scenarios (Behave) + 45 Playwright E2E tests.
+
+E2E tests (Playwright):
+```bash
+# Run E2E tests only (starts its own server on port 8787):
+python -m pytest tests/e2e/ -v
+
+# Run a specific E2E test:
+python -m pytest tests/e2e/test_e2e_dashboard.py::test_dashboard_overdue_expand_collapse -v
+
+# Run E2E tests in headed mode (visible browser):
+python -m pytest tests/e2e/ -v --headed
+
+# First-time setup:
+pip install -e ".[dev]" && playwright install chromium
+```
 
 Container testing:
 ```bash

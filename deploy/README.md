@@ -15,66 +15,102 @@ SCP / folder sync     ─┤
 Internet → HTTPS (443) → nginx → HTTP (8000) → INtelliBOX container (Podman)
 ```
 
-## Prerequisites
+## Quick Start — Zero-Touch Deployment
 
-- AWS account
-- OpenAI API key
+Deploy a fresh pilot instance with a single command. No SSH, no manual steps.
 
-## Step 1: Get a Free Domain (DuckDNS)
+### One-Time Prerequisites
+
+1. [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed and configured (`aws configure`)
+2. An EC2 key pair created in your AWS region
+3. A DuckDNS subdomain — go to [duckdns.org](https://www.duckdns.org/), sign in, create a subdomain, copy your token
+
+### Configure
+
+```bash
+cd deploy
+
+# AWS settings
+cp .env.pilot.example .env.pilot
+# Edit .env.pilot: set AWS_REGION, AWS_KEY_NAME, INSTANCE_TYPE, SSH_KEY_PATH
+
+# App secrets
+cp .env.production.example .env.production
+# Edit .env.production: set DOMAIN, DUCKDNS_TOKEN, OPENAI_API_KEY, SMTP creds
+```
+
+### Deploy
+
+```bash
+bash deploy/pilot.sh
+```
+
+This will automatically:
+1. Terminate any existing pilot instance
+2. Create a security group (ports 22, 80, 443)
+3. Find the latest Ubuntu 24.04 AMI
+4. Launch an EC2 instance with cloud-init
+5. Install Podman, nginx, Certbot on the instance
+6. Clone the repo, build the container, start the app
+7. Configure DuckDNS and obtain an SSL certificate
+8. Wait for the health check to pass
+9. Print the live URL
+
+### CI/CD Auto-Deploy
+
+Pushes to `main` that pass all tests automatically deploy to the pilot instance. To enable this, add two GitHub secrets:
+
+```bash
+# Store the SSH private key
+gh secret set PILOT_SSH_KEY < path/to/intellibox-key.pem
+
+# Store the pilot hostname
+gh secret set PILOT_HOST -b "intellibox-pilot.duckdns.org"
+```
+
+The deploy job will skip gracefully if these secrets are not configured.
+
+---
+
+## Manual Deployment (Alternative)
+
+If you prefer to set up manually instead of using `pilot.sh`:
+
+### Step 1: Get a Free Domain (DuckDNS)
 
 1. Go to [duckdns.org](https://www.duckdns.org/) and sign in
 2. Pick a subdomain (e.g. `intellibox-pilot`) → you get `intellibox-pilot.duckdns.org`
 3. Copy your **token** from the DuckDNS dashboard
 
-## Step 2: Launch EC2 Instance
+### Step 2: Launch EC2 Instance
 
 1. Go to AWS EC2 → Launch Instance
 2. Settings:
    - **AMI**: Ubuntu 24.04 LTS
    - **Instance type**: t3.micro (free tier eligible)
    - **Key pair**: Create or select an SSH key
-   - **Security group**: Allow inbound:
-     - SSH (22) from your IP
-     - HTTP (80) from anywhere
-     - HTTPS (443) from anywhere
+   - **Security group**: Allow inbound SSH (22), HTTP (80), HTTPS (443)
    - **Storage**: 20 GB gp3 (default is fine)
 3. Launch and note the public IP
 
-## Step 3: Deploy
+### Step 3: Deploy
 
-SSH into your instance:
 ```bash
 ssh -i your-key.pem ubuntu@<your-ec2-ip>
-```
-
-Clone the repo and configure:
-```bash
 git clone https://github.com/blake-perkins/INtelliBOX.git
 cd INtelliBOX/deploy
 cp .env.production.example .env.production
 nano .env.production  # Fill in your real values
-```
-
-Run the setup script:
-```bash
 chmod +x setup.sh
 sudo ./setup.sh
 ```
 
-This will:
-1. Install Podman, nginx, and Certbot
-2. Register your DuckDNS subdomain
-3. Obtain an SSL certificate
-4. Build and start the INtelliBOX container
-5. Configure auto-start on boot
-
-## Step 4: Verify
+### Step 4: Verify
 
 1. Visit `https://your-name.duckdns.org` — the dashboard should load
 2. Go to the **Emails** page and upload a test `.eml` file
-3. The file watcher picks it up within a few seconds
-4. Check the dashboard — the email and AI-extracted actions should appear
-5. Check health: `curl https://your-name.duckdns.org/health`
+3. Check the dashboard — the email and AI-extracted actions should appear
+4. Check health: `curl https://your-name.duckdns.org/health`
 
 ## Getting Emails In
 

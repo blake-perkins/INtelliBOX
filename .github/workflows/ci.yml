@@ -124,3 +124,53 @@ jobs:
       - name: Show container logs on failure
         if: failure()
         run: docker logs intellibox
+
+  deploy:
+    needs: [test, container-build-and-test, container-integration]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to pilot
+        env:
+          SSH_KEY: ${{ secrets.PILOT_SSH_KEY }}
+          PILOT_HOST: ${{ secrets.PILOT_HOST }}
+        run: |
+          if [ -z "$SSH_KEY" ] || [ -z "$PILOT_HOST" ]; then
+            echo "Skipping deploy: PILOT_SSH_KEY or PILOT_HOST secret not configured"
+            exit 0
+          fi
+          echo "$SSH_KEY" > /tmp/key.pem
+          chmod 600 /tmp/key.pem
+          ssh -o StrictHostKeyChecking=no -i /tmp/key.pem ubuntu@"$PILOT_HOST" '
+            cd ~/INtelliBOX &&
+            git pull &&
+            sudo podman build -t intellibox:prod -f Dockerfile . &&
+            sudo podman stop intellibox || true &&
+            sudo podman rm intellibox || true &&
+            sudo podman run -d \
+              --name intellibox \
+              --restart=always \
+              --env-file deploy/.env.production \
+              -v /opt/intellibox/data:/app/data:Z \
+              -p 127.0.0.1:8000:8000 \
+              intellibox:prod
+          '
+          rm -f /tmp/key.pem
+      - name: Verify deployment
+        env:
+          PILOT_HOST: ${{ secrets.PILOT_HOST }}
+        run: |
+          if [ -z "$PILOT_HOST" ]; then
+            echo "Skipping verify: PILOT_HOST secret not configured"
+            exit 0
+          fi
+          for i in $(seq 1 30); do
+            if curl -sf --max-time 5 "https://$PILOT_HOST/health"; then
+              echo ""
+              echo "Pilot healthy after $((i * 5))s"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Pilot failed health check after 150s"
+          exit 1
