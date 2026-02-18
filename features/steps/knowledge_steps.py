@@ -1,7 +1,8 @@
 """Step definitions for Knowledge Base BDD scenarios."""
 
-from behave import given, when, then, use_step_matcher
-from features.environment import seed, make_session
+from behave import given, then, use_step_matcher, when
+
+from features.environment import make_session, seed
 
 
 @given('a knowledge document "{filename}" exists')
@@ -80,17 +81,27 @@ def step_response_redirects(context):
 
 @then('the knowledge base has {count:d} document')
 def step_kb_has_count_singular(context, count):
-    from emailtools.models import KnowledgeDocument
-    session = make_session(context)
-    actual = session.query(KnowledgeDocument).count()
-    session.close()
+    if getattr(context, "_container_mode", False):
+        import requests as _requests
+        resp = _requests.get(f"{context._base_url}/api/test/query/knowledge/count")
+        actual = resp.json()["count"]
+    else:
+        from emailtools.models import KnowledgeDocument
+        session = make_session(context)
+        actual = session.query(KnowledgeDocument).count()
+        session.close()
     assert actual == count, f"Expected {count} documents, got {actual}"
 
 
 @then('the knowledge base has {count:d} documents')
 def step_kb_has_count_plural(context, count):
-    from emailtools.models import KnowledgeDocument
-    session = make_session(context)
-    actual = session.query(KnowledgeDocument).count()
-    session.close()
+    if getattr(context, "_container_mode", False):
+        import requests as _requests
+        resp = _requests.get(f"{context._base_url}/api/test/query/knowledge/count")
+        actual = resp.json()["count"]
+    else:
+        from emailtools.models import KnowledgeDocument
+        session = make_session(context)
+        actual = session.query(KnowledgeDocument).count()
+        session.close()
     assert actual == count, f"Expected {count} documents, got {actual}"

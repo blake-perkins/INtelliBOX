@@ -15,7 +15,7 @@ from sqlalchemy.orm import joinedload
 
 from emailtools.database import get_session
 from emailtools.knowledge import search_knowledge_base
-from emailtools.models import Action, Assignment, Email, KnowledgeDocument, RosterMember
+from emailtools.models import Action, Assignment, Email, KnowledgeChunk, KnowledgeDocument, RosterMember
 from emailtools.reporter.generator import (
     generate_enhanced_report,
     get_cached_structured_program_news,
@@ -1373,6 +1373,8 @@ if _os.environ.get("TESTING", "").lower() in ("true", "1", "yes"):
             "action": Action,
             "assignment": Assignment,
             "roster_member": RosterMember,
+            "knowledge_document": KnowledgeDocument,
+            "knowledge_chunk": KnowledgeChunk,
         }
         Model = model_map[entity_type]
 
@@ -1430,6 +1432,13 @@ if _os.environ.get("TESTING", "").lower() in ("true", "1", "yes"):
             if not member:
                 return {"found": False}
             return {"found": True, "id": member.id}
+
+    @app.get("/api/test/query/knowledge/count")
+    async def test_query_knowledge_count():
+        """Count knowledge documents for test assertions."""
+        with get_session() as session:
+            count = session.query(KnowledgeDocument).count()
+            return {"count": count}
 
 
 if __name__ == "__main__":
