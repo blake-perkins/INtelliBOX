@@ -1489,6 +1489,36 @@ if _os.environ.get("TESTING", "").lower() in ("true", "1", "yes"):
             return {"count": count}
 
 
+# --- Deploy webhook (gated by DEPLOY_TOKEN env var) ---
+
+_deploy_token = _os.environ.get("DEPLOY_TOKEN", "")
+
+if _deploy_token:
+
+    @app.post("/api/deploy")
+    async def trigger_deploy(request: Request):
+        """Pull latest code, rebuild container, and restart. Requires Bearer token."""
+        auth = request.headers.get("Authorization", "")
+        if auth != f"Bearer {_deploy_token}":
+            raise HTTPException(status_code=403, detail="Invalid deploy token")
+
+        import subprocess
+        # Run deploy in background — this process will be replaced
+        subprocess.Popen(
+            ["bash", "-c",
+             "sleep 2 && cd ~/INtelliBOX && git pull && "
+             "sudo podman build -t intellibox:prod -f Dockerfile . && "
+             "sudo podman stop intellibox; sudo podman rm intellibox; "
+             "sudo podman run -d --name intellibox --restart=always "
+             "--env-file deploy/.env.production "
+             "-v /opt/intellibox/data:/app/data:Z "
+             "-p 127.0.0.1:8000:8000 intellibox:prod"],
+            stdout=open("/tmp/deploy.log", "w"),
+            stderr=subprocess.STDOUT,
+        )
+        return {"status": "deploying", "message": "Deploy started in background"}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

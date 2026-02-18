@@ -130,33 +130,20 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to pilot
+      - name: Trigger deploy webhook
         env:
-          SSH_KEY: ${{ secrets.PILOT_SSH_KEY }}
           PILOT_HOST: ${{ secrets.PILOT_HOST }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
-          if [ -z "$SSH_KEY" ] || [ -z "$PILOT_HOST" ]; then
-            echo "Skipping deploy: PILOT_SSH_KEY or PILOT_HOST secret not configured"
+          if [ -z "$PILOT_HOST" ] || [ -z "$DEPLOY_TOKEN" ]; then
+            echo "Skipping deploy: PILOT_HOST or DEPLOY_TOKEN secret not configured"
             exit 0
           fi
-          echo "$SSH_KEY" > /tmp/key.pem
-          chmod 600 /tmp/key.pem
-          ssh -o StrictHostKeyChecking=no -i /tmp/key.pem ubuntu@"$PILOT_HOST" '
-            cd ~/INtelliBOX &&
-            git pull &&
-            sudo podman build -t intellibox:prod -f Dockerfile . &&
-            sudo podman stop intellibox || true &&
-            sudo podman rm intellibox || true &&
-            sudo podman run -d \
-              --name intellibox \
-              --restart=always \
-              --env-file deploy/.env.production \
-              -v /opt/intellibox/data:/app/data:Z \
-              -p 127.0.0.1:8000:8000 \
-              intellibox:prod
-          '
-          rm -f /tmp/key.pem
-      - name: Verify deployment
+          RESPONSE=$(curl -sf --max-time 30 \
+            -X POST "https://$PILOT_HOST/api/deploy" \
+            -H "Authorization: Bearer $DEPLOY_TOKEN")
+          echo "Deploy triggered: $RESPONSE"
+      - name: Wait for rebuild and verify
         env:
           PILOT_HOST: ${{ secrets.PILOT_HOST }}
         run: |
@@ -164,13 +151,15 @@ jobs:
             echo "Skipping verify: PILOT_HOST secret not configured"
             exit 0
           fi
-          for i in $(seq 1 30); do
+          echo "Waiting 60s for container rebuild..."
+          sleep 60
+          for i in $(seq 1 36); do
             if curl -sf --max-time 5 "https://$PILOT_HOST/health"; then
               echo ""
-              echo "Pilot healthy after $((i * 5))s"
+              echo "Pilot healthy after $((60 + i * 5))s"
               exit 0
             fi
             sleep 5
           done
-          echo "Pilot failed health check after 150s"
+          echo "Pilot failed health check after 240s"
           exit 1
