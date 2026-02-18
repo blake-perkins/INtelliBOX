@@ -5,19 +5,19 @@ Deploy INtelliBOX to an AWS EC2 instance with Podman, nginx, and HTTPS.
 ## Architecture
 
 ```
-Team forwards emails → Outlook/IMAP inbox
-                              ↓
-              IMAP Fetcher (polls every 60s)
-                              ↓
-              File Watcher → AI Processing → Database
-                              ↓
+Upload via dashboard  ─┐
+SCP / folder sync     ─┤
+                       ↓
+                  data/inbox/
+                       ↓
+         File Watcher → AI Processing → Database
+                       ↓
 Internet → HTTPS (443) → nginx → HTTP (8000) → INtelliBOX container (Podman)
 ```
 
 ## Prerequisites
 
 - AWS account
-- An email address with IMAP access (Outlook, Gmail, etc.)
 - OpenAI API key
 
 ## Step 1: Get a Free Domain (DuckDNS)
@@ -26,20 +26,7 @@ Internet → HTTPS (443) → nginx → HTTP (8000) → INtelliBOX container (Pod
 2. Pick a subdomain (e.g. `intellibox-pilot`) → you get `intellibox-pilot.duckdns.org`
 3. Copy your **token** from the DuckDNS dashboard
 
-## Step 2: Set Up Email Account
-
-For **Outlook/Office 365**:
-- Use your existing Outlook email, or create a new one
-- IMAP is enabled by default for most Outlook accounts
-- Host: `outlook.office365.com`, Port: `993`
-- If using MFA, create an App Password: Account Settings → Security → App Passwords
-
-For **Gmail**:
-- Enable IMAP: Settings → See all settings → Forwarding and POP/IMAP → Enable IMAP
-- Create an App Password: Google Account → Security → 2-Step Verification → App passwords
-- Host: `imap.gmail.com`, Port: `993`
-
-## Step 3: Launch EC2 Instance
+## Step 2: Launch EC2 Instance
 
 1. Go to AWS EC2 → Launch Instance
 2. Settings:
@@ -53,7 +40,7 @@ For **Gmail**:
    - **Storage**: 20 GB gp3 (default is fine)
 3. Launch and note the public IP
 
-## Step 4: Deploy
+## Step 3: Deploy
 
 SSH into your instance:
 ```bash
@@ -81,13 +68,21 @@ This will:
 4. Build and start the INtelliBOX container
 5. Configure auto-start on boot
 
-## Step 5: Verify
+## Step 4: Verify
 
 1. Visit `https://your-name.duckdns.org` — the dashboard should load
-2. Forward a test email to your IMAP email address
-3. Wait ~60 seconds for the IMAP fetcher to pick it up
+2. Go to the **Emails** page and upload a test `.eml` file
+3. The file watcher picks it up within a few seconds
 4. Check the dashboard — the email and AI-extracted actions should appear
 5. Check health: `curl https://your-name.duckdns.org/health`
+
+## Getting Emails In
+
+There are two ways to get emails into INtelliBOX:
+
+**Via the dashboard** — Go to the Emails page and use the upload form to upload `.eml` or `.msg` files directly from your browser.
+
+**Via the file system** — Drop `.eml` or `.msg` files into the `data/inbox/` directory (inside the container at `/app/data/inbox/`, or on the host at `/opt/intellibox/data/inbox/`). The file watcher picks them up automatically. This works with SCP, OneDrive/SharePoint sync, or any folder-based integration.
 
 ## Management Commands
 
@@ -134,10 +129,9 @@ All persistent data is at `/opt/intellibox/data/`:
 podman logs intellibox
 ```
 
-**IMAP not fetching emails:**
-- Check `IMAP_ENABLED=true` in `.env.production`
-- Verify IMAP credentials: `podman logs intellibox | grep IMAP`
-- Some email providers require App Passwords when MFA is enabled
+**Uploaded emails not processing:**
+- Check the file watcher health: `curl http://127.0.0.1:8000/health`
+- Look for errors in logs: `podman logs intellibox | grep -i error`
 
 **SSL certificate issues:**
 ```bash

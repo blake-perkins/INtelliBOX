@@ -4,6 +4,28 @@
 
 {% block content %}
 
+<!-- Upload Success/Error Banner -->
+{% if request.query_params.get('uploaded') %}
+<div style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem;">
+    Email file uploaded. It will be processed within a few seconds.
+</div>
+{% endif %}
+{% if request.query_params.get('upload_error') %}
+<div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem;">
+    {{ request.query_params.get('upload_error') }}
+</div>
+{% endif %}
+
+<!-- Upload Email -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="font-weight: 600;">Upload Email</div>
+    <form method="post" action="/emails/upload" enctype="multipart/form-data" style="padding: 1rem; display: flex; gap: 1rem; align-items: center;">
+        <input type="file" name="file" accept=".eml,.msg" required
+               style="flex: 1; padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+        <button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+</div>
+
 <!-- Search and Filters -->
 <div class="card" style="margin-bottom: 1.5rem;">
     <form method="get" style="display: grid; gap: 1rem;">

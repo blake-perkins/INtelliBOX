@@ -38,16 +38,6 @@ class Settings(BaseSettings):
     ai_batch_size: int = 10
     ai_batch_delay: float = 2.0  # seconds between batches
 
-    # IMAP Email Fetching (optional — set IMAP_ENABLED=true to activate)
-    imap_enabled: bool = False
-    imap_host: str = ""
-    imap_port: int = 993
-    imap_user: str = ""
-    imap_password: str = ""
-    imap_use_ssl: bool = True
-    imap_folder: str = "INBOX"
-    imap_poll_interval: int = 60  # seconds
-
     # Logging
     log_level: str = "INFO"
 

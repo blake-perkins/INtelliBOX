@@ -9,7 +9,7 @@ INtelliBOX is an automated email action tracking system for fast-paced software 
 ```
 INtelliBOX/
 ├── src/intellibox/          # Main application code
-│   ├── ingestion/          # Email parsing (.eml/.msg), file watching, IMAP fetching, chain stripping
+│   ├── ingestion/          # Email parsing (.eml/.msg), file watching, chain stripping
 │   ├── ai/                 # GPT-4 integration with retry logic, mock client for demo
 │   ├── reporter/           # Report generation, program news, email sending
 │   ├── knowledge/          # Knowledge base: document storage, embeddings, TF-IDF search
@@ -52,7 +52,7 @@ INtelliBOX/
   - Web dashboard: /, /actions, /emails, /insights, /settings, /knowledge-base, /roster, /analytics
   - Knowledge base with TF-IDF and embedding search
   - Database maintenance (cache cleanup, log retention, VACUUM/ANALYZE)
-  - IMAP email fetching (optional, polls remote mailbox for new emails)
+  - Email upload via web dashboard (.eml/.msg files)
   - File watcher with health monitoring and supervised restarts
   - AI client retry logic with exponential backoff
   - Rotating log files

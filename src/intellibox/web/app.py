@@ -48,41 +48,9 @@ def _start_background_watcher():
     thread.start()
 
 
-def _start_imap_fetcher():
-    """Start the IMAP fetcher in a background daemon thread (if enabled)."""
-    from intellibox.config import settings
-    from intellibox.ingestion.imap_fetcher import supervised_imap_fetch
-
-    if not settings.imap_enabled:
-        return
-
-    inbox_dir = Path("data/inbox")
-
-    thread = threading.Thread(
-        target=supervised_imap_fetch,
-        args=(
-            settings.imap_host,
-            settings.imap_port,
-            settings.imap_user,
-            settings.imap_password,
-            inbox_dir,
-        ),
-        kwargs={
-            "use_ssl": settings.imap_use_ssl,
-            "folder": settings.imap_folder,
-            "interval": settings.imap_poll_interval,
-            "max_restarts": 5,
-        },
-        daemon=True,
-        name="imap-fetcher",
-    )
-    thread.start()
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _start_background_watcher()
-    _start_imap_fetcher()
     yield
 
 
@@ -498,6 +466,50 @@ async def list_emails(
             "time_since_last_email": time_since_last_email,
             "current_time": utcnow()
         })
+
+
+ALLOWED_EMAIL_EXTENSIONS = {".eml", ".msg"}
+MAX_EMAIL_FILE_SIZE = 25 * 1024 * 1024  # 25 MB
+
+
+@app.post("/emails/upload")
+async def upload_email(file: UploadFile = File(...)):
+    """Upload an .eml or .msg file for processing."""
+    filename = file.filename or "unknown"
+    ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext not in ALLOWED_EMAIL_EXTENSIONS:
+        return RedirectResponse(
+            "/emails?upload_error=Unsupported+file+type.+Please+upload+.eml+or+.msg",
+            status_code=303,
+        )
+
+    content = await file.read()
+    if len(content) > MAX_EMAIL_FILE_SIZE:
+        return RedirectResponse(
+            "/emails?upload_error=File+too+large.+Maximum+size+is+25+MB",
+            status_code=303,
+        )
+    if len(content) == 0:
+        return RedirectResponse(
+            "/emails?upload_error=File+is+empty",
+            status_code=303,
+        )
+
+    inbox_dir = Path("data/inbox")
+    inbox_dir.mkdir(parents=True, exist_ok=True)
+    dest = inbox_dir / filename
+
+    # Avoid overwriting existing files
+    if dest.exists():
+        stem = dest.stem
+        suffix = dest.suffix
+        counter = 1
+        while dest.exists():
+            dest = inbox_dir / f"{stem}_{counter}{suffix}"
+            counter += 1
+
+    dest.write_bytes(content)
+    return RedirectResponse("/emails?uploaded=1", status_code=303)
 
 
 @app.get("/emails/{email_id}", response_class=HTMLResponse)
@@ -1361,21 +1373,14 @@ async def delete_roster_member(member_id: int):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint with watcher and IMAP status."""
-    from intellibox.config import settings
+    """Health check endpoint with watcher status."""
     from intellibox.ingestion.file_watcher import get_watcher_health
 
-    result = {
+    return {
         "status": "healthy",
         "timestamp": utcnow().isoformat(),
         "watcher": get_watcher_health(),
     }
-
-    if settings.imap_enabled:
-        from intellibox.ingestion.imap_fetcher import get_imap_health
-        result["imap"] = get_imap_health()
-
-    return result
 
 
 # --- Test-only endpoints (gated by TESTING env var) ---
