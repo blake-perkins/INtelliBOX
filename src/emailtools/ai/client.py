@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from openai import OpenAI
 from openai import APIError, APIConnectionError, RateLimitError
 
-from emailtools.ai.prompts import ACTION_EXTRACTION_PROMPT, PROGRAM_NEWS_PROMPT, REPORT_INSIGHTS_PROMPT, STRUCTURED_PROGRAM_NEWS_PROMPT, SYSTEM_PROMPT
+from emailtools.ai.prompts import ACTION_EXTRACTION_PROMPT, PROGRAM_NEWS_PROMPT, STRUCTURED_PROGRAM_NEWS_PROMPT, SYSTEM_PROMPT
 from emailtools.config import settings
 from emailtools.knowledge import get_knowledge_context
 from emailtools.models import Action, Email
@@ -375,99 +375,63 @@ class AIClient:
 
     def generate_report_insights(
         self,
-        actions: List,
-        emails: List[Email],
+        action_details: str,
+        email_summaries: str,
         days: int = 7,
-        program_stats: Dict = None
+        pipeline_stats: Dict = None
     ) -> Dict:
         """
-        Generate executive-level insights for the report dashboard.
+        Generate KB-aware program intelligence briefing.
 
         Args:
-            actions: List of unassigned Action objects
-            emails: List of recent Email objects
+            action_details: Pre-formatted text listing all actions with details
+            email_summaries: Pre-formatted text listing recent email subjects
             days: Number of days covered
-            program_stats: Full program metrics (total, unassigned, assigned, completed, overdue)
+            pipeline_stats: Pipeline metrics dict with keys: total_actions,
+                unassigned, high, medium, low, assigned_in_progress,
+                completed, overdue, due_this_week
 
         Returns:
-            Dictionary with structured insights
+            Dictionary with structured insights (SOW alignment, risk radar,
+            process compliance, trend intelligence)
         """
-        if not actions and not emails:
-            return {
-                "executive_summary": "No recent activity to report.",
-                "trends": {},
-                "category_insights": [],
-                "urgent_items": [],
-                "bottlenecks": "Insufficient data for analysis.",
-                "recommendations": []
-            }
+        _empty = {
+            "executive_summary": {
+                "headline": "No recent activity to report",
+                "key_finding": "",
+                "top_risk": "",
+                "recommended_action": ""
+            },
+            "sow_alignment": {"mapped_deliverables": [], "unmapped_actions": [], "coverage_gaps": []},
+            "risk_radar": [],
+            "process_compliance": {"observations": [], "overall_health": "green"},
+            "trend_intelligence": {"patterns": [], "workload_forecast": ""},
+            "recommendations": []
+        }
 
-        from datetime import datetime, timedelta
-        now = datetime.utcnow()
-        week_from_now = now + timedelta(days=7)
+        if not action_details and not email_summaries:
+            return _empty
 
-        # Unassigned breakdown (what the team still needs to pick up)
-        unassigned_count = len(actions)
-        high_priority_count = sum(1 for a in actions if a.priority == "high")
-        medium_priority_count = sum(1 for a in actions if a.priority == "medium")
-        low_priority_count = sum(1 for a in actions if a.priority == "low")
+        stats = pipeline_stats or {}
 
-        due_this_week_count = sum(
-            1 for a in actions
-            if a.due_date and now <= a.due_date <= week_from_now
-        )
-
-        # Use full program stats if available, otherwise fall back to unassigned-only
-        if program_stats:
-            total_actions = program_stats["total_actions"]
-            overdue_count = program_stats["overdue"]
-            assigned_in_progress = program_stats["assigned_in_progress"]
-            completed_count = program_stats["completed"]
-        else:
-            total_actions = unassigned_count
-            overdue_count = sum(1 for a in actions if a.due_date and a.due_date < now)
-            assigned_in_progress = 0
-            completed_count = 0
-
-        # Category breakdown
-        category_counts = {}
-        for action in actions:
-            cat = action.category or "uncategorized"
-            category_counts[cat] = category_counts.get(cat, 0) + 1
-
-        category_breakdown = "\n".join(
-            f"- {cat}: {count}" for cat, count in sorted(
-                category_counts.items(),
-                key=lambda x: x[1],
-                reverse=True
-            )
-        )
-
-        # Email summaries (limit to 15 most recent)
-        email_summaries = []
-        for email in emails[:15]:
-            summary = f"- From {email.from_address}: {email.subject}"
-            email_summaries.append(summary)
-        email_summaries_text = "\n".join(email_summaries) if email_summaries else "No recent emails"
-
-        # Format the prompt
-        prompt = REPORT_INSIGHTS_PROMPT.format(
-            total_actions=total_actions,
-            unassigned_count=unassigned_count,
-            assigned_in_progress=assigned_in_progress,
-            completed_count=completed_count,
-            high_priority_count=high_priority_count,
-            medium_priority_count=medium_priority_count,
-            low_priority_count=low_priority_count,
-            overdue_count=overdue_count,
-            due_this_week_count=due_this_week_count,
-            category_breakdown=category_breakdown or "- No categories",
+        prompt_template = SettingsService.get_insights_prompt()
+        prompt = prompt_template.format(
+            action_details=action_details or "No actions in pipeline",
+            total_actions=stats.get("total_actions", 0),
+            unassigned_count=stats.get("unassigned", 0),
+            high_priority_count=stats.get("high", 0),
+            medium_priority_count=stats.get("medium", 0),
+            low_priority_count=stats.get("low", 0),
+            assigned_in_progress=stats.get("assigned_in_progress", 0),
+            completed_count=stats.get("completed", 0),
+            overdue_count=stats.get("overdue", 0),
+            due_this_week_count=stats.get("due_this_week", 0),
             days=days,
-            email_summaries=email_summaries_text
+            email_summaries=email_summaries or "No recent emails"
         )
 
         try:
-            logger.info(f"Generating report insights from {unassigned_count} unassigned actions, {len(emails)} emails, {overdue_count} overdue")
+            logger.info(f"Generating KB-aware insights ({stats.get('total_actions', 0)} actions, {days}d)")
 
             system_prompt = self._build_system_prompt()
             response = self.client.chat.completions.create(
@@ -476,15 +440,14 @@ class AIClient:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.4,  # Balanced for insights
-                max_tokens=1000,
+                temperature=0.4,
+                max_tokens=2000,
                 timeout=self.timeout
             )
 
             raw_response = response.choices[0].message.content.strip()
             logger.debug(f"Report insights response: {raw_response[:200]}...")
 
-            # Parse JSON response
             try:
                 clean_json = strip_markdown_json(raw_response)
                 insights = json.loads(clean_json)
@@ -494,26 +457,11 @@ class AIClient:
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse insights JSON: {e}")
                 logger.error(f"Raw response: {raw_response}")
-                # Return fallback structure
-                return {
-                    "executive_summary": "Unable to generate insights at this time.",
-                    "trends": {},
-                    "category_insights": [],
-                    "urgent_items": [],
-                    "bottlenecks": "Error parsing AI response.",
-                    "recommendations": []
-                }
+                return {**_empty, "executive_summary": {**_empty["executive_summary"], "headline": "Unable to generate insights at this time"}}
 
         except Exception as e:
             logger.error(f"Failed to generate report insights: {e}")
-            return {
-                "executive_summary": f"Error generating insights: {str(e)[:100]}",
-                "trends": {},
-                "category_insights": [],
-                "urgent_items": [],
-                "bottlenecks": "",
-                "recommendations": []
-            }
+            return {**_empty, "executive_summary": {**_empty["executive_summary"], "headline": f"Error: {str(e)[:80]}"}}
 
 
 # Singleton instance

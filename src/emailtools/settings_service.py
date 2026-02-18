@@ -128,3 +128,18 @@ class SettingsService:
             if name and description:
                 categories.append({"name": name, "description": description})
         return categories if categories else SettingsService.DEFAULT_CATEGORIES
+
+    @staticmethod
+    def get_insights_prompt() -> str:
+        """Return the custom insights prompt, or the hardcoded default."""
+        from emailtools.ai.prompts import REPORT_INSIGHTS_PROMPT
+        return SettingsService.get_setting("insights_prompt", REPORT_INSIGHTS_PROMPT)
+
+    @staticmethod
+    def delete_setting(key: str) -> None:
+        """Remove a setting row entirely (resets to code default)."""
+        with get_session() as session:
+            setting = session.query(Settings).filter_by(key=key).first()
+            if setting:
+                session.delete(setting)
+                session.commit()

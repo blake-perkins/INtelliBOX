@@ -23,6 +23,10 @@
                 Categories
                 <span style="background: #ecf0f1; color: #666; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 10px; margin-left: 0.25rem;">{{ categories|length }}</span>
             </button>
+            <button onclick="switchTab('prompt')" id="tab-prompt"
+                    style="padding: 0.55rem 1.25rem; border: none; background: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; color: #999;">
+                Insights Prompt
+            </button>
         </div>
     </div>
 
@@ -385,6 +389,66 @@
 
     </div><!-- /pane-categories -->
 
+    <!-- ── Insights Prompt Pane ── -->
+    <div id="pane-prompt" style="display: none;">
+
+        {% if request.query_params.get('prompt_saved') %}
+        <div class="prompt-flash" style="margin: 1rem 1.5rem 0; background: #f0fdf4; border: 1px solid #27ae60; color: #1e8449; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>Prompt saved. Next Insights refresh will use the updated prompt.</span>
+            <button onclick="this.closest('.prompt-flash').remove()" style="background: none; border: none; color: #27ae60; cursor: pointer; font-size: 1rem; padding: 0 0.25rem; opacity: 0.6;">x</button>
+        </div>
+        {% endif %}
+        {% if request.query_params.get('prompt_reset') %}
+        <div class="prompt-flash" style="margin: 1rem 1.5rem 0; background: #f8f9fa; border: 1px solid #ddd; color: #555; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>Prompt reset to default.</span>
+            <button onclick="this.closest('.prompt-flash').remove()" style="background: none; border: none; color: #aaa; cursor: pointer; font-size: 1rem; padding: 0 0.25rem;">x</button>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/settings/insights-prompt">
+            <div style="padding: 1.25rem 1.5rem;">
+                <div style="margin-bottom: 0.75rem;">
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Insights System Prompt</div>
+                    <div style="font-size: 0.85rem; color: #888; line-height: 1.6;">
+                        This prompt is sent to GPT-4 when generating the Insights page analysis.
+                        Use <code style="background:#f0f0f0; padding:0.1rem 0.3rem; border-radius:3px;">{placeholder}</code> syntax for dynamic data.
+                    </div>
+                </div>
+                <textarea name="insights_prompt" rows="24"
+                          style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.8rem; font-family: 'Consolas', 'Monaco', monospace; resize: vertical; line-height: 1.5; tab-size: 2;">{{ insights_prompt }}</textarea>
+            </div>
+
+            <!-- Placeholder reference -->
+            <details style="margin: 0 1.5rem 1rem; border: 1px solid #e8e8e8; border-radius: 6px; overflow: hidden;">
+                <summary style="padding: 0.6rem 1rem; font-size: 0.85rem; color: #666; cursor: pointer; background: #fafafa; list-style: none; display: flex; align-items: center; gap: 0.5rem; user-select: none;">
+                    <span>&#9656;</span> Available Placeholders
+                </summary>
+                <div style="padding: 0.75rem 1rem; font-size: 0.82rem; color: #555; line-height: 1.8;">
+                    <code>{action_details}</code> — Numbered list of all actions with title, priority, category, due date, and assignment status<br>
+                    <code>{total_actions}</code> — Total number of actions in the pipeline<br>
+                    <code>{unassigned_count}</code> — Number of unassigned actions<br>
+                    <code>{high_priority_count}</code>, <code>{medium_priority_count}</code>, <code>{low_priority_count}</code> — Priority breakdown of unassigned actions<br>
+                    <code>{assigned_in_progress}</code> — Number of actions currently assigned<br>
+                    <code>{completed_count}</code> — Number of completed actions<br>
+                    <code>{overdue_count}</code> — Number of overdue actions<br>
+                    <code>{due_this_week_count}</code> — Number of actions due within 7 days<br>
+                    <code>{days}</code> — The lookback period selected (e.g. 14)<br>
+                    <code>{email_summaries}</code> — List of recent email subjects and senders<br>
+                    <br>
+                    <strong>Note:</strong> Use <code>{{ '{{' }}</code> and <code>{{ '}}' }}</code> for literal braces in the prompt (e.g. JSON examples).
+                    The Program Knowledge Base is injected into the system message automatically — you don't need a placeholder for it.
+                </div>
+            </details>
+
+            <!-- Save bar -->
+            <div style="padding: 1rem 1.5rem; background: #f8f9fa; border-top: 1px solid #ecf0f1; display: flex; align-items: center; gap: 0.75rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.55rem 1.5rem;">Save Prompt</button>
+                <button type="button" onclick="resetPrompt()" style="padding: 0.55rem 1rem; background: white; color: #666; border: 1px solid #ddd; border-radius: 4px; font-size: 0.875rem; cursor: pointer;">Reset to Default</button>
+                <span style="font-size: 0.83rem; color: #aaa;">Changes apply on next Insights refresh.</span>
+            </div>
+        </form>
+    </div><!-- /pane-prompt -->
+
 </div><!-- /card -->
 
 {% if success %}
@@ -403,7 +467,8 @@
     #pane-priority input:focus,
     #pane-priority select:focus,
     #pane-priority textarea:focus,
-    #add-form-panel input:focus {
+    #add-form-panel input:focus,
+    #pane-prompt textarea:focus {
         outline: none;
         border-color: #3498db;
         box-shadow: 0 0 0 3px rgba(52,152,219,0.12);
@@ -412,11 +477,18 @@
 
 <script>
     function switchTab(tab) {
-        ['priority', 'roster', 'categories'].forEach(t => {
+        ['priority', 'roster', 'categories', 'prompt'].forEach(t => {
             document.getElementById('pane-' + t).style.display = (t === tab) ? 'block' : 'none';
             const btn = document.getElementById('tab-' + t);
             btn.style.borderBottom = (t === tab) ? '3px solid #3498db' : '3px solid transparent';
             btn.style.color        = (t === tab) ? '#3498db' : '#999';
+        });
+    }
+
+    function resetPrompt() {
+        if (!confirm('Reset the insights prompt to its default? Your custom prompt will be deleted.')) return;
+        fetch('/settings/insights-prompt/reset', {method: 'POST'}).then(() => {
+            window.location.href = '/settings?tab=prompt&prompt_reset=1';
         });
     }
 
@@ -442,10 +514,13 @@
         const params = new URLSearchParams(window.location.search);
         const rosterTriggers = ['roster_error', 'roster_added', 'roster_fuzzy', 'roster_deleted'];
         const catTriggers = ['cat_error', 'cat_added', 'cat_deleted'];
+        const promptTriggers = ['prompt_saved', 'prompt_reset'];
         if (window.location.hash === '#roster' || rosterTriggers.some(p => params.has(p))) {
             switchTab('roster');
         } else if (params.get('tab') === 'categories' || catTriggers.some(p => params.has(p))) {
             switchTab('categories');
+        } else if (params.get('tab') === 'prompt' || promptTriggers.some(p => params.has(p))) {
+            switchTab('prompt');
         }
         {% if success %}
         setTimeout(() => {

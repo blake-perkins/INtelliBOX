@@ -128,61 +128,99 @@ Top senders should list the 3-4 most active senders.
 
 JSON response:"""
 
-REPORT_INSIGHTS_PROMPT = """You are generating an executive briefing for a program director reviewing their team's action item pipeline.
+REPORT_INSIGHTS_PROMPT = """You are generating a program intelligence briefing for a director. Cross-reference the action items below against the Program Knowledge Base documents provided in your system instructions.
 
-## Program Status
+## Current Action Pipeline
 
-Total action items across the program: {total_actions}
+{action_details}
+
+## Pipeline Metrics
+
+- Total actions: {total_actions}
 - Awaiting assignment: {unassigned_count} (High: {high_priority_count}, Medium: {medium_priority_count}, Low: {low_priority_count})
-- Assigned and in progress: {assigned_in_progress}
+- In progress: {assigned_in_progress}
 - Completed: {completed_count}
-- Overdue (not yet completed): {overdue_count}
+- Overdue: {overdue_count}
 - Due this week: {due_this_week_count}
 
-Unassigned actions by category:
-{category_breakdown}
+## Recent Email Traffic ({days} days)
 
-Recent inbound email traffic ({days} days):
 {email_summaries}
 
-## Instructions
+## Analysis Instructions
 
-Write for a director who has 60 seconds to understand:
-1. What is the overall health of our action pipeline?
-2. What external requests are driving the most work?
-3. What needs their attention right now?
+Cross-reference the actions and emails against the Program Knowledge Base documents. Generate analysis in these four areas:
 
-Be specific and factual — use the exact numbers provided above. Do not contradict the data. If overdue count is {overdue_count}, state that number exactly. Do not use filler language like "well-managed" unless the data supports it.
+1. **SOW Alignment** — Map actions to deliverables, CLINs, or milestones from program documents. Flag actions that don't match any documented scope (potential scope creep) and documented deliverables with no matching actions (coverage gaps).
 
-Respond with this JSON structure:
+2. **Risk Radar** — Identify risks by cross-referencing actions against known issues, deadlines, or concerns from program documents. Include severity and suggested mitigation.
+
+3. **Process Compliance** — Compare workflow patterns (triage speed, assignment rates, priority distribution) against documented team processes and procedures.
+
+4. **Trend Intelligence** — Connect action patterns to program context. What do the current actions tell us about program trajectory?
+
+Be specific and factual. Use exact numbers from the metrics above. Name the specific program document that informed each finding.
+
+Respond with this JSON:
 
 {{
-  "executive_summary": "2-3 sentences. Lead with the most important fact. State exact numbers (e.g., '{overdue_count} overdue items' if overdue > 0, '{unassigned_count} items awaiting assignment'). Then identify the top risk or bottleneck. End with one concrete recommendation.",
-  "trends": {{
-    "action_volume": "What does the volume of incoming requests suggest? Are certain senders or topics driving most of the workload?",
-    "priority_distribution": "Is the mix of high/medium/low appropriate, or is there a skew that suggests triage issues?",
-    "response_patterns": "Based on the ratio of unassigned vs. in-progress vs. completed, how is throughput?"
+  "executive_summary": {{
+    "headline": "Short, punchy status line — max 12 words. Lead with the most critical number or finding. Example: '4 of 5 SOW deliverables at risk — 27 actions unassigned'",
+    "key_finding": "One sentence: the most important insight from cross-referencing actions against program documents. Name the specific document.",
+    "top_risk": "One sentence: the single biggest risk right now, with evidence.",
+    "recommended_action": "One sentence: the single most important thing the director should do today."
   }},
-  "category_insights": [
+  "sow_alignment": {{
+    "mapped_deliverables": [
+      {{
+        "deliverable": "SOW deliverable or CLIN name",
+        "related_actions": ["action title 1", "action title 2"],
+        "status": "on_track|at_risk|behind",
+        "note": "Brief observation about this deliverable's status"
+      }}
+    ],
+    "unmapped_actions": [
+      {{
+        "action_title": "Action that doesn't map to any SOW item",
+        "concern": "Why this might be scope creep or a missing SOW line item"
+      }}
+    ],
+    "coverage_gaps": ["SOW deliverable with no matching actions in the pipeline"]
+  }},
+  "risk_radar": [
     {{
-      "category": "category_name",
-      "count": number,
-      "insight": "One-sentence observation relevant to a director",
-      "urgency": "high|medium|low"
+      "risk": "Specific risk description",
+      "severity": "high|medium|low",
+      "evidence": "What actions or patterns indicate this risk",
+      "mitigation": "Suggested next step"
     }}
   ],
-  "urgent_items": [
-    {{
-      "action_title": "title of a specific action that needs attention",
-      "reason": "Why — be specific (overdue, high priority unassigned, etc.)",
-      "recommended_action": "One concrete next step"
-    }}
-  ],
-  "bottlenecks": "Where is work getting stuck? Look at the unassigned-to-completed ratio and any category patterns.",
+  "process_compliance": {{
+    "observations": [
+      {{
+        "area": "Process area (e.g., Triage, Escalation, Assignment, Response Time)",
+        "finding": "What the data shows vs what the process docs prescribe",
+        "recommendation": "What to adjust"
+      }}
+    ],
+    "overall_health": "green|yellow|red"
+  }},
+  "trend_intelligence": {{
+    "patterns": [
+      {{
+        "pattern": "Description of the trend",
+        "context": "How it relates to program documents",
+        "impact": "What this means for the team"
+      }}
+    ],
+    "workload_forecast": "Forward-looking statement about expected workload based on program documents and current action patterns"
+  }},
   "recommendations": [
-    "Specific, actionable recommendation grounded in the data above",
+    "Specific, actionable recommendation grounded in program documents",
     "Another recommendation"
   ]
 }}
+
+If no Program Knowledge Base is loaded, provide general analysis based on action content and email patterns.
 
 JSON response:"""

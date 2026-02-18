@@ -509,9 +509,12 @@ async def view_email(request: Request, email_id: int):
 @app.get("/insights", response_class=HTMLResponse)
 async def view_insights(request: Request):
     """View AI-powered insights dashboard. Always loads instantly using cached data."""
+    days = int(request.query_params.get("days", 14))
+    days = max(7, min(days, 90))  # clamp to 7-90
+
     with get_session() as session:
         # Always use cached data — never block page load with AI calls
-        report_data = generate_enhanced_report(session, days=7, force_refresh=False)
+        report_data = generate_enhanced_report(session, days=days, force_refresh=False)
 
         # Calculate cache age in minutes for display
         if report_data.get("is_cached") and report_data.get("generated_at"):
@@ -527,16 +530,21 @@ async def view_insights(request: Request):
             "cache_age_minutes": cache_age_minutes,
             "program_news": program_news_data,
             "current_time": datetime.utcnow(),
-            "datetime": datetime
+            "datetime": datetime,
+            "selected_days": days
         })
 
 
 @app.post("/api/insights-refresh")
-async def refresh_insights():
+async def refresh_insights(request: Request):
     """Regenerate AI insights and program news. Called via AJAX from the Insights page."""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    days = int(body.get("days", 14))
+    days = max(7, min(days, 90))
+
     with get_session() as session:
-        generate_enhanced_report(session, days=7, force_refresh=True)
-        get_cached_structured_program_news(session, force_refresh=True)
+        generate_enhanced_report(session, days=days, force_refresh=True)
+        get_cached_structured_program_news(session, days=days, force_refresh=True)
     return JSONResponse({"status": "ok"})
 
 
@@ -872,6 +880,7 @@ async def settings_page(request: Request, success: bool = False):
                 "categories": categories,
                 "timezone": SettingsService.get_timezone(),
                 "program_name": SettingsService.get_setting('program_name', ''),
+                "insights_prompt": SettingsService.get_insights_prompt(),
                 "success": success,
                 "roster": roster,
             }
@@ -905,6 +914,23 @@ async def save_settings(
 
     # Redirect with success flag
     return RedirectResponse(url="/settings?success=true", status_code=303)
+
+
+@app.post("/settings/insights-prompt")
+async def save_insights_prompt(insights_prompt: str = Form(...)):
+    """Save custom insights prompt template."""
+    SettingsService.set_setting(
+        "insights_prompt", insights_prompt,
+        description="Custom prompt template for Insights page AI analysis"
+    )
+    return RedirectResponse(url="/settings?tab=prompt&prompt_saved=1", status_code=303)
+
+
+@app.post("/settings/insights-prompt/reset")
+async def reset_insights_prompt():
+    """Reset insights prompt to hardcoded default."""
+    SettingsService.delete_setting("insights_prompt")
+    return JSONResponse({"status": "ok"})
 
 
 @app.post("/categories/add")

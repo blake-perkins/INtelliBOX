@@ -13,6 +13,12 @@
         </span>
     </div>
     <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; flex-wrap: wrap;">
+        <select id="daysSelect" style="padding: 0.3rem 0.5rem; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 4px; background: white; color: #555;" onchange="changeDays(this.value)">
+            <option value="7"  {% if selected_days == 7  %}selected{% endif %}>Past 7 days</option>
+            <option value="14" {% if selected_days == 14 %}selected{% endif %}>Past 14 days</option>
+            <option value="30" {% if selected_days == 30 %}selected{% endif %}>Past 30 days</option>
+            <option value="90" {% if selected_days == 90 %}selected{% endif %}>Past 90 days</option>
+        </select>
         {% if not report.generated_at %}
         <button class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.85rem;" onclick="startRefresh()">
             Generate Insights
@@ -42,7 +48,7 @@
 <div class="card" style="text-align: center; padding: 3rem; margin-bottom: 1.5rem; border: 2px dashed #ddd;">
     <h3 style="color: #2c3e50; margin-bottom: 0.5rem;">No insights generated yet</h3>
     <p style="color: #666; margin-bottom: 1.5rem; max-width: 400px; margin-left: auto; margin-right: auto;">
-        Generate an AI-powered summary of your program's email traffic and action items.
+        Generate an AI-powered intelligence briefing that cross-references your actions against uploaded program documents.
     </p>
     <button class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;" onclick="startRefresh()">
         Generate Insights
@@ -50,11 +56,38 @@
 </div>
 {% endif %}
 
-<!-- Executive Summary — always first -->
-{% if report.insights and report.insights.executive_summary %}
+<!-- Executive Summary -->
+{% set es = report.insights.executive_summary if (report.insights and report.insights.executive_summary) else None %}
+{% if es %}
 <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 1.5rem;">
-    <div style="padding: 1.75rem; font-size: 1.05rem; line-height: 1.8;">
-        {{ report.insights.executive_summary }}
+    <div style="padding: 1.75rem;">
+        {% if es is mapping %}
+        {% if es.headline %}
+        <div style="font-size: 1.35rem; font-weight: 700; line-height: 1.3; margin-bottom: 1rem;">{{ es.headline }}</div>
+        {% endif %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1.5rem;">
+            {% if es.key_finding %}
+            <div>
+                <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 0.2rem;">Key Finding</div>
+                <div style="font-size: 0.95rem; line-height: 1.5;">{{ es.key_finding }}</div>
+            </div>
+            {% endif %}
+            {% if es.top_risk %}
+            <div>
+                <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 0.2rem;">Top Risk</div>
+                <div style="font-size: 0.95rem; line-height: 1.5;">{{ es.top_risk }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if es.recommended_action %}
+        <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.2);">
+            <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 0.2rem;">Recommended Action</div>
+            <div style="font-size: 0.95rem; line-height: 1.5; font-weight: 500;">{{ es.recommended_action }}</div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div style="font-size: 1.05rem; line-height: 1.8;">{{ es }}</div>
+        {% endif %}
     </div>
 </div>
 {% endif %}
@@ -83,78 +116,131 @@
     </div>
 </div>
 
-<!-- Key Observations — merged from program news + critical updates -->
-{% set pn = program_news['structured_data'] if (program_news and program_news['structured_data']) else None %}
-{% if pn %}
-{% set has_critical = pn['critical_updates']|length > 0 if pn['critical_updates'] is defined else false %}
-{% set has_takeaways = pn['key_takeaways']|length > 0 if pn['key_takeaways'] is defined else false %}
-{% if has_critical or has_takeaways %}
+{% if report.insights %}
+
+<!-- SOW Alignment -->
+{% set sow = report.insights.sow_alignment if report.insights.sow_alignment is defined else None %}
+{% if sow %}
+{% set has_mapped = sow.mapped_deliverables and sow.mapped_deliverables|length > 0 %}
+{% set has_unmapped = sow.unmapped_actions and sow.unmapped_actions|length > 0 %}
+{% set has_gaps = sow.coverage_gaps and sow.coverage_gaps|length > 0 %}
+{% if has_mapped or has_unmapped or has_gaps %}
 <div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-header">Key Observations</div>
+    <div class="card-header">SOW Alignment</div>
     <div style="padding: 1.5rem;">
-        {% if has_critical %}
-        {% for update in pn['critical_updates'] %}
-        <div style="padding: 0.75rem 1rem; margin-bottom: {% if not loop.last or has_takeaways %}0.75rem{% else %}0{% endif %}; background: #fef9e7; border-left: 3px solid #f0c040; border-radius: 3px; font-size: 0.95rem; line-height: 1.6; color: #5a4e00;">
-            {{ update }}
+        {% if has_mapped %}
+        {% for d in sow.mapped_deliverables %}
+        <div style="padding: 0.75rem 1rem; margin-bottom: 0.75rem; background: #f8f9fa; border-radius: 6px; border-left: 4px solid {% if d.status == 'on_track' %}#28a745{% elif d.status == 'at_risk' %}#e6a817{% else %}#e74c3c{% endif %};">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                <span style="font-weight: 600; color: #2c3e50;">{{ d.deliverable }}</span>
+                <span style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 500; color: white; background: {% if d.status == 'on_track' %}#28a745{% elif d.status == 'at_risk' %}#e6a817{% else %}#e74c3c{% endif %};">
+                    {{ d.status | replace('_', ' ') | upper }}
+                </span>
+            </div>
+            <div style="font-size: 0.9rem; color: #555; line-height: 1.6;">{{ d.note }}</div>
+            {% if d.related_actions %}
+            <div style="font-size: 0.8rem; color: #888; margin-top: 0.35rem;">
+                Related: {{ d.related_actions | join(' | ') }}
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
         {% endif %}
-        {% if has_takeaways %}
-        <ul style="margin: 0; padding-left: 1.5rem; line-height: 1.9; color: #444;">
-            {% for takeaway in pn['key_takeaways'] %}
-            <li style="margin-bottom: 0.4rem;">{{ takeaway }}</li>
+
+        {% if has_unmapped %}
+        <div style="{% if has_mapped %}margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #eee;{% endif %}">
+            <div style="font-weight: 600; font-size: 0.85rem; color: #e67e22; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Potential Scope Creep</div>
+            {% for ua in sow.unmapped_actions %}
+            <div style="padding: 0.4rem 0; font-size: 0.9rem; color: #555; line-height: 1.6;">
+                <strong>{{ ua.action_title }}</strong> — {{ ua.concern }}
+            </div>
             {% endfor %}
-        </ul>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
-{% endif %}
-
-<!-- Two-column: Trends | Recommendations -->
-{% if report.insights %}
-{% set has_trends = report.insights.trends and (report.insights.trends.action_volume or report.insights.trends.priority_distribution or report.insights.trends.response_patterns) %}
-{% set has_recs = report.insights.recommendations and report.insights.recommendations|length > 0 %}
-{% if has_trends or has_recs %}
-<div style="display: grid; grid-template-columns: {% if has_trends and has_recs %}1fr 1fr{% else %}1fr{% endif %}; gap: 1.5rem; margin-bottom: 1.5rem;">
-    {% if has_trends %}
-    <div class="card">
-        <div class="card-header">Traffic Patterns</div>
-        <div style="padding: 1.5rem; line-height: 1.7; color: #444;">
-            {% if report.insights.trends.action_volume %}
-            <div style="margin-bottom: 1.25rem;">
-                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.35rem; font-size: 0.9rem;">Volume</div>
-                <div style="font-size: 0.95rem;">{{ report.insights.trends.action_volume }}</div>
-            </div>
-            {% endif %}
-            {% if report.insights.trends.priority_distribution %}
-            <div style="margin-bottom: 1.25rem;">
-                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.35rem; font-size: 0.9rem;">Priority Mix</div>
-                <div style="font-size: 0.95rem;">{{ report.insights.trends.priority_distribution }}</div>
-            </div>
-            {% endif %}
-            {% if report.insights.trends.response_patterns %}
-            <div>
-                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.35rem; font-size: 0.9rem;">Response Patterns</div>
-                <div style="font-size: 0.95rem;">{{ report.insights.trends.response_patterns }}</div>
-            </div>
-            {% endif %}
         </div>
-    </div>
-    {% endif %}
+        {% endif %}
 
-    {% if has_recs %}
-    <div class="card">
-        <div class="card-header">Recommendations</div>
-        <div style="padding: 1.5rem;">
-            <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.9; color: #444;">
-                {% for rec in report.insights.recommendations %}
-                <li style="margin-bottom: 0.5rem; font-size: 0.95rem;">{{ rec }}</li>
+        {% if has_gaps %}
+        <div style="{% if has_mapped or has_unmapped %}margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #eee;{% endif %}">
+            <div style="font-weight: 600; font-size: 0.85rem; color: #c0392b; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Coverage Gaps</div>
+            <ul style="margin: 0; padding-left: 1.25rem; color: #555; font-size: 0.9rem; line-height: 1.7;">
+                {% for gap in sow.coverage_gaps %}
+                <li>{{ gap }}</li>
                 {% endfor %}
             </ul>
-            {% if report.insights.bottlenecks %}
-            <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #eee; font-size: 0.9rem; color: #666; line-height: 1.7;">
-                {{ report.insights.bottlenecks }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Risk Radar -->
+{% if report.insights.risk_radar and report.insights.risk_radar|length > 0 %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 3px solid #e74c3c;">
+    <div class="card-header">Risk Radar</div>
+    <div style="padding: 1.5rem;">
+        {% for risk in report.insights.risk_radar %}
+        <div style="margin-bottom: {% if not loop.last %}1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid #f0f0f0;{% else %}0{% endif %}">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                <span style="font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: white; background: {% if risk.severity == 'high' %}#e74c3c{% elif risk.severity == 'medium' %}#e6a817{% else %}#3498db{% endif %};">
+                    {{ risk.severity }}
+                </span>
+                <span style="font-weight: 600; color: #2c3e50;">{{ risk.risk }}</span>
+            </div>
+            <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.35rem; line-height: 1.6;">{{ risk.evidence }}</div>
+            <div style="font-size: 0.9rem; color: #444; padding: 0.5rem 0.75rem; background: #f0faf0; border-radius: 4px; line-height: 1.5;">
+                <strong style="color: #27ae60;">Mitigation:</strong> {{ risk.mitigation }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Two-column: Process Health | Trend Intelligence -->
+{% set proc = report.insights.process_compliance if report.insights.process_compliance is defined else None %}
+{% set trend = report.insights.trend_intelligence if report.insights.trend_intelligence is defined else None %}
+{% set has_proc = proc and proc.observations and proc.observations|length > 0 %}
+{% set has_trend = trend and trend.patterns and trend.patterns|length > 0 %}
+{% if has_proc or has_trend %}
+<div style="display: grid; grid-template-columns: {% if has_proc and has_trend %}1fr 1fr{% else %}1fr{% endif %}; gap: 1.5rem; margin-bottom: 1.5rem;">
+    {% if has_proc %}
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Process Health</span>
+            {% if proc.overall_health %}
+            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {% if proc.overall_health == 'green' %}#28a745{% elif proc.overall_health == 'yellow' %}#e6a817{% else %}#e74c3c{% endif %};"></span>
+            {% endif %}
+        </div>
+        <div style="padding: 1.5rem;">
+            {% for obs in proc.observations %}
+            <div style="margin-bottom: {% if not loop.last %}1.25rem{% else %}0{% endif %};">
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.25rem; font-size: 0.9rem;">{{ obs.area }}</div>
+                <div style="font-size: 0.9rem; color: #555; line-height: 1.6; margin-bottom: 0.25rem;">{{ obs.finding }}</div>
+                {% if obs.recommendation %}
+                <div style="font-size: 0.85rem; color: #666; font-style: italic;">{{ obs.recommendation }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if has_trend %}
+    <div class="card">
+        <div class="card-header">Trend Intelligence</div>
+        <div style="padding: 1.5rem;">
+            {% for p in trend.patterns %}
+            <div style="margin-bottom: {% if not loop.last or trend.workload_forecast %}1.25rem{% else %}0{% endif %};">
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.25rem; font-size: 0.9rem;">{{ p.pattern }}</div>
+                <div style="font-size: 0.9rem; color: #555; line-height: 1.6;">{{ p.context }}</div>
+                {% if p.impact %}
+                <div style="font-size: 0.85rem; color: #8e44ad; margin-top: 0.2rem;">{{ p.impact }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% if trend.workload_forecast %}
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee; font-size: 0.9rem; color: #666; line-height: 1.7;">
+                <strong style="color: #2c3e50;">Forecast:</strong> {{ trend.workload_forecast }}
             </div>
             {% endif %}
         </div>
@@ -163,25 +249,21 @@
 </div>
 {% endif %}
 
-<!-- Items to Watch — toned down, amber accent -->
-{% if report.insights.urgent_items %}
-<div class="card" style="margin-bottom: 1.5rem; border-left: 3px solid #e6a817;">
-    <div class="card-header">Items to Watch</div>
+<!-- Recommendations -->
+{% if report.insights.recommendations and report.insights.recommendations|length > 0 %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">Recommendations</div>
     <div style="padding: 1.5rem;">
-        {% for urgent in report.insights.urgent_items %}
-        <div style="margin-bottom: {% if not loop.last %}1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid #f0f0f0;{% else %}0{% endif %}">
-            <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.35rem;">{{ urgent.action_title }}</div>
-            <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.35rem;">{{ urgent.reason }}</div>
-            <div style="font-size: 0.9rem; color: #444; padding: 0.5rem 0.75rem; background: #fafafa; border-radius: 4px;">
-                {{ urgent.recommended_action }}
-            </div>
-        </div>
-        {% endfor %}
+        <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.9; color: #444;">
+            {% for rec in report.insights.recommendations %}
+            <li style="margin-bottom: 0.5rem; font-size: 0.95rem;">{{ rec }}</li>
+            {% endfor %}
+        </ul>
     </div>
 </div>
 {% endif %}
-{% endif %}
 
+{% endif %}
 
 <div style="text-align: center; margin-top: 2rem; color: #bbb; font-size: 0.8rem;">
     {% if report.generated_at %}
@@ -207,10 +289,10 @@
             Generating Insights...
         </div>
         <div style="font-size: 0.95rem; color: rgba(255,255,255,0.8);">
-            Analyzing actions and recent emails with AI
+            Cross-referencing actions against program documents
         </div>
         <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-top: 0.5rem;">
-            This typically takes 15-25 seconds
+            This typically takes 15-30 seconds
         </div>
     </div>
 </div>
@@ -236,15 +318,28 @@ function showToast(msg, isError) {
     setTimeout(() => { toast.style.transition = 'opacity 0.3s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
 }
 
+function getSelectedDays() {
+    return document.getElementById('daysSelect').value;
+}
+
+function changeDays(days) {
+    window.location.href = '/insights?days=' + days;
+}
+
 async function startRefresh() {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
+    const days = getSelectedDays();
 
     try {
-        const resp = await fetch('/api/insights-refresh', { method: 'POST' });
+        const resp = await fetch('/api/insights-refresh', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({days: parseInt(days)})
+        });
         if (resp.ok) {
             sessionStorage.setItem('scrollY:' + window.location.pathname, window.scrollY);
-            window.location.href = window.location.pathname + '?_=' + Date.now();
+            window.location.href = '/insights?days=' + days + '&_=' + Date.now();
         } else {
             overlay.style.display = 'none';
             showToast('Failed to generate insights. Please try again.', true);

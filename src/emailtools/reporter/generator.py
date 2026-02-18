@@ -427,45 +427,94 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         is_cached = True
         insights_generated_at = latest_cache.generated_at
     else:
-        # Generate new AI insights with full program context
+        # Generate new KB-aware AI insights
         logger.info("Generating new AI insights")
         recent_emails = get_recent_emails(session, days)
 
-        # Gather ALL active actions (not just unassigned) for accurate AI context
-        all_actions = session.query(Action).all()
-        assigned_active = session.query(Assignment).filter(
-            Assignment.status != "completed"
-        ).count()
-        completed_count = session.query(Assignment).filter(
-            Assignment.status == "completed"
-        ).count()
-        today = datetime.utcnow().date()
+        # Gather active actions (unassigned + in-progress) plus recently
+        # completed ones.  This keeps the analysis focused on current work
+        # while still showing recent throughput.
+        cutoff = now - timedelta(days=days)
+        all_actions = (
+            session.query(Action)
+            .outerjoin(Assignment)
+            .filter(
+                # Active: no assignment or assignment not completed
+                (Assignment.id.is_(None)) | (Assignment.status != "completed")
+                # OR completed within the lookback window
+                | (Assignment.completed_at >= cutoff)
+            )
+            .distinct()
+            .all()
+        )
+
+        # Format action details for the AI prompt
+        action_lines = []
+        for i, action in enumerate(all_actions, 1):
+            # Determine status
+            if action.assignments:
+                statuses = []
+                for asn in action.assignments:
+                    if asn.status == "completed":
+                        statuses.append(f"COMPLETED ({asn.assigned_to})")
+                    else:
+                        statuses.append(f"IN PROGRESS ({asn.assigned_to})")
+                status = ", ".join(statuses)
+            else:
+                status = "UNASSIGNED"
+
+            pri = (action.priority or "medium").upper()
+            cat = f", {action.category}" if action.category else ""
+            due = f", due: {action.due_date.strftime('%Y-%m-%d')}" if action.due_date else ""
+            line = f'{i}. [{pri}] "{action.title}"{cat}{due} -- {status}'
+            if action.description:
+                line += f"\n   {action.description[:200]}"
+            action_lines.append(line)
+        action_details_text = "\n".join(action_lines) if action_lines else "No actions in pipeline"
+
+        # Format email summaries
+        email_summary_lines = []
+        for email in recent_emails[:20]:
+            email_summary_lines.append(f"- From {email.from_address}: {email.subject}")
+        email_summaries_text = "\n".join(email_summary_lines) if email_summary_lines else "No recent emails"
+
+        # Compute pipeline stats
         total_overdue = session.query(Action).outerjoin(Assignment).filter(
             Action.due_date < now,
             (Assignment.id.is_(None)) | (Assignment.status != "completed")
         ).count()
 
-        program_stats = {
+        pipeline_stats = {
             "total_actions": len(all_actions),
             "unassigned": len(unassigned_actions),
-            "assigned_in_progress": assigned_active,
+            "high": high_priority_count,
+            "medium": medium_priority_count,
+            "low": low_priority_count,
+            "assigned_in_progress": assigned_in_progress,
             "completed": completed_count,
             "overdue": total_overdue,
+            "due_this_week": due_this_week_count,
         }
 
         client = get_ai_client()
         try:
             insights = client.generate_report_insights(
-                unassigned_actions, recent_emails, days, program_stats=program_stats
+                action_details_text, email_summaries_text, days,
+                pipeline_stats=pipeline_stats
             )
         except Exception as e:
             logger.error(f"Failed to generate AI insights: {e}")
             insights = {
-                "executive_summary": "Unable to generate insights at this time.",
-                "trends": {},
-                "category_insights": [],
-                "urgent_items": [],
-                "bottlenecks": "",
+                "executive_summary": {
+                    "headline": "Unable to generate insights at this time",
+                    "key_finding": "",
+                    "top_risk": "",
+                    "recommended_action": ""
+                },
+                "sow_alignment": {"mapped_deliverables": [], "unmapped_actions": [], "coverage_gaps": []},
+                "risk_radar": [],
+                "process_compliance": {"observations": [], "overall_health": "green"},
+                "trend_intelligence": {"patterns": [], "workload_forecast": ""},
                 "recommendations": []
             }
 
