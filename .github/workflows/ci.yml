@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install ruff
+      - run: ruff check src/ tests/
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite:///./data/emailtools.db
+      OPENAI_API_KEY: sk-test-dummy-key
+      OPENAI_MODEL: gpt-4-turbo-preview
+      SMTP_HOST: smtp.test.invalid
+      SMTP_PORT: '587'
+      SMTP_USER: test@test.invalid
+      SMTP_PASSWORD: test-password
+      REPORT_FROM: test@test.invalid
+      REPORT_RECIPIENTS: test@test.invalid
+      TESTING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e ".[dev]"
+      - run: python run_tests.py
+
+  container-build-and-test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build -t emailtools:prod .
+      - name: Build test runner image
+        run: |
+          cp .dockerignore .dockerignore.bak
+          cp .dockerignore.test .dockerignore
+          docker build -f Dockerfile.test -t emailtools:test-runner .
+          cp .dockerignore.bak .dockerignore
+      - name: Run tests inside container
+        run: >
+          docker run --rm
+          -e DATABASE_URL=sqlite:///./data/emailtools.db
+          -e OPENAI_API_KEY=sk-test-dummy-key
+          -e OPENAI_MODEL=gpt-4-turbo-preview
+          -e SMTP_HOST=smtp.test.invalid
+          -e SMTP_PORT=587
+          -e SMTP_USER=test@test.invalid
+          -e SMTP_PASSWORD=test-password
+          -e REPORT_FROM=test@test.invalid
+          -e REPORT_RECIPIENTS=test@test.invalid
+          -e TESTING=true
+          emailtools:test-runner
+
+  container-integration:
+    needs: container-build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build -t emailtools:prod .
+      - name: Start production container
+        run: |
+          mkdir -p data/inbox data/emails
+          docker run -d --name emailtools -p 8000:8000 \
+            -e DATABASE_URL=sqlite:///./data/emailtools.db \
+            -e OPENAI_API_KEY=sk-test-dummy-key \
+            -e OPENAI_MODEL=gpt-4-turbo-preview \
+            -e SMTP_HOST=smtp.test.invalid \
+            -e SMTP_PORT=587 \
+            -e SMTP_USER=test@test.invalid \
+            -e SMTP_PASSWORD=test-password \
+            -e REPORT_FROM=test@test.invalid \
+            -e REPORT_RECIPIENTS=test@test.invalid \
+            -e TESTING=true \
+            emailtools:prod
+      - name: Wait for container health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then
+              echo ""
+              echo "Container healthy after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Container failed to start"
+          docker logs emailtools
+          exit 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install BDD test dependencies
+        run: pip install behave requests
+      - name: Run BDD tests against live container
+        env:
+          TEST_BASE_URL: http://localhost:8000
+        run: behave features/ --no-capture
+      - name: Show container logs on failure
+        if: failure()
+        run: docker logs emailtools
