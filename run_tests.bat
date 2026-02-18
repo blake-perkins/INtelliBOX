@@ -4,7 +4,7 @@ REM Uses the virtual environment Python
 
 echo.
 echo ========================================
-echo EmailTools Test Suite Runner
+echo INtelliBOX Test Suite Runner
 echo ========================================
 echo.
 

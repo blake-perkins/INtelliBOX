@@ -102,7 +102,7 @@ class SettingsService:
     @staticmethod
     def update_last_sync_time() -> None:
         """Record the current UTC time as the last sync timestamp."""
-        from emailtools.utils.datetime_utils import utcnow
+        from intellibox.utils.datetime_utils import utcnow
         SettingsService.set_setting('last_sync_time', utcnow().isoformat())
 
     @staticmethod
@@ -132,7 +132,7 @@ class SettingsService:
     @staticmethod
     def get_insights_prompt() -> str:
         """Return the custom insights prompt, or the hardcoded default."""
-        from emailtools.ai.prompts import REPORT_INSIGHTS_PROMPT
+        from intellibox.ai.prompts import REPORT_INSIGHTS_PROMPT
         return SettingsService.get_setting("insights_prompt", REPORT_INSIGHTS_PROMPT)
 
     @staticmethod

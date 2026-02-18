@@ -81,7 +81,7 @@ No recent assignments
 ```
 
 ## Files Modified
-1. `src/emailtools/web/app.py` - Dashboard query logic (2 filters added)
+1. `src/intellibox/web/app.py` - Dashboard query logic (2 filters added)
 2. `validate_web_interface.py` - Added 3 regression tests
 
 ## Files Created

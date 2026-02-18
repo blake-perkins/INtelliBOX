@@ -1,5 +1,5 @@
 #!/bin/bash
-# EmailTools AWS Deployment Script (Podman-compatible)
+# INtelliBOX AWS Deployment Script (Podman-compatible)
 # Works with both Docker and Podman
 
 set -e
@@ -19,14 +19,14 @@ echo "Using container engine: $CONTAINER_ENGINE"
 # Configuration
 AWS_REGION="${AWS_REGION:-us-east-1}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
-ECR_REPO_NAME="emailtools"
+ECR_REPO_NAME="intellibox"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
-ECS_CLUSTER="emailtools-cluster"
-ECS_SERVICE="emailtools-scheduler"
+ECS_CLUSTER="intellibox-cluster"
+ECS_SERVICE="intellibox-scheduler"
 PLATFORM="${PLATFORM:-linux/amd64}"  # or linux/arm64 for Graviton
 
 echo "======================================"
-echo "EmailTools AWS Deployment (Podman)"
+echo "INtelliBOX AWS Deployment (Podman)"
 echo "======================================"
 echo "Container Engine: $CONTAINER_ENGINE"
 echo "Region: $AWS_REGION"
@@ -106,7 +106,7 @@ echo "Monitor deployment:"
 echo "  aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --region $AWS_REGION"
 echo ""
 echo "View logs:"
-echo "  aws logs tail /ecs/emailtools --follow --region $AWS_REGION"
+echo "  aws logs tail /ecs/intellibox --follow --region $AWS_REGION"
 echo ""
 echo "Run one-time task:"
 echo "  aws ecs run-task --cluster $ECS_CLUSTER --task-definition $TASK_DEF_ARN --launch-type FARGATE"

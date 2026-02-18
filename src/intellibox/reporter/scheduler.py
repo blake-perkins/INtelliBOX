@@ -3,11 +3,11 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from emailtools.config import settings
-from emailtools.database import get_session
-from emailtools.reporter.email_sender import send_report_email
-from emailtools.reporter.generator import generate_report_data
-from emailtools.utils.logging import logger
+from intellibox.config import settings
+from intellibox.database import get_session
+from intellibox.reporter.email_sender import send_report_email
+from intellibox.reporter.generator import generate_report_data
+from intellibox.utils.logging import logger
 
 
 def send_daily_report():
@@ -55,7 +55,7 @@ def start_scheduler():
         send_daily_report,
         trigger=trigger,
         id="daily_report",
-        name="Daily EmailTools Report"
+        name="Daily INtelliBOX Report"
     )
 
     logger.info(

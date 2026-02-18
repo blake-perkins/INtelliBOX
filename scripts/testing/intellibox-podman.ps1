@@ -1,5 +1,5 @@
-# EmailTools Podman Helper Script
-# Easy commands for managing the EmailTools container
+# INtelliBOX Podman Helper Script
+# Easy commands for managing the INtelliBOX container
 
 param(
     [Parameter(Position=0)]
@@ -7,9 +7,9 @@ param(
 )
 
 function Show-Help {
-    Write-Host "EmailTools Container Helper" -ForegroundColor Cyan
+    Write-Host "INtelliBOX Container Helper" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Usage: .\emailtools-podman.ps1 <command>" -ForegroundColor Yellow
+    Write-Host "Usage: .\intellibox-podman.ps1 <command>" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Commands:" -ForegroundColor Green
     Write-Host "  status     - Show container status"
@@ -29,53 +29,53 @@ function Show-Help {
 switch ($Command.ToLower()) {
     "status" {
         Write-Host "Container Status:" -ForegroundColor Yellow
-        wsl -d podman-machine-default podman ps -f name=emailtools
+        wsl -d podman-machine-default podman ps -f name=intellibox
     }
     "logs" {
         Write-Host "Container Logs (Ctrl+C to exit):" -ForegroundColor Yellow
-        wsl -d podman-machine-default podman logs -f emailtools
+        wsl -d podman-machine-default podman logs -f intellibox
     }
     "process" {
         Write-Host "Processing emails..." -ForegroundColor Yellow
-        wsl -d podman-machine-default podman exec emailtools sh -c "emailtools process"
+        wsl -d podman-machine-default podman exec intellibox sh -c "intellibox process"
     }
     "actions" {
         Write-Host "Listing actions..." -ForegroundColor Yellow
-        wsl -d podman-machine-default podman exec emailtools sh -c "emailtools actions list --unassigned"
+        wsl -d podman-machine-default podman exec intellibox sh -c "intellibox actions list --unassigned"
     }
     "report" {
         Write-Host "Generating report..." -ForegroundColor Yellow
-        wsl -d podman-machine-default podman exec emailtools sh -c "emailtools report send --dry-run"
+        wsl -d podman-machine-default podman exec intellibox sh -c "intellibox report send --dry-run"
     }
     "db" {
         Write-Host "Database Summary:" -ForegroundColor Yellow
-        wsl -d podman-machine-default podman exec emailtools sh -c "emailtools db show"
+        wsl -d podman-machine-default podman exec intellibox sh -c "intellibox db show"
     }
     "shell" {
         Write-Host "Opening shell in container..." -ForegroundColor Yellow
-        wsl -d podman-machine-default podman exec -it emailtools sh
+        wsl -d podman-machine-default podman exec -it intellibox sh
     }
     "restart" {
         Write-Host "Restarting container..." -ForegroundColor Yellow
-        podman restart emailtools
+        podman restart intellibox
         Write-Host "Container restarted" -ForegroundColor Green
     }
     "stop" {
         Write-Host "Stopping container..." -ForegroundColor Yellow
-        podman stop emailtools
+        podman stop intellibox
         Write-Host "Container stopped" -ForegroundColor Green
     }
     "start" {
         Write-Host "Starting container..." -ForegroundColor Yellow
-        podman start emailtools
+        podman start intellibox
         Write-Host "Container started" -ForegroundColor Green
     }
     "rebuild" {
         Write-Host "Rebuilding container..." -ForegroundColor Yellow
-        podman stop emailtools
-        podman rm emailtools
-        podman build -t emailtools:latest .
-        podman run -d --name emailtools --env-file .env -v ./data:/app/data emailtools:latest emailtools report schedule
+        podman stop intellibox
+        podman rm intellibox
+        podman build -t intellibox:latest .
+        podman run -d --name intellibox --env-file .env -v ./data:/app/data intellibox:latest intellibox report schedule
         Write-Host "Container rebuilt and started" -ForegroundColor Green
     }
     default {

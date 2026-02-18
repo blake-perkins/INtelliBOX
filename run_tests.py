@@ -83,7 +83,7 @@ def run_behave():
 
 def main():
     """Run all test modules and report results."""
-    print(f"\n{BOLD}{BLUE}EmailTools Test Suite Runner{RESET}")
+    print(f"\n{BOLD}{BLUE}INtelliBOX Test Suite Runner{RESET}")
     print(f"{BLUE}Running each module individually to avoid cross-contamination{RESET}\n")
 
     results = {}

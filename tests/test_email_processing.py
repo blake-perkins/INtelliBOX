@@ -26,10 +26,10 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from emailtools.ai.processor import process_unprocessed_emails
-from emailtools.ingestion.chain_stripper import strip_quoted_text
-from emailtools.ingestion.parser import parse_and_store_email, process_inbox
-from emailtools.models import Action, Base, Email, ProcessingLog
+from intellibox.ai.processor import process_unprocessed_emails
+from intellibox.ingestion.chain_stripper import strip_quoted_text
+from intellibox.ingestion.parser import parse_and_store_email, process_inbox
+from intellibox.models import Action, Base, Email, ProcessingLog
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from msg_factory import make_msg
@@ -68,7 +68,7 @@ def inbox_dir(tmp_path):
     archive = tmp_path / "emails"
     archive.mkdir()
 
-    original_archive = "emailtools.ingestion.parser.archive_eml_file"
+    original_archive = "intellibox.ingestion.parser.archive_eml_file"
 
     def _fake_archive(email_path: Path, message_id: str) -> str:
         safe = message_id.replace("<", "").replace(">", "").replace("/", "_")
@@ -408,7 +408,7 @@ class TestChainStrippingIntegration:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = json.dumps({"actions": []})
 
-        with patch("emailtools.ai.client.OpenAI") as mock_openai_cls:
+        with patch("intellibox.ai.client.OpenAI") as mock_openai_cls:
             mock_client = MagicMock()
             mock_openai_cls.return_value = mock_client
 
@@ -420,7 +420,7 @@ class TestChainStrippingIntegration:
 
             mock_client.chat.completions.create.side_effect = capture_call
 
-            from emailtools.ai.client import AIClient
+            from intellibox.ai.client import AIClient
             client = AIClient.__new__(AIClient)
             client.client = mock_client
             client.model = "gpt-4"
@@ -428,7 +428,7 @@ class TestChainStrippingIntegration:
             client.timeout = 30
             # Patch get_knowledge_context to avoid needing the KB table
             # in this test's isolated DB
-            with patch("emailtools.ai.client.get_knowledge_context", return_value=""):
+            with patch("intellibox.ai.client.get_knowledge_context", return_value=""):
                 client.extract_actions(email)
 
         assert len(captured_prompts) == 1
@@ -473,7 +473,7 @@ class TestBatchProcessing:
         session.commit()
         return emails
 
-    @patch("emailtools.ai.processor.get_ai_client")
+    @patch("intellibox.ai.processor.get_ai_client")
     def test_all_emails_processed(self, mock_get_client, session):
         """All unprocessed emails are processed when no limit is set."""
         self._populate_emails(session, 15)
@@ -486,7 +486,7 @@ class TestBatchProcessing:
         assert processed == 15
         assert actions == 0
 
-    @patch("emailtools.ai.processor.get_ai_client")
+    @patch("intellibox.ai.processor.get_ai_client")
     def test_limit_respected(self, mock_get_client, session):
         """Only 'limit' emails are processed when limit is set."""
         self._populate_emails(session, 20)
@@ -498,7 +498,7 @@ class TestBatchProcessing:
         processed, actions = process_unprocessed_emails(session, limit=7, batch_size=5, batch_delay=0)
         assert processed == 7
 
-    @patch("emailtools.ai.processor.get_ai_client")
+    @patch("intellibox.ai.processor.get_ai_client")
     def test_already_processed_skipped(self, mock_get_client, session):
         """Emails marked as processed=True are not re-processed."""
         emails = self._populate_emails(session, 10)
@@ -515,8 +515,8 @@ class TestBatchProcessing:
         processed, actions = process_unprocessed_emails(session, batch_size=5, batch_delay=0)
         assert processed == 5
 
-    @patch("emailtools.ai.processor.get_ai_client")
-    @patch("emailtools.ai.processor.time.sleep")
+    @patch("intellibox.ai.processor.get_ai_client")
+    @patch("intellibox.ai.processor.time.sleep")
     def test_batch_delay_called_between_batches(self, mock_sleep, mock_get_client, session):
         """time.sleep is called between batches with the correct delay."""
         self._populate_emails(session, 12)
@@ -529,8 +529,8 @@ class TestBatchProcessing:
         assert mock_sleep.call_count == 2
         mock_sleep.assert_any_call(3.0)
 
-    @patch("emailtools.ai.processor.get_ai_client")
-    @patch("emailtools.ai.processor.time.sleep")
+    @patch("intellibox.ai.processor.get_ai_client")
+    @patch("intellibox.ai.processor.time.sleep")
     def test_no_delay_on_last_batch(self, mock_sleep, mock_get_client, session):
         """No delay after the final batch (no unnecessary wait)."""
         self._populate_emails(session, 10)
@@ -542,7 +542,7 @@ class TestBatchProcessing:
         process_unprocessed_emails(session, batch_size=5, batch_delay=2.0)
         assert mock_sleep.call_count == 1
 
-    @patch("emailtools.ai.processor.get_ai_client")
+    @patch("intellibox.ai.processor.get_ai_client")
     def test_actions_counted_correctly(self, mock_get_client, session):
         """Total actions count reflects all actions created across batches."""
         self._populate_emails(session, 6)
@@ -562,7 +562,7 @@ class TestBatchProcessing:
         assert processed == 6
         assert total_actions == 12
 
-    @patch("emailtools.ai.processor.get_ai_client")
+    @patch("intellibox.ai.processor.get_ai_client")
     def test_empty_inbox_returns_zero(self, mock_get_client, session):
         """No unprocessed emails → (0, 0) returned immediately."""
         processed, actions = process_unprocessed_emails(session, batch_size=5, batch_delay=0)
@@ -570,8 +570,8 @@ class TestBatchProcessing:
         assert actions == 0
         mock_get_client.assert_not_called()
 
-    @patch("emailtools.ai.processor.get_ai_client")
-    @patch("emailtools.ai.processor.time.sleep")
+    @patch("intellibox.ai.processor.get_ai_client")
+    @patch("intellibox.ai.processor.time.sleep")
     def test_single_email_no_delay(self, mock_sleep, mock_get_client, session):
         """A single email doesn't trigger any batch delay."""
         self._populate_emails(session, 1)
@@ -719,8 +719,8 @@ class TestVolumeProcessing:
         assert "FYI" in stripped
         assert "The original update" not in stripped
 
-    @patch("emailtools.ai.processor.get_ai_client")
-    @patch("emailtools.ai.processor.time.sleep")
+    @patch("intellibox.ai.processor.get_ai_client")
+    @patch("intellibox.ai.processor.time.sleep")
     def test_batch_processing_25_emails(self, mock_sleep, mock_get_client, session):
         """25 emails processed in batches of 10 with delays between batches."""
         for i in range(25):

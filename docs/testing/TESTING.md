@@ -1,4 +1,4 @@
-# EmailTools Testing Strategy
+# INtelliBOX Testing Strategy
 
 ## Lessons Learned
 
@@ -21,7 +21,7 @@ After finding multiple template bugs in production, we've developed a more rigor
 
 ```bash
 # Start the server
-emailtools web --host 127.0.0.1 --port 8000
+intellibox web --host 127.0.0.1 --port 8000
 ```
 
 **Test Checklist:**
@@ -53,7 +53,7 @@ Before the web interface goes live, validate all templates against models:
 
 import re
 from pathlib import Path
-from emailtools.models import Email, Action, Assignment
+from intellibox.models import Email, Action, Assignment
 
 # Map template names to their context variables
 TEMPLATE_CONTEXTS = {
@@ -168,9 +168,9 @@ def validate_template(template_name, template_path):
 
 def main():
     """Validate all templates."""
-    templates_dir = Path("src/emailtools/web/templates")
+    templates_dir = Path("src/intellibox/web/templates")
 
-    print("EmailTools Template Validator")
+    print("INtelliBOX Template Validator")
     print("=" * 70)
 
     all_valid = True
@@ -308,7 +308,7 @@ action.from_address  ❌ (use action.email.from_address)
 
 ```bash
 # Manual testing
-emailtools web
+intellibox web
 
 # Validate templates (run this script after creating it)
 python validate_templates.py

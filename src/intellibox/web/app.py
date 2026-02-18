@@ -13,22 +13,22 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import case, desc, func, or_
 from sqlalchemy.orm import joinedload
 
-from emailtools.database import get_session
-from emailtools.knowledge import search_knowledge_base
-from emailtools.models import Action, Assignment, Email, KnowledgeChunk, KnowledgeDocument, RosterMember
-from emailtools.reporter.generator import (
+from intellibox.database import get_session
+from intellibox.knowledge import search_knowledge_base
+from intellibox.models import Action, Assignment, Email, KnowledgeChunk, KnowledgeDocument, RosterMember
+from intellibox.reporter.generator import (
     generate_enhanced_report,
     get_cached_structured_program_news,
 )
-from emailtools.settings_service import SettingsService
-from emailtools.utils.datetime_utils import utcnow
+from intellibox.settings_service import SettingsService
+from intellibox.utils.datetime_utils import utcnow
 
 
 def _start_background_watcher():
     """Start the file watcher in a background daemon thread with supervised restarts."""
-    from emailtools.ai.processor import process_email_with_ai
-    from emailtools.ingestion.file_watcher import supervised_watch
-    from emailtools.ingestion.parser import parse_and_store_email
+    from intellibox.ai.processor import process_email_with_ai
+    from intellibox.ingestion.file_watcher import supervised_watch
+    from intellibox.ingestion.parser import parse_and_store_email
 
     inbox_dir = Path("data/inbox")
 
@@ -1087,7 +1087,7 @@ async def upload_knowledge_doc(
     description: str = Form(""),
 ):
     """Upload a document to the knowledge base."""
-    from emailtools.knowledge.extractor import extract_text
+    from intellibox.knowledge.extractor import extract_text
 
     filename = file.filename or "unknown"
     ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
@@ -1140,7 +1140,7 @@ async def upload_knowledge_doc(
         )
 
     # Compute embeddings if API key is available (non-blocking best-effort)
-    from emailtools.knowledge.embeddings import embed_document
+    from intellibox.knowledge.embeddings import embed_document
     chunk_count = embed_document(doc_id)
     if chunk_count > 0:
         return RedirectResponse(
@@ -1168,7 +1168,7 @@ async def knowledge_base_detail(request: Request, doc_id: int, highlight: Option
 @app.post("/knowledge-base/{doc_id}/delete")
 async def delete_knowledge_doc(doc_id: int):
     """Delete a document and its embedding chunks from the knowledge base."""
-    from emailtools.knowledge.embeddings import remove_document_chunks
+    from intellibox.knowledge.embeddings import remove_document_chunks
     remove_document_chunks(doc_id)
     with get_session() as session:
         doc = session.query(KnowledgeDocument).filter_by(id=doc_id).first()
@@ -1330,7 +1330,7 @@ async def delete_roster_member(member_id: int):
 @app.get("/health")
 async def health_check():
     """Health check endpoint with watcher status."""
-    from emailtools.ingestion.file_watcher import get_watcher_health
+    from intellibox.ingestion.file_watcher import get_watcher_health
 
     return {
         "status": "healthy",
@@ -1347,8 +1347,8 @@ if _os.environ.get("TESTING", "").lower() in ("true", "1", "yes"):
     @app.post("/api/test/reset")
     async def test_reset_database():
         """Drop and recreate all tables. Only available when TESTING=true."""
-        from emailtools.database import engine
-        from emailtools.models import Base
+        from intellibox.database import engine
+        from intellibox.models import Base
         Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
         return {"status": "reset", "tables": list(Base.metadata.tables.keys())}

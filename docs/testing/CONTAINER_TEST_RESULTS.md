@@ -1,4 +1,4 @@
-# EmailTools - Container Testing Results
+# INtelliBOX - Container Testing Results
 
 ## ✅ Local Tests (Completed)
 
@@ -46,24 +46,24 @@ sudo apt install -y podman
 
 ```bash
 # Build image
-podman build -t emailtools:latest .
+podman build -t intellibox:latest .
 
 # Run container
 podman run -d \
-    --name emailtools \
+    --name intellibox \
     --env-file .env \
     -v ./data:/app/data:Z \
-    emailtools:latest
+    intellibox:latest
 
 # Check logs
-podman logs -f emailtools
+podman logs -f intellibox
 
 # Test CLI inside container
-podman exec emailtools emailtools process
+podman exec intellibox intellibox process
 
 # Stop container
-podman stop emailtools
-podman rm emailtools
+podman stop intellibox
+podman rm intellibox
 ```
 
 ### Comprehensive Test Suite
@@ -117,11 +117,11 @@ This will:
 ```bash
 # Check ECS service
 aws ecs describe-services \
-    --cluster emailtools-cluster \
-    --services emailtools-scheduler
+    --cluster intellibox-cluster \
+    --services intellibox-scheduler
 
 # View logs
-aws logs tail /ecs/emailtools --follow
+aws logs tail /ecs/intellibox --follow
 ```
 
 ---
@@ -172,14 +172,14 @@ podman machine start
 
 Use the `:Z` flag for SELinux systems:
 ```bash
-podman run -v ./data:/app/data:Z emailtools:latest
+podman run -v ./data:/app/data:Z intellibox:latest
 ```
 
 ### Container Build Fails
 
 Check Dockerfile syntax:
 ```bash
-podman build --no-cache -t emailtools:latest .
+podman build --no-cache -t intellibox:latest .
 ```
 
 ### AWS Deployment Issues
@@ -187,7 +187,7 @@ podman build --no-cache -t emailtools:latest .
 Check logs:
 ```bash
 aws ecs describe-tasks \
-    --cluster emailtools-cluster \
+    --cluster intellibox-cluster \
     --tasks TASK_ARN
 ```
 

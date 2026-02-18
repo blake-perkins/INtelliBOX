@@ -1,6 +1,6 @@
-# Azure VM Deployment Guide for EmailTools Web Interface
+# Azure VM Deployment Guide for INtelliBOX Web Interface
 
-This guide covers deploying EmailTools to an Azure VM with a web interface accessible via IP address.
+This guide covers deploying INtelliBOX to an Azure VM with a web interface accessible via IP address.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ This guide covers deploying EmailTools to an Azure VM with a web interface acces
 │  ┌──────────────────────────────────────────────┐  │
 │  │  Azure VM (Ubuntu 22.04)                     │  │
 │  │  - Podman Container Runtime                  │  │
-│  │  - EmailTools Container (Web + Scheduler)     │  │
+│  │  - INtelliBOX Container (Web + Scheduler)     │  │
 │  │  - Port 8000 (Web Interface)                  │  │
 │  │  - SQLite Database (Persistent Volume)       │  │
 │  └──────────────────────────────────────────────┘  │
@@ -40,7 +40,7 @@ This guide covers deploying EmailTools to an Azure VM with a web interface acces
    - Click "Create a resource" > "Virtual Machine"
    - Fill in details:
      - **Resource Group**: Create new or select existing
-     - **VM Name**: `emailtools-vm`
+     - **VM Name**: `intellibox-vm`
      - **Region**: Choose closest to your location
      - **Image**: Ubuntu Server 22.04 LTS
      - **Size**: Standard_B2s (2 vCPUs, 4 GB RAM) - ~$30/month
@@ -60,12 +60,12 @@ This guide covers deploying EmailTools to an Azure VM with a web interface acces
 az login
 
 # Create resource group
-az group create --name emailtools-rg --location eastus
+az group create --name intellibox-rg --location eastus
 
 # Create VM
 az vm create \
-  --resource-group emailtools-rg \
-  --name emailtools-vm \
+  --resource-group intellibox-rg \
+  --name intellibox-vm \
   --image Ubuntu2204 \
   --size Standard_B2s \
   --admin-username azureuser \
@@ -74,15 +74,15 @@ az vm create \
 
 # Open port 8000 for web interface
 az vm open-port \
-  --resource-group emailtools-rg \
-  --name emailtools-vm \
+  --resource-group intellibox-rg \
+  --name intellibox-vm \
   --port 8000 \
   --priority 1001
 
 # Get public IP
 az vm list-ip-addresses \
-  --resource-group emailtools-rg \
-  --name emailtools-vm \
+  --resource-group intellibox-rg \
+  --name intellibox-vm \
   --output table
 ```
 
@@ -118,8 +118,8 @@ podman --version
 sudo apt install -y git
 
 # Clone your repo
-git clone https://github.com/blake-perkins/EmailTools.git
-cd EmailTools
+git clone https://github.com/blake-perkins/INtelliBOX.git
+cd INtelliBOX
 ```
 
 ### 4. Configure Environment
@@ -135,7 +135,7 @@ nano .env
 **Required settings** in `.env`:
 ```bash
 # Database
-DATABASE_URL=sqlite:///./data/emailtools.db
+DATABASE_URL=sqlite:///./data/intellibox.db
 
 # OpenAI API Key
 OPENAI_API_KEY=sk-your-real-api-key
@@ -160,34 +160,34 @@ TIMEZONE=America/New_York
 ### Build Container
 
 ```bash
-cd ~/EmailTools
-podman build -t emailtools:latest .
+cd ~/INtelliBOX
+podman build -t intellibox:latest .
 ```
 
 ### Run Web Interface + Scheduler
 
 ```bash
 # Create persistent data directory
-mkdir -p ~/emailtools-data
+mkdir -p ~/intellibox-data
 
 # Run web server (with scheduler in background)
 podman run -d \
-  --name emailtools-web \
+  --name intellibox-web \
   --restart always \
   -p 8000:8000 \
   --env-file .env \
-  -v ~/emailtools-data:/app/data:Z \
-  emailtools:latest \
-  emailtools web --host 0.0.0.0 --port 8000
+  -v ~/intellibox-data:/app/data:Z \
+  intellibox:latest \
+  intellibox web --host 0.0.0.0 --port 8000
 
 # Run scheduler (processes emails nightly)
 podman run -d \
-  --name emailtools-scheduler \
+  --name intellibox-scheduler \
   --restart always \
   --env-file .env \
-  -v ~/emailtools-data:/app/data:Z \
-  emailtools:latest \
-  emailtools report schedule
+  -v ~/intellibox-data:/app/data:Z \
+  intellibox:latest \
+  intellibox report schedule
 
 # Verify containers are running
 podman ps
@@ -197,7 +197,7 @@ podman ps
 
 ```bash
 # One-time database setup
-podman exec emailtools-web emailtools init
+podman exec intellibox-web intellibox init
 ```
 
 ---
@@ -221,7 +221,7 @@ Open browser and go to:
 http://YOUR_VM_PUBLIC_IP:8000
 ```
 
-You should see the EmailTools dashboard!
+You should see the INtelliBOX dashboard!
 
 ### Pages Available:
 - `http://YOUR_IP:8000/` - Dashboard
@@ -237,19 +237,19 @@ You should see the EmailTools dashboard!
 
 ```bash
 # Generate systemd files for containers
-podman generate systemd --new --name emailtools-web --files
-podman generate systemd --new --name emailtools-scheduler --files
+podman generate systemd --new --name intellibox-web --files
+podman generate systemd --new --name intellibox-scheduler --files
 
 # Move to systemd directory
-sudo mv container-emailtools-*.service /etc/systemd/system/
+sudo mv container-intellibox-*.service /etc/systemd/system/
 
 # Enable services
 sudo systemctl daemon-reload
-sudo systemctl enable container-emailtools-web.service
-sudo systemctl enable container-emailtools-scheduler.service
+sudo systemctl enable container-intellibox-web.service
+sudo systemctl enable container-intellibox-scheduler.service
 
 # Check status
-sudo systemctl status container-emailtools-web.service
+sudo systemctl status container-intellibox-web.service
 ```
 
 ---
@@ -280,7 +280,7 @@ sudo ufw status
 sudo apt install -y nginx certbot python3-certbot-nginx
 
 # Configure Nginx proxy
-sudo nano /etc/nginx/sites-available/emailtools
+sudo nano /etc/nginx/sites-available/intellibox
 ```
 
 **Nginx config**:
@@ -300,7 +300,7 @@ server {
 
 ```bash
 # Enable site
-sudo ln -s /etc/nginx/sites-available/emailtools /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/intellibox /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 
@@ -315,45 +315,45 @@ sudo systemctl restart nginx
 
 ```bash
 # Web server logs
-podman logs -f emailtools-web
+podman logs -f intellibox-web
 
 # Scheduler logs
-podman logs -f emailtools-scheduler
+podman logs -f intellibox-scheduler
 
 # System journal
-sudo journalctl -u container-emailtools-web.service -f
+sudo journalctl -u container-intellibox-web.service -f
 ```
 
 ### Update Application
 
 ```bash
 # Pull latest code
-cd ~/EmailTools
+cd ~/INtelliBOX
 git pull origin main
 
 # Rebuild container
-podman build -t emailtools:latest .
+podman build -t intellibox:latest .
 
 # Restart containers (systemd will recreate)
-sudo systemctl restart container-emailtools-web.service
-sudo systemctl restart container-emailtools-scheduler.service
+sudo systemctl restart container-intellibox-web.service
+sudo systemctl restart container-intellibox-scheduler.service
 ```
 
 ### Backup Data
 
 ```bash
 # Backup database and emails
-tar -czf emailtools-backup-$(date +%Y%m%d).tar.gz ~/emailtools-data/
+tar -czf intellibox-backup-$(date +%Y%m%d).tar.gz ~/intellibox-data/
 
 # Copy to local machine
-scp azureuser@YOUR_IP:~/emailtools-backup-*.tar.gz ./
+scp azureuser@YOUR_IP:~/intellibox-backup-*.tar.gz ./
 ```
 
 ### Monitor Resources
 
 ```bash
 # Check container resource usage
-podman stats emailtools-web emailtools-scheduler
+podman stats intellibox-web intellibox-scheduler
 
 # Check VM resources
 htop  # or top
@@ -369,8 +369,8 @@ Ensure Azure NSG allows traffic on port 8000:
 ```bash
 # Via Azure CLI
 az network nsg rule create \
-  --resource-group emailtools-rg \
-  --nsg-name emailtools-vmNSG \
+  --resource-group intellibox-rg \
+  --nsg-name intellibox-vmNSG \
   --name AllowWeb \
   --protocol tcp \
   --priority 1001 \
@@ -402,24 +402,24 @@ sudo netstat -tlnp | grep 8000
 sudo ufw status
 
 # Check container logs
-podman logs emailtools-web
+podman logs intellibox-web
 ```
 
 ### Container Won't Start
 
 ```bash
 # Check environment variables
-podman exec emailtools-web env | grep -E "DATABASE|OPENAI"
+podman exec intellibox-web env | grep -E "DATABASE|OPENAI"
 
 # Test database connection
-podman exec emailtools-web python -c "from emailtools.database import get_session; print('OK')"
+podman exec intellibox-web python -c "from intellibox.database import get_session; print('OK')"
 ```
 
 ### Performance Issues
 
 ```bash
 # Check VM size (may need to upgrade)
-az vm show -g emailtools-rg -n emailtools-vm --query hardwareProfile
+az vm show -g intellibox-rg -n intellibox-vm --query hardwareProfile
 
 # Monitor resources
 htop
@@ -446,27 +446,27 @@ podman stats
 
 ```bash
 # Start web interface manually
-emailtools web --host 0.0.0.0 --port 8000
+intellibox web --host 0.0.0.0 --port 8000
 
 # Process emails
-emailtools process
+intellibox process
 
 # View actions
-emailtools actions list
+intellibox actions list
 
 # Generate report
-emailtools report send --dry-run
+intellibox report send --dry-run
 
 # Container management
 podman ps                    # List containers
-podman logs -f emailtools-web # View logs
-podman restart emailtools-web # Restart
-podman exec emailtools-web emailtools db show  # Run command
+podman logs -f intellibox-web # View logs
+podman restart intellibox-web # Restart
+podman exec intellibox-web intellibox db show  # Run command
 
 # System management
-sudo systemctl status container-emailtools-web.service
-sudo systemctl restart container-emailtools-web.service
-sudo journalctl -u container-emailtools-web.service -f
+sudo systemctl status container-intellibox-web.service
+sudo systemctl restart container-intellibox-web.service
+sudo journalctl -u container-intellibox-web.service -f
 ```
 
 ---
@@ -479,7 +479,7 @@ sudo journalctl -u container-emailtools-web.service -f
 4. Share IP address with your boss
 5. Monitor and maintain
 
-**Your boss can now access EmailTools at**: `http://YOUR_VM_IP:8000`
+**Your boss can now access INtelliBOX at**: `http://YOUR_VM_IP:8000`
 
 ---
 

@@ -5,8 +5,8 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # Import your models' Base
-from emailtools.models import Base
-from emailtools.config import settings
+from intellibox.models import Base
+from intellibox.config import settings
 
 # Alembic Config object
 config = context.config

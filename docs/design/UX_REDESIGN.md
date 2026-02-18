@@ -254,7 +254,7 @@ The redesign maintains all functionality while improving usability:
 
 If you prefer the old design:
 ```bash
-cp src/emailtools/web/templates/dashboard_old.html src/emailtools/web/templates/dashboard.html
+cp src/intellibox/web/templates/dashboard_old.html src/intellibox/web/templates/dashboard.html
 ```
 
 Then restart the web server.

@@ -304,11 +304,11 @@ If you prefer the old design:
 
 ```bash
 # Copy old dashboard back
-cp src/emailtools/web/templates/dashboard_old.html src/emailtools/web/templates/dashboard.html
+cp src/intellibox/web/templates/dashboard_old.html src/intellibox/web/templates/dashboard.html
 
 # Restart web server
 taskkill //F //PID <server_pid>
-./venv/Scripts/python.exe -m emailtools.cli web --host 127.0.0.1 --port 8000
+./venv/Scripts/python.exe -m intellibox.cli web --host 127.0.0.1 --port 8000
 ```
 
 ---

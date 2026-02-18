@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Web Interface Validation Script for EmailTools
+Web Interface Validation Script for INtelliBOX
 
 This script validates that all web pages and features work correctly
 with your actual database. Run this before deploying to ensure everything
 functions properly for end users.
 
 Usage:
-    1. Start web server: emailtools web --host 127.0.0.1 --port 8000
+    1. Start web server: intellibox web --host 127.0.0.1 --port 8000
     2. Run this script: python validate_web_interface.py
 """
 
@@ -101,7 +101,7 @@ def test_api_endpoint(name, url):
 
 def validate_web_interface():
     """Run all validation tests."""
-    print_header("EmailTools Web Interface Validation")
+    print_header("INtelliBOX Web Interface Validation")
     print(f"Testing server at: {BASE_URL}")
     print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
@@ -490,8 +490,8 @@ def validate_web_interface():
     print_header("6. Regression Tests: Dashboard Logic")
 
     try:
-        from src.emailtools.database import SessionLocal
-        from src.emailtools.models import Action, Assignment, Email
+        from src.intellibox.database import SessionLocal
+        from src.intellibox.models import Action, Assignment, Email
         from sqlalchemy import desc
 
         session = SessionLocal()
@@ -595,13 +595,13 @@ def validate_web_interface():
 
 if __name__ == "__main__":
     print(f"""
-{Fore.CYAN}EmailTools Web Interface Validator
+{Fore.CYAN}INtelliBOX Web Interface Validator
 {Fore.CYAN}==================================={Style.RESET_ALL}
 
 This script validates all web pages and features.
 
 {Fore.YELLOW}Prerequisites:{Style.RESET_ALL}
-1. Web server must be running: emailtools web --host 127.0.0.1 --port 8000
+1. Web server must be running: intellibox web --host 127.0.0.1 --port 8000
 2. Database should have some test data
 
 {Fore.YELLOW}Note:{Style.RESET_ALL} First install required package: pip install colorama requests

@@ -53,7 +53,7 @@ def before_all(context):
 
     else:
         # ---- In-process mode (original behaviour) ----
-        fd, db_path = tempfile.mkstemp(suffix="_behave.db", prefix="test_emailtools_")
+        fd, db_path = tempfile.mkstemp(suffix="_behave.db", prefix="test_intellibox_")
         os.close(fd)
         context._db_path = db_path
         context._container_mode = False
@@ -78,19 +78,19 @@ def before_all(context):
         context._override_get_session = override_get_session
 
         # Patch all three locations where get_session is used (same as conftest.py)
-        import emailtools.database as database_module
-        import emailtools.settings_service as settings_service_module
-        import emailtools.web.app as app_module
+        import intellibox.database as database_module
+        import intellibox.settings_service as settings_service_module
+        import intellibox.web.app as app_module
 
         database_module.get_session = override_get_session
         settings_service_module.get_session = override_get_session
         app_module.get_session = override_get_session
 
-        from emailtools.models import Base
+        from intellibox.models import Base
         Base.metadata.create_all(engine)
 
         from fastapi.testclient import TestClient
-        from emailtools.web.app import app
+        from intellibox.web.app import app
         context.client = TestClient(app)
 
 
@@ -101,7 +101,7 @@ def before_scenario(context, scenario):
         resp = _requests.post(f"{context._base_url}/api/test/reset")
         assert resp.status_code == 200, f"Test reset failed: {resp.text}"
     else:
-        from emailtools.models import Base
+        from intellibox.models import Base
         Base.metadata.drop_all(context._engine)
         Base.metadata.create_all(context._engine)
 
@@ -146,7 +146,7 @@ def seed(context, entity_type, **kwargs):
         assert resp.status_code == 200, f"Seed {entity_type} failed: {resp.text}"
         return resp.json()["id"]
     else:
-        from emailtools.models import Email, Action, Assignment, RosterMember, KnowledgeDocument, KnowledgeChunk
+        from intellibox.models import Email, Action, Assignment, RosterMember, KnowledgeDocument, KnowledgeChunk
         model_map = {
             "email": Email, "action": Action,
             "assignment": Assignment, "roster_member": RosterMember,
@@ -170,7 +170,7 @@ def query_action(context, action_id):
         data = resp.json()
         return data if data.get("found") else None
     else:
-        from emailtools.models import Action
+        from intellibox.models import Action
         session = make_session(context)
         action = session.query(Action).filter_by(id=action_id).first()
         if not action:
@@ -200,7 +200,7 @@ def query_assignment(context, action_id):
         data = resp.json()
         return data if data.get("found") else None
     else:
-        from emailtools.models import Assignment
+        from intellibox.models import Assignment
         session = make_session(context)
         assignment = session.query(Assignment).filter_by(action_id=action_id).first()
         if not assignment:
@@ -224,7 +224,7 @@ def query_roster_count(context):
         resp = _requests.get(f"{context._base_url}/api/test/query/roster/count")
         return resp.json()["count"]
     else:
-        from emailtools.models import RosterMember
+        from intellibox.models import RosterMember
         session = make_session(context)
         count = session.query(RosterMember).count()
         session.close()
@@ -239,7 +239,7 @@ def query_roster_member(context, member_id):
         data = resp.json()
         return data if data.get("found") else None
     else:
-        from emailtools.models import RosterMember
+        from intellibox.models import RosterMember
         session = make_session(context)
         member = session.query(RosterMember).filter_by(id=member_id).first()
         if not member:

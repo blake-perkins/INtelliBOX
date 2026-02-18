@@ -10,8 +10,8 @@ import requests
 # Fix Windows console encoding
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-from src.emailtools.database import SessionLocal
-from src.emailtools.models import Action, Assignment
+from src.intellibox.database import SessionLocal
+from src.intellibox.models import Action, Assignment
 from sqlalchemy import desc
 
 BASE_URL = "http://127.0.0.1:8000"

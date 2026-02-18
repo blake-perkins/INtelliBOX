@@ -7,9 +7,9 @@ from typing import Dict, Generator
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
-from emailtools.config import settings
-from emailtools.models import Base
-from emailtools.utils.datetime_utils import utcnow
+from intellibox.config import settings
+from intellibox.models import Base
+from intellibox.utils.datetime_utils import utcnow
 
 # Build connect_args for SQLite compatibility
 _connect_args = {}
@@ -114,7 +114,7 @@ def cleanup_cache_tables(
     Returns:
         Dict with ``program_news_deleted`` and ``report_deleted`` counts.
     """
-    from emailtools.models import ProgramNewsCache, ReportCache
+    from intellibox.models import ProgramNewsCache, ReportCache
 
     pn_deleted = 0
     if keep_program_news > 0:
@@ -158,7 +158,7 @@ def cleanup_processing_logs(session: Session, retention_days: int = 90) -> int:
     Returns:
         Number of rows deleted.
     """
-    from emailtools.models import ProcessingLog
+    from intellibox.models import ProcessingLog
 
     cutoff = utcnow() - timedelta(days=retention_days)
     deleted = (

@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  emailtools:
+  intellibox:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: emailtools
+    container_name: intellibox
     env_file:
       - .env
     volumes:
@@ -21,15 +21,15 @@ services:
       retries: 3
 
   # Testing profile: run the web app with test config
-  emailtools-test:
+  intellibox-test:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: emailtools-test
+    container_name: intellibox-test
     env_file:
       - .env.test
     environment:
-      - DATABASE_URL=sqlite:///./data/emailtools.db
+      - DATABASE_URL=sqlite:///./data/intellibox.db
       - TESTING=true
     volumes:
       - ./data/test:/app/data
@@ -49,7 +49,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
-    container_name: emailtools-test-runner
+    container_name: intellibox-test-runner
     env_file:
       - .env.test
     profiles:
@@ -58,10 +58,10 @@ services:
   # Optional: PostgreSQL for production-like setup
   postgres:
     image: postgres:16-alpine
-    container_name: emailtools-db
+    container_name: intellibox-db
     environment:
-      - POSTGRES_DB=emailtools
-      - POSTGRES_USER=emailtools
+      - POSTGRES_DB=intellibox
+      - POSTGRES_USER=intellibox
       - POSTGRES_PASSWORD=changeme
     volumes:
       - postgres_data:/var/lib/postgresql/data

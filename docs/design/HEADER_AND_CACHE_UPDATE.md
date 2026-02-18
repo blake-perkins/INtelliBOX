@@ -19,7 +19,7 @@
 #### Visual Indicators:
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ EmailTools Dashboard                    [📋 Unassigned(29)] │
+│ INtelliBOX Dashboard                    [📋 Unassigned(29)] │
 │                                         [📊 Daily Report   ] │
 │ Last Email: 15m ago | Total: 29 | High: 6 | Overdue: 0     │
 └─────────────────────────────────────────────────────────────┘
@@ -220,21 +220,21 @@ SAVINGS: $129.60/month (96% reduction)
 
 ## 📁 Files Modified
 
-1. **src/emailtools/models.py**
+1. **src/intellibox/models.py**
    - Added `ProgramNewsCache` model
 
 2. **alembic/versions/002_add_program_news_cache.py**
    - Database migration for new table
 
-3. **src/emailtools/reporter/generator.py**
+3. **src/intellibox/reporter/generator.py**
    - Added `get_cached_program_news()` function
    - Implements caching logic
 
-4. **src/emailtools/web/app.py**
+4. **src/intellibox/web/app.py**
    - Updated dashboard route to fetch cached news
    - Added header metrics (last email time, etc.)
 
-5. **src/emailtools/web/templates/dashboard.html**
+5. **src/intellibox/web/templates/dashboard.html**
    - Enhanced header with metrics and alerts
    - Added program news section
 

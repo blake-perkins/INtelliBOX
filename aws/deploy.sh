@@ -1,5 +1,5 @@
 #!/bin/bash
-# EmailTools AWS Deployment Script
+# INtelliBOX AWS Deployment Script
 # Deploys containerized application to AWS ECS Fargate
 
 set -e
@@ -7,13 +7,13 @@ set -e
 # Configuration
 AWS_REGION="${AWS_REGION:-us-east-1}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
-ECR_REPO_NAME="emailtools"
+ECR_REPO_NAME="intellibox"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
-ECS_CLUSTER="emailtools-cluster"
-ECS_SERVICE="emailtools-scheduler"
+ECS_CLUSTER="intellibox-cluster"
+ECS_SERVICE="intellibox-scheduler"
 
 echo "======================================"
-echo "EmailTools AWS Deployment"
+echo "INtelliBOX AWS Deployment"
 echo "======================================"
 echo "Region: $AWS_REGION"
 echo "Account: $AWS_ACCOUNT_ID"
@@ -69,4 +69,4 @@ echo "Monitor deployment:"
 echo "  aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --region $AWS_REGION"
 echo ""
 echo "View logs:"
-echo "  aws logs tail /ecs/emailtools --follow --region $AWS_REGION"
+echo "  aws logs tail /ecs/intellibox --follow --region $AWS_REGION"

@@ -2,7 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(curl:*)",
-      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/emailtools.exe\" actions list)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/intellibox.exe\" actions list)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
@@ -13,9 +13,9 @@
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pytest tests/test_web_interface.py -v --tb=line)",
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pytest tests/test_web_interface.py::TestWebInterface::test_api_stats -v)",
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -m pip install colorama requests -q)",
-      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/emailtools.exe\" web --host 127.0.0.1 --port 8000)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/intellibox.exe\" web --host 127.0.0.1 --port 8000)",
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" validate_web_interface.py)",
-      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/emailtools.exe\" --version)",
+      "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/Scripts/intellibox.exe\" --version)",
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" -c:*)",
       "Bash(\"/c/Users/Death/AppData/Local/Programs/Python/Python312/python.exe\" validate_templates.py)",
       "Bash(python:*)",
@@ -33,7 +33,25 @@
       "Bash(git rm:*)",
       "Bash(py -m pytest tests/ -v --tb=short)",
       "Bash(python3 -m pytest:*)",
-      "Bash(/c/Users/Death/AppData/Local/Programs/Python/Python313/python.exe -m pytest:*)"
+      "Bash(/c/Users/Death/AppData/Local/Programs/Python/Python313/python.exe -m pytest:*)",
+      "Bash(./venv/Scripts/alembic.exe current:*)",
+      "Bash(./venv/Scripts/alembic.exe upgrade:*)",
+      "Bash(py -m intellibox.web.start:*)",
+      "Bash(./venv/Scripts/intellibox.exe web:*)",
+      "Bash(./venv/Scripts/pip.exe show:*)",
+      "Bash(./venv/Scripts/intellibox.exe:*)",
+      "Bash(./venv/Scripts/pytest.exe tests/ -v)",
+      "Bash(./venv/Scripts/pytest.exe tests/test_web_interface.py -v)",
+      "Bash(./venv/Scripts/pytest.exe:*)",
+      "Bash(grep:*)",
+      "Bash(run_tests.bat)",
+      "Bash(cmd.exe /c run_tests.bat)",
+      "Bash(cmd.exe /c \"netstat -ano | findstr :8000\")",
+      "Bash(./venv/Scripts/behave.exe:*)",
+      "Bash(wc:*)",
+      "WebFetch(domain:127.0.0.1)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh run view:*)"
     ]
   }
 }

@@ -8,10 +8,10 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from emailtools.models import Base, Settings
+from intellibox.models import Base, Settings
 
 # Create a unique temporary database file for this test module
-test_db_fd, test_db_path = tempfile.mkstemp(suffix='_settings_service.db', prefix='test_emailtools_')
+test_db_fd, test_db_path = tempfile.mkstemp(suffix='_settings_service.db', prefix='test_intellibox_')
 TEST_DATABASE_URL = f"sqlite:///{test_db_path}"
 test_engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True, isolation_level="READ UNCOMMITTED")
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
@@ -28,14 +28,14 @@ def override_get_session():
 
 
 # Patch get_session in both database module and settings_service module
-import emailtools.database as database_module
-import emailtools.settings_service as settings_service_module
+import intellibox.database as database_module
+import intellibox.settings_service as settings_service_module
 
 database_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session
 
 # Now import SettingsService after patching
-from emailtools.settings_service import SettingsService
+from intellibox.settings_service import SettingsService
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -297,7 +297,7 @@ def test_format_categories_for_prompt(setup_database):
 
 def test_get_insights_prompt_default(setup_database):
     """get_insights_prompt returns hardcoded default when no custom prompt saved."""
-    from emailtools.ai.prompts import REPORT_INSIGHTS_PROMPT
+    from intellibox.ai.prompts import REPORT_INSIGHTS_PROMPT
     prompt = SettingsService.get_insights_prompt()
     assert prompt == REPORT_INSIGHTS_PROMPT
 
@@ -319,7 +319,7 @@ def test_get_insights_prompt_roundtrip(setup_database):
 
 def test_get_insights_prompt_after_delete(setup_database):
     """After delete_setting, get_insights_prompt falls back to the default."""
-    from emailtools.ai.prompts import REPORT_INSIGHTS_PROMPT
+    from intellibox.ai.prompts import REPORT_INSIGHTS_PROMPT
     SettingsService.set_setting("insights_prompt", "custom prompt")
     SettingsService.delete_setting("insights_prompt")
     prompt = SettingsService.get_insights_prompt()

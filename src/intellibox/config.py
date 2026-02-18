@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     # Database
-    database_url: str = "sqlite:///./data/emailtools.db"
+    database_url: str = "sqlite:///./data/intellibox.db"
 
     # OpenAI API
     openai_api_key: str

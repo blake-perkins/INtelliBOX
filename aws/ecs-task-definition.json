@@ -1,21 +1,21 @@
 {
-  "family": "emailtools-scheduler",
+  "family": "intellibox-scheduler",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
   "memory": "512",
   "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/emailtoolsTaskRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/intelliboxTaskRole",
   "containerDefinitions": [
     {
-      "name": "emailtools",
-      "image": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/emailtools:latest",
+      "name": "intellibox",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/intellibox:latest",
       "essential": true,
-      "command": ["emailtools", "report", "schedule"],
+      "command": ["intellibox", "report", "schedule"],
       "environment": [
         {
           "name": "DATABASE_URL",
-          "value": "postgresql://emailtools:PASSWORD@emailtools-db.xxxxx.us-east-1.rds.amazonaws.com:5432/emailtools"
+          "value": "postgresql://intellibox:PASSWORD@intellibox-db.xxxxx.us-east-1.rds.amazonaws.com:5432/intellibox"
         },
         {
           "name": "LOG_LEVEL",
@@ -29,17 +29,17 @@
       "secrets": [
         {
           "name": "OPENAI_API_KEY",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:emailtools/openai-api-key"
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:intellibox/openai-api-key"
         },
         {
           "name": "SMTP_PASSWORD",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:emailtools/smtp-password"
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:intellibox/smtp-password"
         }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/emailtools",
+          "awslogs-group": "/ecs/intellibox",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }

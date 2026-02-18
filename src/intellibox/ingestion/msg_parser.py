@@ -6,8 +6,8 @@ from typing import List, Optional, Tuple
 
 import extract_msg
 
-from emailtools.utils.datetime_utils import utcnow
-from emailtools.utils.logging import logger
+from intellibox.utils.datetime_utils import utcnow
+from intellibox.utils.logging import logger
 
 
 def parse_msg_file(msg_path: Path) -> Tuple[str, str, str, str, List[str], List[str], datetime, Optional[str], Optional[str]]:

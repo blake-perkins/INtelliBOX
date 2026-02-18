@@ -11,9 +11,9 @@ from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from emailtools.models import Email, ProcessingLog
-from emailtools.utils.datetime_utils import utcnow
-from emailtools.utils.logging import logger
+from intellibox.models import Email, ProcessingLog
+from intellibox.utils.datetime_utils import utcnow
+from intellibox.utils.logging import logger
 
 
 def parse_eml_file(eml_path: Path) -> EmailMessage:
@@ -152,7 +152,7 @@ def parse_and_store_email(email_path: Path, session: Session) -> Optional[Email]
         # Check file extension and parse accordingly
         if email_path.suffix.lower() == ".msg":
             # Parse Outlook .msg file
-            from emailtools.ingestion.msg_parser import parse_msg_file
+            from intellibox.ingestion.msg_parser import parse_msg_file
 
             (message_id, subject, from_name, from_address, to_addresses,
              cc_addresses, received_date, body_text, body_html) = parse_msg_file(email_path)
@@ -165,7 +165,7 @@ def parse_and_store_email(email_path: Path, session: Session) -> Optional[Email]
             message_id = msg.get("Message-ID")
             if not message_id:
                 logger.warning(f"Email has no Message-ID, generating one: {email_path}")
-                message_id = f"<{email_path.stem}@emailtools.local>"
+                message_id = f"<{email_path.stem}@intellibox.local>"
 
             # Extract header information
             subject = msg.get("Subject", "(No Subject)")

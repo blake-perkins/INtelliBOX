@@ -1,9 +1,9 @@
 """Save HTML report to file for viewing."""
 
 from pathlib import Path
-from emailtools.database import get_session
-from emailtools.reporter.generator import generate_report_data
-from emailtools.reporter.email_sender import render_template
+from intellibox.database import get_session
+from intellibox.reporter.generator import generate_report_data
+from intellibox.reporter.email_sender import render_template
 
 
 def main():

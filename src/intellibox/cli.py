@@ -1,4 +1,4 @@
-"""Command-line interface for EmailTools."""
+"""Command-line interface for INtelliBOX."""
 
 from pathlib import Path
 from typing import Optional
@@ -7,15 +7,15 @@ import click
 from sqlalchemy import func
 from tabulate import tabulate
 
-from emailtools.config import settings
-from emailtools.database import get_session, init_db
-from emailtools.ingestion.parser import parse_and_store_email, process_inbox
-from emailtools.models import Action, Assignment, Email, ProcessingLog
+from intellibox.config import settings
+from intellibox.database import get_session, init_db
+from intellibox.ingestion.parser import parse_and_store_email, process_inbox
+from intellibox.models import Action, Assignment, Email, ProcessingLog
 
 
 @click.group()
 def cli():
-    """EmailTools - Email action tracking system."""
+    """INtelliBOX - Email action tracking system."""
     pass
 
 
@@ -25,7 +25,7 @@ def init():
     try:
         init_db()
         click.echo("[OK] Database initialized successfully")
-        click.echo("  Location: data/emailtools.db")
+        click.echo("  Location: data/intellibox.db")
     except Exception as e:
         click.echo(f"[ERROR] Failed to initialize database: {e}", err=True)
         raise click.Abort()
@@ -47,7 +47,7 @@ def process(watch: bool, interval: int):
     inbox_dir = Path("data/inbox")
 
     if watch:
-        from emailtools.ingestion.file_watcher import watch_inbox
+        from intellibox.ingestion.file_watcher import watch_inbox
 
         def callback(eml_path: Path):
             with get_session() as session:
@@ -63,7 +63,7 @@ def process(watch: bool, interval: int):
                 click.echo(f"[OK] Processed {count} email(s)")
             else:
                 click.echo("No new emails to process")
-        from emailtools.settings_service import SettingsService
+        from intellibox.settings_service import SettingsService
         SettingsService.update_last_sync_time()
 
 
@@ -301,7 +301,7 @@ def ai():
 )
 def ai_parse(email_id: Optional[int], parse_all: bool, limit: Optional[int]):
     """Parse emails with AI to extract actions."""
-    from emailtools.ai.processor import process_email_with_ai, process_unprocessed_emails
+    from intellibox.ai.processor import process_email_with_ai, process_unprocessed_emails
 
     with get_session() as session:
         if email_id:
@@ -341,8 +341,8 @@ def report():
 )
 def report_generate(preview: bool):
     """Generate daily report."""
-    from emailtools.reporter.email_sender import preview_report
-    from emailtools.reporter.generator import generate_report_data
+    from intellibox.reporter.email_sender import preview_report
+    from intellibox.reporter.generator import generate_report_data
 
     with get_session() as session:
         click.echo("Generating report...")
@@ -369,8 +369,8 @@ def report_generate(preview: bool):
 )
 def report_send(dry_run: bool):
     """Generate and send daily report email."""
-    from emailtools.reporter.email_sender import send_report_email
-    from emailtools.reporter.generator import generate_report_data
+    from intellibox.reporter.email_sender import send_report_email
+    from intellibox.reporter.generator import generate_report_data
 
     with get_session() as session:
         click.echo("Generating report...")
@@ -394,7 +394,7 @@ def report_send(dry_run: bool):
 @report.command(name="schedule")
 def report_schedule():
     """Start scheduler for nightly reports (runs in foreground)."""
-    from emailtools.reporter.scheduler import start_scheduler
+    from intellibox.reporter.scheduler import start_scheduler
 
     click.echo("Starting report scheduler...")
     click.echo(f"Reports will be sent daily at {settings.report_time}")
@@ -425,12 +425,12 @@ def web(host: str, port: int, reload: bool):
     import uvicorn
 
 
-    click.echo("Starting EmailTools web interface...")
+    click.echo("Starting INtelliBOX web interface...")
     click.echo(f"  URL: http://{host if host != '0.0.0.0' else 'localhost'}:{port}")
     click.echo("  Press Ctrl+C to stop")
 
     uvicorn.run(
-        "emailtools.web.app:app",
+        "intellibox.web.app:app",
         host=host,
         port=port,
         reload=reload,
@@ -443,8 +443,8 @@ def web(host: str, port: int, reload: bool):
 @click.option("--keep-caches", default=5, type=int, help="Number of cache entries to keep per table")
 def maintenance(retention_days: int, keep_caches: int):
     """Run database maintenance (cleanup old caches/logs, vacuum, analyze)."""
-    from emailtools.database import engine as db_engine
-    from emailtools.database import run_maintenance
+    from intellibox.database import engine as db_engine
+    from intellibox.database import run_maintenance
 
     click.echo("Running database maintenance...")
     with get_session() as session:

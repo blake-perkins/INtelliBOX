@@ -86,7 +86,7 @@ def step_kb_has_count_singular(context, count):
         resp = _requests.get(f"{context._base_url}/api/test/query/knowledge/count")
         actual = resp.json()["count"]
     else:
-        from emailtools.models import KnowledgeDocument
+        from intellibox.models import KnowledgeDocument
         session = make_session(context)
         actual = session.query(KnowledgeDocument).count()
         session.close()
@@ -100,7 +100,7 @@ def step_kb_has_count_plural(context, count):
         resp = _requests.get(f"{context._base_url}/api/test/query/knowledge/count")
         actual = resp.json()["count"]
     else:
-        from emailtools.models import KnowledgeDocument
+        from intellibox.models import KnowledgeDocument
         session = make_session(context)
         actual = session.query(KnowledgeDocument).count()
         session.close()

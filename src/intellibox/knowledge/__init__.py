@@ -3,9 +3,9 @@
 import time
 from typing import Dict, List
 
-from emailtools.database import get_session
-from emailtools.models import KnowledgeDocument
-from emailtools.utils.logging import logger
+from intellibox.database import get_session
+from intellibox.models import KnowledgeDocument
+from intellibox.utils.logging import logger
 
 # Max characters of KB text to inject into AI prompts
 MAX_CONTEXT_CHARS = 30_000
@@ -111,7 +111,7 @@ def search_knowledge_base(
     if not query_text.strip():
         return []
 
-    from emailtools.knowledge.embeddings import (
+    from intellibox.knowledge.embeddings import (
         _has_api_key,
         _has_embeddings,
         search_by_embeddings,

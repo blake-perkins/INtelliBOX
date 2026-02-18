@@ -7,9 +7,9 @@ from typing import Dict, List, Optional, Tuple
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine
 
-from emailtools.database import get_session
-from emailtools.models import KnowledgeChunk, KnowledgeDocument
-from emailtools.utils.logging import logger
+from intellibox.database import get_session
+from intellibox.models import KnowledgeChunk, KnowledgeDocument
+from intellibox.utils.logging import logger
 
 # --- Chunking ----------------------------------------------------------------
 
@@ -64,7 +64,7 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 
 def _has_api_key() -> bool:
     """Check if a real OpenAI API key is configured."""
-    from emailtools.config import settings
+    from intellibox.config import settings
     return bool(
         settings.openai_api_key
         and not settings.openai_api_key.startswith("sk-placeholder")
@@ -82,7 +82,7 @@ def compute_embedding(text: str) -> Optional[List[float]]:
     try:
         from openai import OpenAI
 
-        from emailtools.config import settings
+        from intellibox.config import settings
 
         client = OpenAI(api_key=settings.openai_api_key)
         response = client.embeddings.create(
@@ -123,7 +123,7 @@ def embed_document(doc_id: int) -> int:
         try:
             from openai import OpenAI
 
-            from emailtools.config import settings
+            from intellibox.config import settings
 
             client = OpenAI(api_key=settings.openai_api_key)
 

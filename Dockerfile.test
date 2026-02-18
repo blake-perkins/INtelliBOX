@@ -1,4 +1,4 @@
-# EmailTools - Test Docker Image (includes test suite and dev dependencies)
+# INtelliBOX - Test Docker Image (includes test suite and dev dependencies)
 FROM python:3.12-slim
 
 # Set working directory

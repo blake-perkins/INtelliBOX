@@ -1,6 +1,6 @@
 """Tests for email chain stripping utility."""
 
-from emailtools.ingestion.chain_stripper import strip_quoted_text
+from intellibox.ingestion.chain_stripper import strip_quoted_text
 
 
 class TestStripQuotedText:

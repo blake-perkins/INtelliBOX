@@ -1,14 +1,14 @@
-# CLAUDE.md — EmailTools
+# CLAUDE.md — INtelliBOX
 
 ## Project Overview
 
-EmailTools is an automated email action tracking system for fast-paced software teams. It parses emails using AI (GPT-4) to extract actionable items, stores them in a database, and provides a web dashboard for action management, assignment tracking, and AI-generated reports.
+INtelliBOX is an automated email action tracking system for fast-paced software teams. It parses emails using AI (GPT-4) to extract actionable items, stores them in a database, and provides a web dashboard for action management, assignment tracking, and AI-generated reports.
 
 ## Repository Structure
 
 ```
-EmailTools/
-├── src/emailtools/          # Main application code
+INtelliBOX/
+├── src/intellibox/          # Main application code
 │   ├── ingestion/          # Email parsing (.eml/.msg), file watching, chain stripping
 │   ├── ai/                 # GPT-4 integration with retry logic, mock client for demo
 │   ├── reporter/           # Report generation, program news, email sending
@@ -31,7 +31,7 @@ EmailTools/
 │   ├── inbox/             # Drop .eml/.msg files here
 │   ├── emails/            # Archived emails
 │   ├── logs/              # Rotating log files
-│   └── emailtools.db      # SQLite database
+│   └── intellibox.db      # SQLite database
 ├── alembic/               # Database migrations
 ├── docs/deployment/       # AWS, Azure, Podman guides
 ├── Dockerfile             # Production container image
@@ -57,7 +57,7 @@ EmailTools/
   - Container support (Dockerfile, Dockerfile.test, docker-compose.yml)
 - **Primary branch**: `main`
 - **Python**: 3.12+
-- **Database**: SQLite (data/emailtools.db)
+- **Database**: SQLite (data/intellibox.db)
 
 ## Testing
 
@@ -76,30 +76,30 @@ Container testing:
 ```bash
 # Swap .dockerignore, build test image, run tests
 cp .dockerignore .dockerignore.bak && cp .dockerignore.test .dockerignore
-podman build -f Dockerfile.test -t emailtools:test-runner .
+podman build -f Dockerfile.test -t intellibox:test-runner .
 cp .dockerignore.bak .dockerignore
-podman run --rm --env-file .env.test emailtools:test-runner
+podman run --rm --env-file .env.test intellibox:test-runner
 ```
 
 ## CLI Commands
 
 ```
-emailtools init            # Initialize database
-emailtools process         # Process emails from inbox
-emailtools web             # Start web server (http://localhost:8000)
-emailtools maintenance     # DB maintenance (cleanup, vacuum, analyze)
-emailtools actions list    # List actions
-emailtools ai process      # Run AI extraction
-emailtools report generate # Preview report
-emailtools report send     # Send report
-emailtools db show         # View database
+intellibox init            # Initialize database
+intellibox process         # Process emails from inbox
+intellibox web             # Start web server (http://localhost:8000)
+intellibox maintenance     # DB maintenance (cleanup, vacuum, analyze)
+intellibox actions list    # List actions
+intellibox ai process      # Run AI extraction
+intellibox report generate # Preview report
+intellibox report send     # Send report
+intellibox db show         # View database
 ```
 
 ## Development Workflow
 
 1. Local development uses `venv/` virtual environment
 2. `pip install -e ".[dev]"` for all dependencies including test tools
-3. Web server: `emailtools web` (or `./venv/Scripts/emailtools.exe web` on Windows)
+3. Web server: `intellibox web` (or `./venv/Scripts/intellibox.exe web` on Windows)
 4. Template changes (HTML) take effect immediately; Python changes require server restart
 5. Run `python run_tests.py` before committing
 

@@ -1,4 +1,4 @@
-# EmailTools — Production Readiness Roadmap
+# INtelliBOX — Production Readiness Roadmap
 
 > Created: 2026-02-17
 > Last updated: 2026-02-17
@@ -103,7 +103,7 @@ The code is clean but has accumulated structural debts worth addressing before f
 ### 2.1 — Split app.py into Route Modules
 `app.py` is 1,097 lines with 40+ routes. Target structure:
 ```
-src/emailtools/web/
+src/intellibox/web/
 ├── app.py              # App factory, startup/shutdown only
 ├── routers/
 │   ├── dashboard.py    # GET /
@@ -170,7 +170,7 @@ The `create_action()` bug (accessing `.id` after session close) is a pattern ris
 Current: 69 unit/integration tests + 66 BDD scenarios, all passing. These are the gaps.
 
 ### 3.1 — Coverage Analysis
-- [ ] Run `pytest tests/ --cov=src/emailtools --cov-report=html` and open the report
+- [ ] Run `pytest tests/ --cov=src/intellibox --cov-report=html` and open the report
 - [ ] Document current line coverage percentage: **_____%**
 - [ ] Set coverage gate in CI: **80% minimum**
 - [ ] Target 100% on `models.py`, `settings_service.py`, `priority_rules.py`
@@ -294,7 +294,7 @@ Triggered on: every push, every PR to `main`
 - [ ] **Job 2 — Security:** `pip-audit` + `bandit -r src/` — fails on HIGH findings
 - [ ] **Job 3 — Unit/Integration Tests:** full test suite, coverage gate 80%+
 - [ ] **Job 4 — BDD Tests:** behave suite in isolation
-- [ ] **Job 5 — Docker Build:** build image, run `emailtools --version` to verify entrypoint
+- [ ] **Job 5 — Docker Build:** build image, run `intellibox --version` to verify entrypoint
 - [ ] **Requirement:** all 5 jobs must pass for PR to merge to `main`
 
 ### 5.3 — CD Pipeline (`cd.yml`)
@@ -333,10 +333,10 @@ hotfix/*      ← emergency fixes (branch from main, merge to main + dev)
 ### 6.1 — Structured Logging
 Replace plain-text formatter with JSON logging for production:
 ```json
-{"timestamp": "...", "level": "INFO", "logger": "emailtools.web.app", "message": "Action created", "action_id": 42}
+{"timestamp": "...", "level": "INFO", "logger": "intellibox.web.app", "message": "Action created", "action_id": 42}
 ```
 - [ ] Add `LOG_FORMAT=json` env var to toggle between human-readable (dev) and JSON (prod)
-- [ ] Update `src/emailtools/utils/logging.py` to support both formats
+- [ ] Update `src/intellibox/utils/logging.py` to support both formats
 
 ### 6.2 — Log Aggregation
 Choose based on deployment target:

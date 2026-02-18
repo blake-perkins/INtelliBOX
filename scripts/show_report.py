@@ -1,8 +1,8 @@
 """Show the complete daily report."""
 
-from emailtools.database import get_session
-from emailtools.reporter.generator import generate_report_data
-from emailtools.reporter.email_sender import preview_report
+from intellibox.database import get_session
+from intellibox.reporter.generator import generate_report_data
+from intellibox.reporter.email_sender import preview_report
 
 
 def main():

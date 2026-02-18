@@ -1,7 +1,7 @@
 """Process all unprocessed emails with AI."""
 
-from emailtools.database import get_session
-from emailtools.ai.processor import process_unprocessed_emails
+from intellibox.database import get_session
+from intellibox.ai.processor import process_unprocessed_emails
 
 
 def main():

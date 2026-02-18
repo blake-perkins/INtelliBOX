@@ -1,5 +1,5 @@
 """
-Comprehensive test suite for EmailTools web interface.
+Comprehensive test suite for INtelliBOX web interface.
 
 Tests all routes, templates, and functionality to ensure everything works
 for end users.
@@ -14,11 +14,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from emailtools.database import Base
-from emailtools.models import Action, Assignment, Email, RosterMember
+from intellibox.database import Base
+from intellibox.models import Action, Assignment, Email, RosterMember
 
 # Create test database with unique temp file
-test_db_fd, test_db_path = tempfile.mkstemp(suffix='_web_interface.db', prefix='test_emailtools_')
+test_db_fd, test_db_path = tempfile.mkstemp(suffix='_web_interface.db', prefix='test_intellibox_')
 TEST_DATABASE_URL = f"sqlite:///{test_db_path}"
 test_engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
@@ -36,13 +36,13 @@ def override_get_session():
 
 # Import app AFTER defining override function
 # Then patch get_session in the app module where it's used
-import emailtools.settings_service as settings_service_module
-import emailtools.web.app as app_module
+import intellibox.settings_service as settings_service_module
+import intellibox.web.app as app_module
 
 app_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session
 
-from emailtools.web.app import app
+from intellibox.web.app import app
 
 client = TestClient(app)
 
@@ -496,14 +496,14 @@ class TestSettingsPage:
         assert "prompt_saved" in location
 
         # Verify it was saved
-        from emailtools.settings_service import SettingsService
+        from intellibox.settings_service import SettingsService
         saved = SettingsService.get_insights_prompt()
         assert saved == custom_prompt
 
     def test_reset_insights_prompt(self, setup_database):
         """Test resetting insights prompt to default."""
-        from emailtools.ai.prompts import REPORT_INSIGHTS_PROMPT
-        from emailtools.settings_service import SettingsService
+        from intellibox.ai.prompts import REPORT_INSIGHTS_PROMPT
+        from intellibox.settings_service import SettingsService
 
         # Save a custom prompt
         SettingsService.set_setting("insights_prompt", "custom")

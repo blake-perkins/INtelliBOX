@@ -6,20 +6,20 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from emailtools.config import settings
-from emailtools.models import Email, ProcessingLog
-from emailtools.utils.datetime_utils import utcnow
-from emailtools.utils.logging import logger
+from intellibox.config import settings
+from intellibox.models import Email, ProcessingLog
+from intellibox.utils.datetime_utils import utcnow
+from intellibox.utils.logging import logger
 
 
 def get_ai_client():
     """Get AI client (real or mock based on API key)."""
     # Check if API key is set to a real value
     if settings.openai_api_key and not settings.openai_api_key.startswith("sk-placeholder"):
-        from emailtools.ai.client import ai_client
+        from intellibox.ai.client import ai_client
         return ai_client
     else:
-        from emailtools.ai.mock_client import mock_ai_client
+        from intellibox.ai.mock_client import mock_ai_client
         logger.info("Using DEMO MODE: No real API calls will be made")
         return mock_ai_client
 

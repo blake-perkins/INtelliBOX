@@ -105,7 +105,7 @@ text = "BOX"
 draw.text((text_x, text_y), text, font=font, fill=cyan)
 
 # Save the image
-output_path = os.path.join('src', 'emailtools', 'web', 'static', 'logo.png')
+output_path = os.path.join('src', 'intellibox', 'web', 'static', 'logo.png')
 img.save(output_path, 'PNG')
 print(f"Logo saved to {output_path}")
 print(f"Image size: {img.size}")

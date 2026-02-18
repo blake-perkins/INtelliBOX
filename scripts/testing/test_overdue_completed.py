@@ -10,8 +10,8 @@ import io
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-from src.emailtools.database import SessionLocal
-from src.emailtools.models import Action, Assignment, Email
+from src.intellibox.database import SessionLocal
+from src.intellibox.models import Action, Assignment, Email
 from datetime import datetime, date
 
 def print_section(title):
@@ -104,7 +104,7 @@ def main():
     print("   2. Recent Assignments now excludes completed items")
     print("\n⚠️  NOTE: Web server needs restart to see changes in browser:")
     print("   1. Stop current web server (Ctrl+C in terminal)")
-    print("   2. Restart: emailtools web --host 127.0.0.1 --port 8000")
+    print("   2. Restart: intellibox web --host 127.0.0.1 --port 8000")
 
 if __name__ == "__main__":
     main()

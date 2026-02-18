@@ -1,8 +1,8 @@
 """Reset and reprocess all emails with real GPT-4."""
 
-from emailtools.database import get_session
-from emailtools.models import Email, Action, Assignment
-from emailtools.ai.processor import process_unprocessed_emails
+from intellibox.database import get_session
+from intellibox.models import Email, Action, Assignment
+from intellibox.ai.processor import process_unprocessed_emails
 
 
 def main():

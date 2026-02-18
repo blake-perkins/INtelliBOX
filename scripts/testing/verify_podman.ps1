@@ -41,8 +41,8 @@ if ($podmanCmd) {
     Write-Host "Podman is ready to use!" -ForegroundColor Green
     Write-Host "======================================" -ForegroundColor Green
     Write-Host "`nNext steps:" -ForegroundColor Cyan
-    Write-Host "  cd d:\dev\EmailTools" -ForegroundColor White
-    Write-Host "  podman build -t emailtools:latest ." -ForegroundColor White
+    Write-Host "  cd d:\dev\INtelliBOX" -ForegroundColor White
+    Write-Host "  podman build -t intellibox:latest ." -ForegroundColor White
     Write-Host ""
 
 } else {

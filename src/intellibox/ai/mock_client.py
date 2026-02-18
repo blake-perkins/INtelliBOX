@@ -5,12 +5,12 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
-from emailtools.knowledge import get_knowledge_context
-from emailtools.models import Action, Email
-from emailtools.priority_rules import PriorityRuleEngine
-from emailtools.settings_service import SettingsService
-from emailtools.utils.datetime_utils import utcnow
-from emailtools.utils.logging import logger
+from intellibox.knowledge import get_knowledge_context
+from intellibox.models import Action, Email
+from intellibox.priority_rules import PriorityRuleEngine
+from intellibox.settings_service import SettingsService
+from intellibox.utils.datetime_utils import utcnow
+from intellibox.utils.logging import logger
 
 
 class MockAIClient:

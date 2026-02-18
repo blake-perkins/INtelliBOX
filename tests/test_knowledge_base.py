@@ -9,11 +9,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from emailtools.database import Base
-from emailtools.models import KnowledgeDocument
+from intellibox.database import Base
+from intellibox.models import KnowledgeDocument
 
 # Create test database
-test_db_fd, test_db_path = tempfile.mkstemp(suffix='_knowledge_base.db', prefix='test_emailtools_')
+test_db_fd, test_db_path = tempfile.mkstemp(suffix='_knowledge_base.db', prefix='test_intellibox_')
 TEST_DATABASE_URL = f"sqlite:///{test_db_path}"
 test_engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
@@ -30,13 +30,13 @@ def override_get_session():
 
 
 # Patch before importing app
-import emailtools.settings_service as settings_service_module
-import emailtools.web.app as app_module
+import intellibox.settings_service as settings_service_module
+import intellibox.web.app as app_module
 
 app_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session
 
-from emailtools.web.app import app
+from intellibox.web.app import app
 
 client = TestClient(app)
 
@@ -308,13 +308,13 @@ class TestChunkText:
     """Tests for the text chunking utility."""
 
     def test_chunk_text_returns_list(self):
-        from emailtools.knowledge.embeddings import chunk_text
+        from intellibox.knowledge.embeddings import chunk_text
         result = chunk_text("Hello world")
         assert isinstance(result, list)
         assert len(result) >= 1
 
     def test_chunk_text_respects_size_limit(self):
-        from emailtools.knowledge.embeddings import CHUNK_SIZE, chunk_text
+        from intellibox.knowledge.embeddings import CHUNK_SIZE, chunk_text
         # Create a very long text
         long_text = "word " * 1000  # ~5000 chars
         chunks = chunk_text(long_text)
@@ -322,13 +322,13 @@ class TestChunkText:
             assert len(chunk) <= CHUNK_SIZE + 50  # small tolerance for paragraph boundary
 
     def test_chunk_text_empty(self):
-        from emailtools.knowledge.embeddings import chunk_text
+        from intellibox.knowledge.embeddings import chunk_text
         assert chunk_text("") == []
         assert chunk_text("   ") == []
         assert chunk_text(None) == []
 
     def test_chunk_text_preserves_content(self):
-        from emailtools.knowledge.embeddings import chunk_text
+        from intellibox.knowledge.embeddings import chunk_text
         text = "Paragraph one.\n\nParagraph two.\n\nParagraph three."
         chunks = chunk_text(text)
         # All content should appear in at least one chunk
@@ -343,7 +343,7 @@ class TestTfidfSearch:
 
     def test_tfidf_search_returns_results(self, setup_database):
         """Upload a doc and search for a keyword — should get results."""
-        from emailtools.knowledge.embeddings import invalidate_tfidf_cache, search_by_tfidf
+        from intellibox.knowledge.embeddings import invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -358,7 +358,7 @@ class TestTfidfSearch:
             session.commit()
 
         # Patch get_session in embeddings module to use our test session
-        import emailtools.knowledge.embeddings as emb_module
+        import intellibox.knowledge.embeddings as emb_module
         original_get_session = emb_module.get_session
         emb_module.get_session = override_get_session
 
@@ -372,7 +372,7 @@ class TestTfidfSearch:
 
     def test_tfidf_cache_reused_on_second_call(self, setup_database):
         """Second TF-IDF search reuses cached vectorizer (no rebuild)."""
-        from emailtools.knowledge.embeddings import _tfidf_cache, invalidate_tfidf_cache, search_by_tfidf
+        from intellibox.knowledge.embeddings import _tfidf_cache, invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -385,7 +385,7 @@ class TestTfidfSearch:
             session.add(doc)
             session.commit()
 
-        import emailtools.knowledge.embeddings as emb_module
+        import intellibox.knowledge.embeddings as emb_module
         original_get_session = emb_module.get_session
         emb_module.get_session = override_get_session
 
@@ -403,7 +403,7 @@ class TestTfidfSearch:
 
     def test_tfidf_cache_invalidated_on_doc_change(self, setup_database):
         """Cache is invalidated when document set changes."""
-        from emailtools.knowledge.embeddings import _tfidf_cache, invalidate_tfidf_cache, search_by_tfidf
+        from intellibox.knowledge.embeddings import _tfidf_cache, invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -416,7 +416,7 @@ class TestTfidfSearch:
             session.add(doc)
             session.commit()
 
-        import emailtools.knowledge.embeddings as emb_module
+        import intellibox.knowledge.embeddings as emb_module
         original_get_session = emb_module.get_session
         emb_module.get_session = override_get_session
 
@@ -447,7 +447,7 @@ class TestKnowledgeContextCache:
 
     def test_context_returns_text(self, setup_database):
         """get_knowledge_context returns non-empty string when docs exist."""
-        from emailtools.knowledge import _invalidate_kb_cache, get_knowledge_context
+        from intellibox.knowledge import _invalidate_kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
@@ -460,7 +460,7 @@ class TestKnowledgeContextCache:
             session.add(doc)
             session.commit()
 
-        import emailtools.knowledge as kb_module
+        import intellibox.knowledge as kb_module
         original_get_session = kb_module.get_session
         kb_module.get_session = override_get_session
 
@@ -472,7 +472,7 @@ class TestKnowledgeContextCache:
 
     def test_context_cache_avoids_repeated_queries(self, setup_database):
         """Second call to get_knowledge_context uses cached value."""
-        from emailtools.knowledge import _invalidate_kb_cache, _kb_cache, get_knowledge_context
+        from intellibox.knowledge import _invalidate_kb_cache, _kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
@@ -485,7 +485,7 @@ class TestKnowledgeContextCache:
             session.add(doc)
             session.commit()
 
-        import emailtools.knowledge as kb_module
+        import intellibox.knowledge as kb_module
         original_get_session = kb_module.get_session
         kb_module.get_session = override_get_session
 
@@ -502,11 +502,11 @@ class TestKnowledgeContextCache:
 
     def test_context_empty_when_no_docs(self, setup_database):
         """get_knowledge_context returns empty string with no documents."""
-        from emailtools.knowledge import _invalidate_kb_cache, get_knowledge_context
+        from intellibox.knowledge import _invalidate_kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
-        import emailtools.knowledge as kb_module
+        import intellibox.knowledge as kb_module
         original_get_session = kb_module.get_session
         kb_module.get_session = override_get_session
 
@@ -518,7 +518,7 @@ class TestKnowledgeContextCache:
 
     def test_context_cache_expires_after_ttl(self, setup_database):
         """After TTL expires, cache is refreshed from DB on next call."""
-        from emailtools.knowledge import _invalidate_kb_cache, _kb_cache, get_knowledge_context
+        from intellibox.knowledge import _invalidate_kb_cache, _kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
@@ -531,7 +531,7 @@ class TestKnowledgeContextCache:
             session.add(doc)
             session.commit()
 
-        import emailtools.knowledge as kb_module
+        import intellibox.knowledge as kb_module
         original_get_session = kb_module.get_session
         kb_module.get_session = override_get_session
 
@@ -563,7 +563,7 @@ class TestKnowledgeContextCache:
         """Verify the cache actually prevents DB queries on subsequent calls."""
         from unittest.mock import MagicMock
 
-        from emailtools.knowledge import _invalidate_kb_cache, get_knowledge_context
+        from intellibox.knowledge import _invalidate_kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
@@ -576,7 +576,7 @@ class TestKnowledgeContextCache:
             session.add(doc)
             session.commit()
 
-        import emailtools.knowledge as kb_module
+        import intellibox.knowledge as kb_module
         original_get_session = kb_module.get_session
         kb_module.get_session = override_get_session
 
@@ -600,7 +600,7 @@ class TestTfidfStress:
 
     def test_tfidf_with_many_documents(self, setup_database):
         """TF-IDF search works correctly with 50+ documents."""
-        from emailtools.knowledge.embeddings import invalidate_tfidf_cache, search_by_tfidf
+        from intellibox.knowledge.embeddings import invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -624,7 +624,7 @@ class TestTfidfStress:
                 ))
             session.commit()
 
-        import emailtools.knowledge.embeddings as emb_module
+        import intellibox.knowledge.embeddings as emb_module
         original_get_session = emb_module.get_session
         emb_module.get_session = override_get_session
 
@@ -640,7 +640,7 @@ class TestTfidfStress:
 
     def test_tfidf_repeated_searches_use_cache(self, setup_database):
         """Running 20 different searches reuses the cached vectorizer."""
-        from emailtools.knowledge.embeddings import _tfidf_cache, invalidate_tfidf_cache, search_by_tfidf
+        from intellibox.knowledge.embeddings import _tfidf_cache, invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -655,7 +655,7 @@ class TestTfidfStress:
                 ))
             session.commit()
 
-        import emailtools.knowledge.embeddings as emb_module
+        import intellibox.knowledge.embeddings as emb_module
         original_get_session = emb_module.get_session
         emb_module.get_session = override_get_session
 
@@ -684,20 +684,20 @@ class TestTextExtractor:
     """Test the text extraction module."""
 
     def test_extract_txt(self):
-        from emailtools.knowledge.extractor import extract_text
+        from intellibox.knowledge.extractor import extract_text
         text, status = extract_text(b"Hello World", "txt")
         assert text == "Hello World"
         assert status == "success"
 
     def test_extract_txt_latin1(self):
-        from emailtools.knowledge.extractor import extract_text
+        from intellibox.knowledge.extractor import extract_text
         content = "café résumé".encode("latin-1")
         text, status = extract_text(content, "txt")
         assert "caf" in text
         assert status == "success"
 
     def test_extract_unknown_type(self):
-        from emailtools.knowledge.extractor import extract_text
+        from intellibox.knowledge.extractor import extract_text
         text, status = extract_text(b"content", "xlsx")
         assert text == ""
         assert status == "failed"
@@ -707,7 +707,7 @@ class TestTextExtractor:
         # Create a minimal PDF using pypdf
         from pypdf import PdfWriter
 
-        from emailtools.knowledge.extractor import extract_text
+        from intellibox.knowledge.extractor import extract_text
         writer = PdfWriter()
         writer.add_blank_page(width=72, height=72)
         buf = io.BytesIO()
@@ -722,7 +722,7 @@ class TestTextExtractor:
         """Test DOCX extraction with a minimal docx."""
         from docx import Document
 
-        from emailtools.knowledge.extractor import extract_text
+        from intellibox.knowledge.extractor import extract_text
 
         doc = Document()
         doc.add_paragraph("Test paragraph content")
@@ -736,14 +736,14 @@ class TestTextExtractor:
 
     def test_extract_txt_empty(self):
         """Test extracting from empty text content."""
-        from emailtools.knowledge.extractor import extract_text
+        from intellibox.knowledge.extractor import extract_text
         text, status = extract_text(b"", "txt")
         assert text == ""
         assert status == "success"
 
     def test_extract_txt_unicode(self):
         """Test extracting UTF-8 unicode text."""
-        from emailtools.knowledge.extractor import extract_text
+        from intellibox.knowledge.extractor import extract_text
         content = "Hello 世界 🌍".encode("utf-8")
         text, status = extract_text(content, "txt")
         assert "Hello" in text

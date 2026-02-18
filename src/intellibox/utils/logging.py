@@ -1,4 +1,4 @@
-"""Logging configuration for EmailTools."""
+"""Logging configuration for INtelliBOX."""
 
 import logging
 import sys
@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
-from emailtools.config import settings
+from intellibox.config import settings
 
 
 def setup_logging(
@@ -19,7 +19,7 @@ def setup_logging(
     Setup and configure logger with appropriate level and format.
 
     Args:
-        name: Logger name (defaults to "emailtools")
+        name: Logger name (defaults to "intellibox")
         log_dir: Directory for log files (created if missing)
         max_bytes: Max size per log file before rotation (default 5 MB)
         backup_count: Number of rotated backups to keep (default 5)
@@ -27,7 +27,7 @@ def setup_logging(
     Returns:
         Configured logger instance
     """
-    logger_name = name or "emailtools"
+    logger_name = name or "intellibox"
     logger = logging.getLogger(logger_name)
 
     # Only configure if handlers haven't been added yet
@@ -51,7 +51,7 @@ def setup_logging(
             log_path = Path(log_dir)
             log_path.mkdir(parents=True, exist_ok=True)
             file_handler = RotatingFileHandler(
-                log_path / "emailtools.log",
+                log_path / "intellibox.log",
                 maxBytes=max_bytes,
                 backupCount=backup_count,
                 encoding="utf-8",

@@ -85,11 +85,11 @@
 Commit: a9ec213
 Message: "Add enhanced header and cached program news to dashboard"
 Files:
-- src/emailtools/models.py (ProgramNewsCache model)
+- src/intellibox/models.py (ProgramNewsCache model)
 - alembic/versions/002_add_program_news_cache.py (migration)
-- src/emailtools/reporter/generator.py (caching logic)
-- src/emailtools/web/app.py (dashboard route updates)
-- src/emailtools/web/templates/dashboard.html (UI improvements)
+- src/intellibox/reporter/generator.py (caching logic)
+- src/intellibox/web/app.py (dashboard route updates)
+- src/intellibox/web/templates/dashboard.html (UI improvements)
 ```
 
 ---

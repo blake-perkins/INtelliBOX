@@ -1,10 +1,10 @@
-# EmailTools
+# INtelliBOX
 
 An automated email action tracking system for fast-paced software teams.
 
 ## Overview
 
-EmailTools helps teams manage incoming Requests for Information (RFIs), data calls, and stakeholder requests by:
+INtelliBOX helps teams manage incoming Requests for Information (RFIs), data calls, and stakeholder requests by:
 - Parsing emails using AI (GPT-4) to extract actionable items
 - Storing them in a database with metadata and priority rules
 - Providing a web dashboard for action management and assignment
@@ -50,7 +50,7 @@ EmailTools helps teams manage incoming Requests for Information (RFIs), data cal
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd EmailTools
+cd INtelliBOX
 
 # Create virtual environment
 python -m venv venv
@@ -64,24 +64,24 @@ cp .env.example .env
 # Edit .env with your API keys and SMTP settings
 
 # Initialize database
-emailtools init
+intellibox init
 
 # Start the web server
-emailtools web
+intellibox web
 ```
 
 ### Container Setup (Podman/Docker)
 
 ```bash
 # Build production image
-podman build -t emailtools:latest .
+podman build -t intellibox:latest .
 
 # Run with docker-compose
 podman-compose up -d
 
 # Or run directly
-podman run -d --name emailtools --env-file .env \
-    -v ./data:/app/data:Z -p 8000:8000 emailtools:latest
+podman run -d --name intellibox --env-file .env \
+    -v ./data:/app/data:Z -p 8000:8000 intellibox:latest
 ```
 
 See [Deployment Guides](docs/deployment/) for detailed container and cloud setup.
@@ -89,17 +89,17 @@ See [Deployment Guides](docs/deployment/) for detailed container and cloud setup
 ## CLI Commands
 
 ```bash
-emailtools --help          # Show all commands
-emailtools init            # Initialize the database
-emailtools process         # Process emails from data/inbox/
-emailtools web             # Start the web server (default: http://localhost:8000)
-emailtools maintenance     # Run DB maintenance (cleanup caches/logs, vacuum)
-emailtools actions list    # List actions (--unassigned for unassigned only)
-emailtools ai process      # Run AI extraction on unprocessed emails
-emailtools report generate # Preview report without sending
-emailtools report send     # Send report via email
-emailtools report schedule # Start nightly report scheduler
-emailtools db show         # View database contents
+intellibox --help          # Show all commands
+intellibox init            # Initialize the database
+intellibox process         # Process emails from data/inbox/
+intellibox web             # Start the web server (default: http://localhost:8000)
+intellibox maintenance     # Run DB maintenance (cleanup caches/logs, vacuum)
+intellibox actions list    # List actions (--unassigned for unassigned only)
+intellibox ai process      # Run AI extraction on unprocessed emails
+intellibox report generate # Preview report without sending
+intellibox report send     # Send report via email
+intellibox report schedule # Start nightly report scheduler
+intellibox db show         # View database contents
 ```
 
 ## Testing
@@ -125,18 +125,18 @@ behave features/
 # Build test runner image (includes tests and dev dependencies)
 # First swap .dockerignore for the test version:
 cp .dockerignore .dockerignore.bak && cp .dockerignore.test .dockerignore
-podman build -f Dockerfile.test -t emailtools:test-runner .
+podman build -f Dockerfile.test -t intellibox:test-runner .
 cp .dockerignore.bak .dockerignore
 
 # Run tests inside container
-podman run --rm --env-file .env.test emailtools:test-runner
+podman run --rm --env-file .env.test intellibox:test-runner
 ```
 
 ## Project Structure
 
 ```
-EmailTools/
-├── src/emailtools/          # Main application code
+INtelliBOX/
+├── src/intellibox/          # Main application code
 │   ├── ingestion/          # Email parsing, file watching, chain stripping
 │   ├── ai/                 # GPT-4 integration with retry logic
 │   ├── reporter/           # Report generation and email sending
@@ -155,7 +155,7 @@ EmailTools/
     ├── inbox/             # Drop .eml/.msg files here
     ├── emails/            # Archived emails
     ├── logs/              # Rotating log files
-    └── emailtools.db      # SQLite database
+    └── intellibox.db      # SQLite database
 ```
 
 ## Configuration

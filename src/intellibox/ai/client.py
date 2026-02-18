@@ -7,19 +7,19 @@ from typing import Dict, List, Optional
 
 from openai import APIConnectionError, APIError, OpenAI, RateLimitError
 
-from emailtools.ai.prompts import (
+from intellibox.ai.prompts import (
     ACTION_EXTRACTION_PROMPT,
     PROGRAM_NEWS_PROMPT,
     STRUCTURED_PROGRAM_NEWS_PROMPT,
     SYSTEM_PROMPT,
 )
-from emailtools.config import settings
-from emailtools.knowledge import get_knowledge_context
-from emailtools.models import Action, Email
-from emailtools.priority_rules import PriorityRuleEngine
-from emailtools.settings_service import SettingsService
-from emailtools.utils.datetime_utils import utcnow
-from emailtools.utils.logging import logger
+from intellibox.config import settings
+from intellibox.knowledge import get_knowledge_context
+from intellibox.models import Action, Email
+from intellibox.priority_rules import PriorityRuleEngine
+from intellibox.settings_service import SettingsService
+from intellibox.utils.datetime_utils import utcnow
+from intellibox.utils.logging import logger
 
 # Exceptions eligible for automatic retry
 _RETRYABLE_EXCEPTIONS = (RateLimitError, APIConnectionError, APIError)
@@ -145,7 +145,7 @@ class AIClient:
             current_date = utcnow()
 
         # Prepare email body (prefer plain text, fallback to HTML)
-        from emailtools.ingestion.chain_stripper import strip_quoted_text
+        from intellibox.ingestion.chain_stripper import strip_quoted_text
         body = email.body_text or email.body_html or "(No body content)"
         body = strip_quoted_text(body)
 

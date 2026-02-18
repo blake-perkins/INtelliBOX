@@ -1,6 +1,6 @@
-# AWS Deployment Guide for EmailTools
+# AWS Deployment Guide for INtelliBOX
 
-This guide covers deploying EmailTools as a containerized application on AWS.
+This guide covers deploying INtelliBOX as a containerized application on AWS.
 
 ## Architecture Overview
 
@@ -71,15 +71,15 @@ aws ec2 create-subnet --vpc-id vpc-xxx --cidr-block 10.0.2.0/24 --availability-z
 #### Create RDS PostgreSQL Database
 ```bash
 aws rds create-db-instance \
-    --db-instance-identifier emailtools-db \
+    --db-instance-identifier intellibox-db \
     --db-instance-class db.t4g.micro \
     --engine postgres \
     --engine-version 16.1 \
-    --master-username emailtools \
+    --master-username intellibox \
     --master-user-password YOUR_PASSWORD \
     --allocated-storage 20 \
     --vpc-security-group-ids sg-xxx \
-    --db-subnet-group-name emailtools-subnet-group \
+    --db-subnet-group-name intellibox-subnet-group \
     --backup-retention-period 7 \
     --publicly-accessible false
 ```
@@ -91,25 +91,25 @@ aws efs create-file-system \
     --performance-mode generalPurpose \
     --throughput-mode bursting \
     --encrypted \
-    --tags Key=Name,Value=emailtools-efs
+    --tags Key=Name,Value=intellibox-efs
 
 # Create access point
 aws efs create-access-point \
     --file-system-id fs-xxx \
     --posix-user Uid=1000,Gid=1000 \
-    --root-directory Path=/emailtools,CreationInfo={OwnerUid=1000,OwnerGid=1000,Permissions=755}
+    --root-directory Path=/intellibox,CreationInfo={OwnerUid=1000,OwnerGid=1000,Permissions=755}
 ```
 
 #### Store Secrets in Secrets Manager
 ```bash
 # OpenAI API Key
 aws secretsmanager create-secret \
-    --name emailtools/openai-api-key \
+    --name intellibox/openai-api-key \
     --secret-string "sk-proj-your-api-key"
 
 # SMTP Password
 aws secretsmanager create-secret \
-    --name emailtools/smtp-password \
+    --name intellibox/smtp-password \
     --secret-string "your-smtp-password"
 ```
 
@@ -126,15 +126,15 @@ aws iam attach-role-policy \
     --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 ```
 
-#### EmailTools Task Role (for accessing AWS services)
+#### INtelliBOX Task Role (for accessing AWS services)
 ```bash
 aws iam create-role \
-    --role-name emailtoolsTaskRole \
+    --role-name intelliboxTaskRole \
     --assume-role-policy-document file://aws/ecs-task-trust-policy.json
 
 # Attach policies for S3, SES, Secrets Manager
 aws iam attach-role-policy \
-    --role-name emailtoolsTaskRole \
+    --role-name intelliboxTaskRole \
     --policy-arn arn:aws:iam::aws:policy/AmazonSESFullAccess
 ```
 
@@ -165,14 +165,14 @@ export IMAGE_TAG=v1.0.0
 ```bash
 # Create cluster
 aws ecs create-cluster \
-    --cluster-name emailtools-cluster \
+    --cluster-name intellibox-cluster \
     --region us-east-1
 
 # Create service
 aws ecs create-service \
-    --cluster emailtools-cluster \
-    --service-name emailtools-scheduler \
-    --task-definition emailtools-scheduler:1 \
+    --cluster intellibox-cluster \
+    --service-name intellibox-scheduler \
+    --task-definition intellibox-scheduler:1 \
     --desired-count 1 \
     --launch-type FARGATE \
     --network-configuration "awsvpcConfiguration={subnets=[subnet-xxx,subnet-yyy],securityGroups=[sg-xxx],assignPublicIp=DISABLED}" \
@@ -184,7 +184,7 @@ aws ecs create-service \
 ```bash
 aws application-autoscaling register-scalable-target \
     --service-namespace ecs \
-    --resource-id service/emailtools-cluster/emailtools-scheduler \
+    --resource-id service/intellibox-cluster/intellibox-scheduler \
     --scalable-dimension ecs:service:DesiredCount \
     --min-capacity 1 \
     --max-capacity 3
@@ -198,21 +198,21 @@ aws application-autoscaling register-scalable-target \
 
 ```bash
 # Build Docker image for Lambda
-docker build -f aws/Dockerfile.lambda -t emailtools-lambda .
+docker build -f aws/Dockerfile.lambda -t intellibox-lambda .
 
 # Push to ECR
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com
-docker tag emailtools-lambda:latest YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/emailtools-lambda:latest
-docker push YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/emailtools-lambda:latest
+docker tag intellibox-lambda:latest YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/intellibox-lambda:latest
+docker push YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/intellibox-lambda:latest
 ```
 
 ### 2. Create Lambda Function
 
 ```bash
 aws lambda create-function \
-    --function-name emailtools-report-generator \
+    --function-name intellibox-report-generator \
     --package-type Image \
-    --code ImageUri=YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/emailtools-lambda:latest \
+    --code ImageUri=YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/intellibox-lambda:latest \
     --role arn:aws:iam::YOUR_ACCOUNT:role/lambda-execution-role \
     --timeout 900 \
     --memory-size 512 \
@@ -223,13 +223,13 @@ aws lambda create-function \
 
 ```bash
 aws events put-rule \
-    --name emailtools-daily-report \
+    --name intellibox-daily-report \
     --schedule-expression "cron(0 6 * * ? *)" \
     --state ENABLED
 
 aws events put-targets \
-    --rule emailtools-daily-report \
-    --targets "Id"="1","Arn"="arn:aws:lambda:us-east-1:YOUR_ACCOUNT:function:emailtools-report-generator"
+    --rule intellibox-daily-report \
+    --targets "Id"="1","Arn"="arn:aws:lambda:us-east-1:YOUR_ACCOUNT:function:intellibox-report-generator"
 ```
 
 ---
@@ -241,19 +241,19 @@ Run migrations after initial deployment:
 ```bash
 # Via ECS Exec (recommended)
 aws ecs execute-command \
-    --cluster emailtools-cluster \
+    --cluster intellibox-cluster \
     --task TASK_ID \
-    --container emailtools \
+    --container intellibox \
     --interactive \
     --command "alembic upgrade head"
 
 # Or via one-time task
 aws ecs run-task \
-    --cluster emailtools-cluster \
-    --task-definition emailtools-scheduler \
+    --cluster intellibox-cluster \
+    --task-definition intellibox-scheduler \
     --launch-type FARGATE \
     --network-configuration "awsvpcConfiguration={subnets=[subnet-xxx],securityGroups=[sg-xxx]}" \
-    --overrides '{"containerOverrides":[{"name":"emailtools","command":["alembic","upgrade","head"]}]}'
+    --overrides '{"containerOverrides":[{"name":"intellibox","command":["alembic","upgrade","head"]}]}'
 ```
 
 ---
@@ -282,11 +282,11 @@ aws ecs run-task \
 ### CloudWatch Logs
 ```bash
 # View real-time logs
-aws logs tail /ecs/emailtools --follow
+aws logs tail /ecs/intellibox --follow
 
 # Create log insights query
 aws logs insights \
-    --log-group-name /ecs/emailtools \
+    --log-group-name /ecs/intellibox \
     --query-string 'fields @timestamp, @message | filter @message like /ERROR/ | sort @timestamp desc'
 ```
 
@@ -294,7 +294,7 @@ aws logs insights \
 ```bash
 # Alert on errors
 aws cloudwatch put-metric-alarm \
-    --alarm-name emailtools-high-error-rate \
+    --alarm-name intellibox-high-error-rate \
     --comparison-operator GreaterThanThreshold \
     --evaluation-periods 1 \
     --metric-name Errors \
@@ -344,19 +344,19 @@ aws cloudwatch put-metric-alarm \
 ### Container won't start
 ```bash
 # Check task logs
-aws ecs describe-tasks --cluster emailtools-cluster --tasks TASK_ID
+aws ecs describe-tasks --cluster intellibox-cluster --tasks TASK_ID
 
 # View stopped tasks
-aws ecs list-tasks --cluster emailtools-cluster --desired-status STOPPED
+aws ecs list-tasks --cluster intellibox-cluster --desired-status STOPPED
 ```
 
 ### Database connection issues
 ```bash
 # Test connectivity from container
 aws ecs execute-command \
-    --cluster emailtools-cluster \
+    --cluster intellibox-cluster \
     --task TASK_ID \
-    --container emailtools \
+    --container intellibox \
     --interactive \
     --command "psql $DATABASE_URL -c 'SELECT 1'"
 ```
@@ -367,7 +367,7 @@ aws ecs execute-command \
 aws cloudwatch get-metric-statistics \
     --namespace AWS/ECS \
     --metric-name CPUUtilization \
-    --dimensions Name=ClusterName,Value=emailtools-cluster \
+    --dimensions Name=ClusterName,Value=intellibox-cluster \
     --statistics Average \
     --start-time 2026-01-01T00:00:00Z \
     --end-time 2026-01-31T23:59:59Z \

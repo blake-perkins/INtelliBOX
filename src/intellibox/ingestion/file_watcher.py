@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
-from emailtools.settings_service import SettingsService
-from emailtools.utils.datetime_utils import utcnow
-from emailtools.utils.logging import logger
+from intellibox.settings_service import SettingsService
+from intellibox.utils.datetime_utils import utcnow
+from intellibox.utils.logging import logger
 
 # ── Health monitoring ────────────────────────────────────────────────────────
 

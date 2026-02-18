@@ -8,11 +8,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
-from emailtools.ai.processor import get_ai_client
-from emailtools.config import settings
-from emailtools.models import Action, Assignment, Email, ProgramNewsCache, ReportCache
-from emailtools.utils.datetime_utils import utcnow
-from emailtools.utils.logging import logger
+from intellibox.ai.processor import get_ai_client
+from intellibox.config import settings
+from intellibox.models import Action, Assignment, Email, ProgramNewsCache, ReportCache
+from intellibox.utils.datetime_utils import utcnow
+from intellibox.utils.logging import logger
 
 
 def to_local_time(dt: datetime, tz_name: str) -> datetime:
@@ -186,7 +186,7 @@ def get_cached_program_news(session: Session, days: int = None, force_refresh: b
     session.commit()
 
     # Prune old cache entries
-    from emailtools.database import cleanup_cache_tables
+    from intellibox.database import cleanup_cache_tables
     cleanup_cache_tables(session, keep_program_news=5, keep_report=0)
     session.commit()
 
@@ -288,7 +288,7 @@ def get_cached_structured_program_news(session: Session, days: int = None, force
     session.add(cache_entry)
     session.commit()
 
-    from emailtools.database import cleanup_cache_tables
+    from intellibox.database import cleanup_cache_tables
     cleanup_cache_tables(session, keep_program_news=5, keep_report=0)
     session.commit()
 
@@ -333,7 +333,7 @@ def generate_report_data(session: Session) -> Dict:
         .count()
     )
 
-    from emailtools.settings_service import SettingsService
+    from intellibox.settings_service import SettingsService
     tz_name = SettingsService.get_timezone()
 
     report_data = {
@@ -541,7 +541,7 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         session.add(cache_entry)
         session.commit()
 
-        from emailtools.database import cleanup_cache_tables
+        from intellibox.database import cleanup_cache_tables
         cleanup_cache_tables(session, keep_program_news=0, keep_report=5)
         session.commit()
 

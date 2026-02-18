@@ -1,4 +1,4 @@
-"""Generate realistic test emails for EmailTools testing."""
+"""Generate realistic test emails for INtelliBOX testing."""
 
 import email
 from email.message import EmailMessage

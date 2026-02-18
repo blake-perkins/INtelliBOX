@@ -9,14 +9,14 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-import emailtools.settings_service as settings_service_module
-from emailtools import database as database_module
+import intellibox.settings_service as settings_service_module
+from intellibox import database as database_module
 
 # Import models first to ensure they're registered with Base
-from emailtools.models import Base, Email, Settings
+from intellibox.models import Base, Email, Settings
 
 # Create a unique temporary database file for this test module
-test_db_fd, test_db_path = tempfile.mkstemp(suffix='_priority_integration.db', prefix='test_emailtools_')
+test_db_fd, test_db_path = tempfile.mkstemp(suffix='_priority_integration.db', prefix='test_intellibox_')
 TEST_DATABASE_URL = f"sqlite:///{test_db_path}"
 test_engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True, isolation_level="READ UNCOMMITTED")
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
@@ -37,8 +37,8 @@ database_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session
 
 # Now safe to import these
-from emailtools.ai.mock_client import MockAIClient
-from emailtools.settings_service import SettingsService
+from intellibox.ai.mock_client import MockAIClient
+from intellibox.settings_service import SettingsService
 
 
 @pytest.fixture(scope="module", autouse=True)

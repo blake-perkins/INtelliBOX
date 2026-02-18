@@ -9,10 +9,10 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from emailtools.models import Base, ProcessingLog, ProgramNewsCache, ReportCache
+from intellibox.models import Base, ProcessingLog, ProgramNewsCache, ReportCache
 
 # Create a unique temp database for this module
-test_db_fd, test_db_path = tempfile.mkstemp(suffix='_db_maintenance.db', prefix='test_emailtools_')
+test_db_fd, test_db_path = tempfile.mkstemp(suffix='_db_maintenance.db', prefix='test_intellibox_')
 TEST_DATABASE_URL = f"sqlite:///{test_db_path}"
 test_engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
@@ -29,11 +29,11 @@ def override_get_session():
 
 
 # Patch before importing maintenance functions
-import emailtools.database as database_module
+import intellibox.database as database_module
 
 database_module.get_session = override_get_session
 
-from emailtools.database import (
+from intellibox.database import (
     cleanup_cache_tables,
     cleanup_processing_logs,
     run_analyze,
@@ -86,7 +86,7 @@ class TestSQLitePragmas:
 
     def test_busy_timeout_set(self):
         """busy_timeout pragma should be set on new connections."""
-        from emailtools.database import configure_sqlite_pragmas
+        from intellibox.database import configure_sqlite_pragmas
 
         temp_fd, temp_path = tempfile.mkstemp(suffix='_pragma_test.db')
         temp_engine = create_engine(f"sqlite:///{temp_path}")
@@ -102,7 +102,7 @@ class TestSQLitePragmas:
 
     def test_cache_size_set(self):
         """cache_size pragma should be set on new connections."""
-        from emailtools.database import configure_sqlite_pragmas
+        from intellibox.database import configure_sqlite_pragmas
 
         temp_fd, temp_path = tempfile.mkstemp(suffix='_pragma_test.db')
         temp_engine = create_engine(f"sqlite:///{temp_path}")
@@ -118,7 +118,7 @@ class TestSQLitePragmas:
 
     def test_wal_mode_set(self):
         """journal_mode should be WAL."""
-        from emailtools.database import configure_sqlite_pragmas
+        from intellibox.database import configure_sqlite_pragmas
 
         temp_fd, temp_path = tempfile.mkstemp(suffix='_pragma_test.db')
         temp_engine = create_engine(f"sqlite:///{temp_path}")

@@ -8,8 +8,8 @@ from typing import Dict
 
 from jinja2 import Environment, FileSystemLoader
 
-from emailtools.config import settings
-from emailtools.utils.logging import logger
+from intellibox.config import settings
+from intellibox.utils.logging import logger
 
 
 def render_template(template_name: str, context: Dict) -> str:
@@ -47,7 +47,7 @@ def send_report_email(report_data: Dict, dry_run: bool = False) -> bool:
 
         # Create message
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"EmailTools Daily Report - {report_data['total_actions']} Unassigned Actions"
+        msg["Subject"] = f"INtelliBOX Daily Report - {report_data['total_actions']} Unassigned Actions"
         msg["From"] = settings.report_from
         msg["To"] = ", ".join(settings.get_recipients_list())
 

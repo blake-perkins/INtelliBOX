@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for EmailTools."""
+"""SQLAlchemy ORM models for INtelliBOX."""
 
 from datetime import datetime
 from typing import List, Optional
@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from emailtools.utils.datetime_utils import utcnow
+from intellibox.utils.datetime_utils import utcnow
 
 
 class Base(DeclarativeBase):

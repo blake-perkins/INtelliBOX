@@ -28,9 +28,9 @@ else
 fi
 echo "Using compose command: $COMPOSE_CMD"
 
-SERVICE="emailtools-test"
+SERVICE="intellibox-test"
 BASE_URL="http://localhost:8001"
-DB_PATH="data/test/emailtools.db"
+DB_PATH="data/test/intellibox.db"
 MAX_WAIT=60  # seconds
 
 # --- Cleanup function ---

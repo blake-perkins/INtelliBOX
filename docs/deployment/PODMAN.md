@@ -1,4 +1,4 @@
-# Podman Deployment Guide for EmailTools
+# Podman Deployment Guide for INtelliBOX
 
 Podman is a daemonless container engine that's a drop-in replacement for Docker. This guide covers using Podman for local development and AWS deployment.
 
@@ -46,12 +46,12 @@ sudo dnf install -y podman
 
 ## Container Images
 
-EmailTools provides two container images:
+INtelliBOX provides two container images:
 
 | Image | Dockerfile | Purpose |
 |-------|-----------|---------|
-| `emailtools:latest` | `Dockerfile` | Production — runs web server with health check |
-| `emailtools:test-runner` | `Dockerfile.test` | CI/testing — runs full test suite and exits |
+| `intellibox:latest` | `Dockerfile` | Production — runs web server with health check |
+| `intellibox:test-runner` | `Dockerfile.test` | CI/testing — runs full test suite and exits |
 
 The production `.dockerignore` excludes tests for a smaller image. The test build uses `.dockerignore.test` which includes tests and BDD features.
 
@@ -61,17 +61,17 @@ The production `.dockerignore` excludes tests for a smaller image. The test buil
 
 ### Build Production Image
 ```bash
-podman build -t emailtools:latest .
+podman build -t intellibox:latest .
 ```
 
 ### Run Web Server
 ```bash
 podman run -d \
-    --name emailtools \
+    --name intellibox \
     --env-file .env \
     -v ./data:/app/data:Z \
     -p 8000:8000 \
-    emailtools:latest
+    intellibox:latest
 
 # Dashboard available at http://localhost:8000
 # Health check at http://localhost:8000/health
@@ -81,20 +81,20 @@ podman run -d \
 ```bash
 # Build test image (swap .dockerignore first)
 cp .dockerignore .dockerignore.bak && cp .dockerignore.test .dockerignore
-podman build -f Dockerfile.test -t emailtools:test-runner .
+podman build -f Dockerfile.test -t intellibox:test-runner .
 cp .dockerignore.bak .dockerignore
 
 # Run all 13 test modules + 165 BDD scenarios
-podman run --rm --env-file .env.test emailtools:test-runner
+podman run --rm --env-file .env.test intellibox:test-runner
 ```
 
 ### Run One-Off Commands
 ```bash
 podman run --rm --env-file .env -v ./data:/app/data:Z \
-    emailtools:latest emailtools process
+    intellibox:latest intellibox process
 
 podman run --rm --env-file .env -v ./data:/app/data:Z \
-    emailtools:latest emailtools maintenance
+    intellibox:latest intellibox maintenance
 ```
 
 **Note**: The `:Z` flag is important for SELinux systems — it relabels the volume content.
@@ -122,8 +122,8 @@ The `docker-compose.yml` defines these services:
 
 | Service | Profile | Description |
 |---------|---------|-------------|
-| `emailtools` | (default) | Production web server on port 8000 |
-| `emailtools-test` | `testing` | Web server with test config on port 8001 |
+| `intellibox` | (default) | Production web server on port 8000 |
+| `intellibox-test` | `testing` | Web server with test config on port 8001 |
 | `test-runner` | `ci` | Runs test suite and exits |
 | `postgres` | `production` | PostgreSQL 16 for production use |
 
@@ -146,12 +146,12 @@ Podman's rootless mode provides better security:
 
 ```bash
 podman run -d \
-    --name emailtools \
+    --name intellibox \
     --userns=keep-id \
     --env-file .env \
     -v ./data:/app/data:Z \
     -p 8000:8000 \
-    emailtools:latest
+    intellibox:latest
 ```
 
 ---
@@ -162,25 +162,25 @@ Podman pods group containers together (like docker-compose):
 
 ```bash
 # Create a pod
-podman pod create --name emailtools-pod -p 8000:8000
+podman pod create --name intellibox-pod -p 8000:8000
 
 # Run PostgreSQL in pod
 podman run -d \
-    --pod emailtools-pod \
+    --pod intellibox-pod \
     --name postgres \
-    -e POSTGRES_DB=emailtools \
-    -e POSTGRES_USER=emailtools \
+    -e POSTGRES_DB=intellibox \
+    -e POSTGRES_USER=intellibox \
     -e POSTGRES_PASSWORD=changeme \
     -v postgres-data:/var/lib/postgresql/data \
     postgres:16-alpine
 
-# Run EmailTools in same pod
+# Run INtelliBOX in same pod
 podman run -d \
-    --pod emailtools-pod \
-    --name emailtools \
+    --pod intellibox-pod \
+    --name intellibox \
     --env-file .env \
     -v ./data:/app/data:Z \
-    emailtools:latest
+    intellibox:latest
 ```
 
 ---
@@ -218,7 +218,7 @@ The Dockerfile includes a `HEALTHCHECK` directive using this endpoint. Note: Pod
 ```bash
 podman build \
     --platform linux/amd64,linux/arm64 \
-    --manifest emailtools:latest \
+    --manifest intellibox:latest \
     -f Dockerfile \
     .
 ```
@@ -229,11 +229,11 @@ aws ecr get-login-password --region us-east-1 | \
     podman login --username AWS --password-stdin \
     YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com
 
-podman tag emailtools:latest \
-    YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/emailtools:latest
+podman tag intellibox:latest \
+    YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/intellibox:latest
 
 podman push \
-    YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/emailtools:latest
+    YOUR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/intellibox:latest
 ```
 
 ---
@@ -241,10 +241,10 @@ podman push \
 ## Systemd Integration (Linux Only)
 
 ```bash
-podman generate systemd --new --name emailtools --files
-sudo cp container-emailtools.service /etc/systemd/system/
+podman generate systemd --new --name intellibox --files
+sudo cp container-intellibox.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now container-emailtools.service
+sudo systemctl enable --now container-intellibox.service
 ```
 
 ---
@@ -267,7 +267,7 @@ sudo systemctl enable --now container-emailtools.service
 
 ### Permission Denied on Volumes
 ```bash
-podman run -v ./data:/app/data:Z emailtools:latest
+podman run -v ./data:/app/data:Z intellibox:latest
 ```
 
 ### Podman Machine Issues (macOS/Windows)

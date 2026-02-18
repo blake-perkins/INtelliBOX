@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Template Validation Script for EmailTools
+Template Validation Script for INtelliBOX
 
 Validates that all Jinja2 templates use correct model attributes.
 This catches bugs like using 'email.text_body' instead of 'email.body_text'.
@@ -19,10 +19,10 @@ init(autoreset=True)
 
 # Import models to validate against
 try:
-    from emailtools.models import Email, Action, Assignment
+    from intellibox.models import Email, Action, Assignment
 except ImportError:
-    print(f"{Fore.RED}Error: Could not import EmailTools models")
-    print(f"{Fore.YELLOW}Make sure you're in the EmailTools directory and the package is installed")
+    print(f"{Fore.RED}Error: Could not import INtelliBOX models")
+    print(f"{Fore.YELLOW}Make sure you're in the INtelliBOX directory and the package is installed")
     sys.exit(1)
 
 
@@ -185,14 +185,14 @@ def validate_template(template_name, template_path):
 
 def main():
     """Validate all templates."""
-    templates_dir = Path("src/emailtools/web/templates")
+    templates_dir = Path("src/intellibox/web/templates")
 
     if not templates_dir.exists():
         print(f"{Fore.RED}Error: Templates directory not found: {templates_dir}")
-        print(f"{Fore.YELLOW}Make sure you're in the EmailTools root directory")
+        print(f"{Fore.YELLOW}Make sure you're in the INtelliBOX root directory")
         return 1
 
-    print(f"{Fore.CYAN}{Style.BRIGHT}EmailTools Template Validator")
+    print(f"{Fore.CYAN}{Style.BRIGHT}INtelliBOX Template Validator")
     print(f"{Fore.CYAN}{'='*70}")
 
     all_valid = True

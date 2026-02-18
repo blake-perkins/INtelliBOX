@@ -27,8 +27,8 @@ sys.path.insert(0, str(project_root / "src"))
 
 def capture_actions(label: str) -> dict:
     """Capture all actions grouped by email from the current database."""
-    from emailtools.database import get_session
-    from emailtools.models import Action, Email
+    from intellibox.database import get_session
+    from intellibox.models import Action, Email
 
     emails_data = {}
     with get_session() as session:
@@ -62,8 +62,8 @@ def capture_actions(label: str) -> dict:
 
 def capture_kb_docs() -> list:
     """Extract KB document data from current database for re-insertion."""
-    from emailtools.database import get_session
-    from emailtools.models import KnowledgeDocument
+    from intellibox.database import get_session
+    from intellibox.models import KnowledgeDocument
 
     docs = []
     with get_session() as session:
@@ -82,7 +82,7 @@ def capture_kb_docs() -> list:
 
 def reset_database():
     """Drop and recreate all database tables."""
-    from emailtools.database import drop_db, init_db
+    from intellibox.database import drop_db, init_db
     drop_db()
     init_db()
     print("  Database reset complete")
@@ -90,9 +90,9 @@ def reset_database():
 
 def insert_kb_docs(kb_docs: list):
     """Re-insert KB documents and compute embeddings."""
-    from emailtools.database import get_session
-    from emailtools.knowledge.embeddings import embed_document
-    from emailtools.models import KnowledgeDocument
+    from intellibox.database import get_session
+    from intellibox.knowledge.embeddings import embed_document
+    from intellibox.models import KnowledgeDocument
 
     for doc_data in kb_docs:
         with get_session() as session:
@@ -130,9 +130,9 @@ def copy_emails_to_inbox() -> int:
 
 def ingest_and_process():
     """Run email ingestion and AI processing."""
-    from emailtools.database import get_session
-    from emailtools.ingestion.parser import process_inbox
-    from emailtools.ai.processor import process_unprocessed_emails
+    from intellibox.database import get_session
+    from intellibox.ingestion.parser import process_inbox
+    from intellibox.ai.processor import process_unprocessed_emails
 
     with get_session() as session:
         email_count = process_inbox(session, Path("data/inbox"))
@@ -310,8 +310,8 @@ def main():
 
     # Step 2: Backup and reset database
     print("\n[Step 2] Backing up and resetting database...")
-    db_path = Path("data/emailtools.db")
-    backup_path = Path("data/emailtools.db.backup")
+    db_path = Path("data/intellibox.db")
+    backup_path = Path("data/intellibox.db.backup")
     if db_path.exists():
         shutil.copy2(db_path, backup_path)
         print(f"  Backup saved to {backup_path}")

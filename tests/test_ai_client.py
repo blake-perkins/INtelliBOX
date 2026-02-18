@@ -11,35 +11,35 @@ class TestStripMarkdownJson:
 
     def test_strip_json_with_fences(self):
         """Removes ```json ... ``` fences from JSON."""
-        from emailtools.ai.client import strip_markdown_json
+        from intellibox.ai.client import strip_markdown_json
 
         raw = '```json\n{"key": "value"}\n```'
         assert strip_markdown_json(raw) == '{"key": "value"}'
 
     def test_strip_plain_fences(self):
         """Removes ``` ... ``` fences (without json label)."""
-        from emailtools.ai.client import strip_markdown_json
+        from intellibox.ai.client import strip_markdown_json
 
         raw = '```\n{"key": "value"}\n```'
         assert strip_markdown_json(raw) == '{"key": "value"}'
 
     def test_passthrough_clean_json(self):
         """Clean JSON without fences passes through unchanged."""
-        from emailtools.ai.client import strip_markdown_json
+        from intellibox.ai.client import strip_markdown_json
 
         raw = '{"key": "value"}'
         assert strip_markdown_json(raw) == '{"key": "value"}'
 
     def test_strips_whitespace(self):
         """Leading/trailing whitespace is stripped."""
-        from emailtools.ai.client import strip_markdown_json
+        from intellibox.ai.client import strip_markdown_json
 
         raw = '  \n  {"key": "value"}  \n  '
         assert strip_markdown_json(raw) == '{"key": "value"}'
 
     def test_multiline_json(self):
         """Multi-line JSON inside fences is preserved."""
-        from emailtools.ai.client import strip_markdown_json
+        from intellibox.ai.client import strip_markdown_json
 
         raw = '```json\n{\n  "key": "value",\n  "list": [1, 2]\n}\n```'
         result = strip_markdown_json(raw)
@@ -52,14 +52,14 @@ class TestAPIRetryLogic:
 
     def _make_client(self):
         """Create an AIClient with mocked OpenAI client."""
-        with patch("emailtools.ai.client.OpenAI"):
-            with patch("emailtools.ai.client.settings") as mock_settings:
+        with patch("intellibox.ai.client.OpenAI"):
+            with patch("intellibox.ai.client.settings") as mock_settings:
                 mock_settings.openai_api_key = "test-key"
                 mock_settings.openai_model = "gpt-4"
                 mock_settings.openai_max_retries = 3
                 mock_settings.openai_timeout = 30
 
-                from emailtools.ai.client import AIClient
+                from intellibox.ai.client import AIClient
                 client = AIClient()
                 return client
 
@@ -227,13 +227,13 @@ class TestRetryTimingAccuracy:
     """Tests that verify the actual time.sleep values passed during retries."""
 
     def _make_client(self, max_retries=3):
-        with patch("emailtools.ai.client.OpenAI"):
-            with patch("emailtools.ai.client.settings") as mock_settings:
+        with patch("intellibox.ai.client.OpenAI"):
+            with patch("intellibox.ai.client.settings") as mock_settings:
                 mock_settings.openai_api_key = "test-key"
                 mock_settings.openai_model = "gpt-4"
                 mock_settings.openai_max_retries = max_retries
                 mock_settings.openai_timeout = 30
-                from emailtools.ai.client import AIClient
+                from intellibox.ai.client import AIClient
                 return AIClient()
 
     @staticmethod
@@ -332,14 +332,14 @@ class TestGenerateReportInsightsEdgeCases:
 
     def test_empty_input_returns_empty_structure(self):
         """Empty action_details and email_summaries returns default empty structure."""
-        with patch("emailtools.ai.client.OpenAI"):
-            with patch("emailtools.ai.client.settings") as mock_settings:
+        with patch("intellibox.ai.client.OpenAI"):
+            with patch("intellibox.ai.client.settings") as mock_settings:
                 mock_settings.openai_api_key = "test-key"
                 mock_settings.openai_model = "gpt-4"
                 mock_settings.openai_max_retries = 3
                 mock_settings.openai_timeout = 30
 
-                from emailtools.ai.client import AIClient
+                from intellibox.ai.client import AIClient
                 client = AIClient()
 
         result = client.generate_report_insights(

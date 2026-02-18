@@ -1,7 +1,7 @@
 """Test OpenAI API connection."""
 
-from emailtools.ai.processor import get_ai_client
-from emailtools.config import settings
+from intellibox.ai.processor import get_ai_client
+from intellibox.config import settings
 
 
 def main():
@@ -27,7 +27,7 @@ def main():
             # Try a simple test
             try:
                 print("\nTesting API with a simple email...")
-                from emailtools.models import Email
+                from intellibox.models import Email
                 from datetime import datetime
 
                 # Create a test email object (not saved to DB)

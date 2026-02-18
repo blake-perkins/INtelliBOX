@@ -1,4 +1,4 @@
-# EmailTools - Production Docker Image
+# INtelliBOX - Production Docker Image
 FROM python:3.12-slim
 
 # Set working directory
@@ -39,10 +39,10 @@ ENV PYTHONDONTWRITEBYTECODE=1
 EXPOSE 8000
 
 # Create non-root user for security
-RUN useradd -m -u 1000 emailtools && \
-    chown -R emailtools:emailtools /app
+RUN useradd -m -u 1000 intellibox && \
+    chown -R intellibox:intellibox /app
 
-USER emailtools
+USER intellibox
 
 # Health check using the /health endpoint
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
@@ -50,4 +50,4 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
 
 # Use entrypoint for migrations, CMD for the actual command
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["emailtools", "web", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["intellibox", "web", "--host", "0.0.0.0", "--port", "8000"]

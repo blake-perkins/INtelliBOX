@@ -8,10 +8,10 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from emailtools.models import Base
+from intellibox.models import Base
 
 # Create ONE shared test database for all test modules
-test_db_fd, test_db_path = tempfile.mkstemp(suffix='_shared.db', prefix='test_emailtools_')
+test_db_fd, test_db_path = tempfile.mkstemp(suffix='_shared.db', prefix='test_intellibox_')
 TEST_DATABASE_URL = f"sqlite:///{test_db_path}"
 test_engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
@@ -28,9 +28,9 @@ def override_get_session():
 
 
 # Patch database modules ONCE for all tests
-import emailtools.database as database_module
-import emailtools.settings_service as settings_service_module
-import emailtools.web.app as app_module
+import intellibox.database as database_module
+import intellibox.settings_service as settings_service_module
+import intellibox.web.app as app_module
 
 database_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session

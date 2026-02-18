@@ -1,5 +1,5 @@
 [project]
-name = "emailtools"
+name = "intellibox"
 version = "0.1.0"
 description = "Email action tracking system for fast-paced teams"
 requires-python = ">=3.11"
@@ -35,7 +35,7 @@ dev = [
 ]
 
 [project.scripts]
-emailtools = "emailtools.cli:cli"
+intellibox = "intellibox.cli:cli"
 
 [build-system]
 requires = ["setuptools>=68.0"]
@@ -67,7 +67,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --cov=src/emailtools --cov-report=term-missing"
+addopts = "-v --cov=src/intellibox --cov-report=term-missing"
 
 [tool.coverage.run]
 source = ["src"]

@@ -20,7 +20,7 @@ def capture_from_db(db_url: str, label: str) -> dict:
     """Capture all actions grouped by email from a specific database."""
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from emailtools.models import Action, Email
+    from intellibox.models import Action, Email
 
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
     Session = sessionmaker(bind=engine)
@@ -66,11 +66,11 @@ def main():
     sys.path.insert(0, str(Path(__file__).parent))
     from compare_kb_context import generate_report
 
-    backup_db = Path("data/emailtools.db.backup")
-    current_db = Path("data/emailtools.db")
+    backup_db = Path("data/intellibox.db.backup")
+    current_db = Path("data/intellibox.db")
 
     if not backup_db.exists():
-        print("ERROR: Backup database not found at data/emailtools.db.backup")
+        print("ERROR: Backup database not found at data/intellibox.db.backup")
         sys.exit(1)
 
     print("Reading baseline from backup database...")

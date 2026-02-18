@@ -3,7 +3,7 @@
 ## Changes Implemented
 
 ### 1. Recent Assignments No Longer Shows Completed Actions
-**File**: `src/emailtools/web/app.py` (line 87-92)
+**File**: `src/intellibox/web/app.py` (line 87-92)
 
 **Before**:
 ```python
@@ -26,7 +26,7 @@ recent_assignments = session.query(Assignment, Action).join(
 ---
 
 ### 2. Overdue Actions No Longer Shows Completed Actions
-**File**: `src/emailtools/web/app.py` (line 75-80)
+**File**: `src/intellibox/web/app.py` (line 75-80)
 
 **Before**:
 ```python
@@ -68,7 +68,7 @@ overdue_actions = session.query(Action).outerjoin(Assignment).join(Email).filter
 1. Stop the current web server (Ctrl+C in the terminal where it's running)
 2. Restart it:
    ```bash
-   emailtools web --host 127.0.0.1 --port 8000
+   intellibox web --host 127.0.0.1 --port 8000
    ```
 
 After restart, you should see:
@@ -79,7 +79,7 @@ After restart, you should see:
 ---
 
 ## Files Modified
-1. `src/emailtools/web/app.py` - Dashboard query logic (2 changes)
+1. `src/intellibox/web/app.py` - Dashboard query logic (2 changes)
 
 ## Test Files Created
 1. `test_assignments_separation.py` - Comprehensive test for separation

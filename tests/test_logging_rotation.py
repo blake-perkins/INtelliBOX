@@ -14,7 +14,7 @@ def test_file_handler_created():
         logger = logging.getLogger(logger_name)
         logger.handlers.clear()
 
-        from emailtools.utils.logging import setup_logging
+        from intellibox.utils.logging import setup_logging
         result = setup_logging(name=logger_name, log_dir=tmpdir)
 
         handler_types = [type(h) for h in result.handlers]
@@ -33,7 +33,7 @@ def test_console_handler_still_present():
         logger = logging.getLogger(logger_name)
         logger.handlers.clear()
 
-        from emailtools.utils.logging import setup_logging
+        from intellibox.utils.logging import setup_logging
         result = setup_logging(name=logger_name, log_dir=tmpdir)
 
         handler_types = [type(h) for h in result.handlers]
@@ -54,11 +54,11 @@ def test_log_file_created():
         logger = logging.getLogger(logger_name)
         logger.handlers.clear()
 
-        from emailtools.utils.logging import setup_logging
+        from intellibox.utils.logging import setup_logging
         result = setup_logging(name=logger_name, log_dir=tmpdir)
         result.info("test message")
 
-        log_file = Path(tmpdir) / "emailtools.log"
+        log_file = Path(tmpdir) / "intellibox.log"
         assert log_file.exists()
         content = log_file.read_text()
         assert "test message" in content
@@ -75,7 +75,7 @@ def test_rotation_creates_backup():
         logger = logging.getLogger(logger_name)
         logger.handlers.clear()
 
-        from emailtools.utils.logging import setup_logging
+        from intellibox.utils.logging import setup_logging
         # Use a very small maxBytes to trigger rotation quickly
         result = setup_logging(name=logger_name, log_dir=tmpdir, max_bytes=1000, backup_count=3)
 
@@ -83,8 +83,8 @@ def test_rotation_creates_backup():
         for i in range(200):
             result.info(f"log message number {i} with some padding to fill bytes quickly xxxx")
 
-        log_file = Path(tmpdir) / "emailtools.log"
-        backup_file = Path(tmpdir) / "emailtools.log.1"
+        log_file = Path(tmpdir) / "intellibox.log"
+        backup_file = Path(tmpdir) / "intellibox.log.1"
         assert log_file.exists()
         assert backup_file.exists(), "Rotation should have created at least one backup file"
 
@@ -99,7 +99,7 @@ def test_unwritable_dir_does_not_crash():
     logger = logging.getLogger(logger_name)
     logger.handlers.clear()
 
-    from emailtools.utils.logging import setup_logging
+    from intellibox.utils.logging import setup_logging
     # Use a path that doesn't exist and can't be created
     result = setup_logging(name=logger_name, log_dir="/nonexistent/path/that/cannot/exist")
 
