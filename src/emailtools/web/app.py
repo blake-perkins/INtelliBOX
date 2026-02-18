@@ -24,8 +24,8 @@ from emailtools.settings_service import SettingsService
 
 
 def _start_background_watcher():
-    """Start the file watcher in a background daemon thread."""
-    from emailtools.ingestion.file_watcher import watch_inbox
+    """Start the file watcher in a background daemon thread with supervised restarts."""
+    from emailtools.ingestion.file_watcher import supervised_watch
     from emailtools.ingestion.parser import parse_and_store_email
     from emailtools.ai.processor import process_email_with_ai
 
@@ -38,9 +38,9 @@ def _start_background_watcher():
                 process_email_with_ai(email_record, session)
 
     thread = threading.Thread(
-        target=watch_inbox,
+        target=supervised_watch,
         args=(inbox_dir, callback),
-        kwargs={"interval": 5},
+        kwargs={"interval": 5, "max_restarts": 5},
         daemon=True,
         name="inbox-watcher",
     )
@@ -1327,8 +1327,14 @@ async def delete_roster_member(member_id: int):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "timestamp": utcnow().isoformat()}
+    """Health check endpoint with watcher status."""
+    from emailtools.ingestion.file_watcher import get_watcher_health
+
+    return {
+        "status": "healthy",
+        "timestamp": utcnow().isoformat(),
+        "watcher": get_watcher_health(),
+    }
 
 
 # --- Test-only endpoints (gated by TESTING env var) ---

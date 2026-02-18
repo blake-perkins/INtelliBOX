@@ -32,6 +32,7 @@ TEST_MODULES = [
     "tests/test_datetime_utils.py",
     "tests/test_database_maintenance.py",
     "tests/test_logging_rotation.py",
+    "tests/test_file_watcher.py",
     "tests/test_web_interface.py",
     "tests/test_settings_service.py",
     "tests/test_priority_rules.py",
