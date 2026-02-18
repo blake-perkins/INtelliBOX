@@ -1,7 +1,8 @@
 """E2E tests for the Emails page — upload, filters, empty-days regression."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 from playwright.sync_api import Page, expect
 
 from tests.e2e.conftest import make_email

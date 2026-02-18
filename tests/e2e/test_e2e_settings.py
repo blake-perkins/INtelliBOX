@@ -1,7 +1,8 @@
 """E2E tests for the Settings page — tabs, forms, roster, categories, prompt, KB."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 from playwright.sync_api import Page, expect
 
 from tests.e2e.conftest import make_roster_member
