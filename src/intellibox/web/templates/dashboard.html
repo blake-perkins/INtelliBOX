@@ -19,7 +19,7 @@
         </thead>
         <tbody>
             {% for action in overdue_actions %}
-            <tr style="cursor: pointer; background-color: #fde8e8;" onclick="window.location='/actions/{{ action.id }}'">
+            <tr class="overdue-row{% if loop.index > 5 %} overdue-extra{% endif %}" style="cursor: pointer; background-color: #fde8e8;{% if loop.index > 5 %} display: none;{% endif %}" onclick="window.location='/actions/{{ action.id }}'">
                 <td style="padding-left: 1.5rem;">
                     <div style="font-weight: 600;" title="{{ action.title }}">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
                     <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -65,6 +65,14 @@
             {% endfor %}
         </tbody>
     </table>
+    {% if overdue_actions|length > 5 %}
+    <div style="padding: 0.5rem 1.5rem; border-top: 1px solid rgba(0,0,0,0.08); text-align: center;">
+        <button id="btn-overdue-expand" onclick="toggleSection('overdue')"
+                style="background: none; border: none; color: #c0392b; font-size: 0.85rem; cursor: pointer; font-weight: 600;">
+            ▼ Show {{ overdue_actions|length - 5 }} more
+        </button>
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -86,7 +94,7 @@
             {% for action in high_priority_actions %}
             {% set hp_assignment = action.assignments[0] if action.assignments else None %}
             {% set is_overdue = action.due_date and action.due_date < current_time %}
-            <tr style="cursor: pointer; background-color: #fef8f6;" onclick="window.location='/actions/{{ action.id }}'">
+            <tr class="hp-row{% if loop.index > 5 %} hp-extra{% endif %}" style="cursor: pointer; background-color: #fef8f6;{% if loop.index > 5 %} display: none;{% endif %}" onclick="window.location='/actions/{{ action.id }}'">
                 <td style="padding-left: 1.5rem;">
                     <div style="font-weight: 600;" title="{{ action.title }}">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
                     <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -140,6 +148,14 @@
             {% endfor %}
         </tbody>
     </table>
+    {% if high_priority_actions|length > 5 %}
+    <div style="padding: 0.5rem 1.5rem; border-top: 1px solid rgba(0,0,0,0.08); text-align: center;">
+        <button id="btn-hp-expand" onclick="toggleSection('hp')"
+                style="background: none; border: none; color: #e74c3c; font-size: 0.85rem; cursor: pointer; font-weight: 600;">
+            ▼ Show {{ high_priority_actions|length - 5 }} more
+        </button>
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -413,7 +429,8 @@ function toggleSection(prefix) {
     const extras = document.querySelectorAll('.' + prefix + '-extra');
     const btn = document.getElementById('btn-' + prefix + '-expand');
     const hidden = extras[0] && extras[0].style.display === 'none';
-    extras.forEach(r => r.style.display = hidden ? '' : 'none');
+    const isTableRow = extras[0] && extras[0].tagName === 'TR';
+    extras.forEach(r => r.style.display = hidden ? (isTableRow ? 'table-row' : '') : 'none');
     btn.textContent = hidden
         ? '▲ Show less'
         : '▼ Show ' + extras.length + ' more';

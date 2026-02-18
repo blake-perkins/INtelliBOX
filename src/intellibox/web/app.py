@@ -373,10 +373,11 @@ async def list_emails(
     request: Request,
     search: Optional[str] = None,
     processed: Optional[str] = None,
-    days: Optional[int] = None,
+    days: Optional[str] = None,
     page: int = Query(1, ge=1)
 ):
     """List all emails."""
+    days = int(days) if days and days.strip().isdigit() else None
     with get_session() as session:
         # Shared banner stats (same as all pages)
         unassigned_actions = session.query(Action).outerjoin(Assignment).filter(
