@@ -3,18 +3,16 @@
 import email
 import json
 import shutil
-from datetime import datetime
-
-from emailtools.utils.datetime_utils import utcnow
 from email import policy
 from email.message import EmailMessage
 from email.utils import parseaddr, parsedate_to_datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
 from emailtools.models import Email, ProcessingLog
+from emailtools.utils.datetime_utils import utcnow
 from emailtools.utils.logging import logger
 
 

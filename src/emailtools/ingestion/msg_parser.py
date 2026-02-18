@@ -1,12 +1,12 @@
 """Parser for Outlook .msg files."""
 
-import extract_msg
 from datetime import datetime
+from pathlib import Path
+from typing import List, Optional, Tuple
+
+import extract_msg
 
 from emailtools.utils.datetime_utils import utcnow
-from pathlib import Path
-from typing import Tuple, Optional, List
-
 from emailtools.utils.logging import logger
 
 

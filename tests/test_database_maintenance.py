@@ -1,16 +1,15 @@
 """Tests for database maintenance functions (cleanup, vacuum, pragmas)."""
 
-import tempfile
 import os
+import tempfile
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from contextlib import contextmanager
 
-from emailtools.models import Base, ProgramNewsCache, ReportCache, ProcessingLog, Email
-
+from emailtools.models import Base, ProcessingLog, ProgramNewsCache, ReportCache
 
 # Create a unique temp database for this module
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_db_maintenance.db', prefix='test_emailtools_')
@@ -31,14 +30,15 @@ def override_get_session():
 
 # Patch before importing maintenance functions
 import emailtools.database as database_module
+
 database_module.get_session = override_get_session
 
 from emailtools.database import (
     cleanup_cache_tables,
     cleanup_processing_logs,
-    run_vacuum,
     run_analyze,
     run_maintenance,
+    run_vacuum,
 )
 
 

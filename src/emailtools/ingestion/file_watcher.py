@@ -2,14 +2,13 @@
 
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
+from emailtools.settings_service import SettingsService
 from emailtools.utils.datetime_utils import utcnow
 from emailtools.utils.logging import logger
-from emailtools.settings_service import SettingsService
-
 
 # ── Health monitoring ────────────────────────────────────────────────────────
 

@@ -4,13 +4,12 @@ from contextlib import contextmanager
 from datetime import timedelta
 from typing import Dict, Generator
 
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from emailtools.config import settings
 from emailtools.models import Base
 from emailtools.utils.datetime_utils import utcnow
-
 
 # Build connect_args for SQLite compatibility
 _connect_args = {}

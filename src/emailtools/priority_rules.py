@@ -1,7 +1,8 @@
 """Priority rule engine for overriding AI-suggested priorities."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
+
 from .settings_service import SettingsService
 from .utils.datetime_utils import utcnow
 

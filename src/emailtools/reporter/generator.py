@@ -1,18 +1,17 @@
 """Report generation for daily email summaries."""
 
 import json
-from datetime import datetime, timedelta, timezone as dt_timezone
-
-from emailtools.utils.datetime_utils import utcnow
+from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 from typing import Dict, List
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from emailtools.ai.processor import get_ai_client
 from emailtools.config import settings
 from emailtools.models import Action, Assignment, Email, ProgramNewsCache, ReportCache
+from emailtools.utils.datetime_utils import utcnow
 from emailtools.utils.logging import logger
 
 
@@ -546,7 +545,7 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         cleanup_cache_tables(session, keep_program_news=0, keep_report=5)
         session.commit()
 
-        logger.info(f"AI insights cached")
+        logger.info("AI insights cached")
         is_cached = False
         insights_generated_at = now
 

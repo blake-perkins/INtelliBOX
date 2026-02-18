@@ -1,17 +1,19 @@
 """Integration tests for AI clients with priority rules."""
 
-import pytest
-import tempfile
 import os
+import tempfile
+from contextlib import contextmanager
 from datetime import datetime, timedelta
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from contextlib import contextmanager
+
+import emailtools.settings_service as settings_service_module
+from emailtools import database as database_module
 
 # Import models first to ensure they're registered with Base
-from emailtools.models import Email, Base, Settings
-from emailtools import database as database_module
-import emailtools.settings_service as settings_service_module
+from emailtools.models import Base, Email, Settings
 
 # Create a unique temporary database file for this test module
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_priority_integration.db', prefix='test_emailtools_')

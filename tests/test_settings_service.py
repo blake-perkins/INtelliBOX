@@ -1,13 +1,14 @@
 """Tests for SettingsService."""
 
-import pytest
-import tempfile
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import tempfile
 from contextlib import contextmanager
 
-from emailtools.models import Settings, Base
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from emailtools.models import Base, Settings
 
 # Create a unique temporary database file for this test module
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_settings_service.db', prefix='test_emailtools_')

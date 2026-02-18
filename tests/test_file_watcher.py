@@ -1,12 +1,9 @@
 """Tests for file watcher resilience and health monitoring."""
 
-import tempfile
-import time
 import threading
+import time
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 
 class TestWatchInbox:
@@ -77,7 +74,6 @@ class TestWatchInbox:
 
     def test_no_retry_on_failed_files(self, tmp_path):
         """Failed files are not reprocessed on subsequent polls."""
-        from emailtools.ingestion.file_watcher import watch_inbox
 
         eml_file = tmp_path / "retry_test.eml"
         eml_file.write_text("Subject: Retry\n\nBody")
@@ -147,7 +143,7 @@ class TestWatcherHealth:
 
     def test_health_initial_state(self):
         """Health starts as not alive with zero counters."""
-        from emailtools.ingestion.file_watcher import get_watcher_health, _reset_health
+        from emailtools.ingestion.file_watcher import _reset_health, get_watcher_health
 
         _reset_health()
         health = get_watcher_health()
@@ -159,9 +155,7 @@ class TestWatcherHealth:
 
     def test_health_reports_alive_after_poll(self, tmp_path):
         """After a successful poll, health reports is_alive=True."""
-        from emailtools.ingestion.file_watcher import (
-            watch_inbox, get_watcher_health, _reset_health
-        )
+        from emailtools.ingestion.file_watcher import _reset_health, get_watcher_health, watch_inbox
 
         _reset_health()
 
@@ -174,9 +168,7 @@ class TestWatcherHealth:
 
     def test_health_tracks_files_processed(self, tmp_path):
         """Health counter increments for each successfully processed file."""
-        from emailtools.ingestion.file_watcher import (
-            watch_inbox, get_watcher_health, _reset_health
-        )
+        from emailtools.ingestion.file_watcher import _reset_health, get_watcher_health, watch_inbox
 
         _reset_health()
 
@@ -191,9 +183,7 @@ class TestWatcherHealth:
 
     def test_health_tracks_error_count(self, tmp_path):
         """Health error_count increments when callback raises."""
-        from emailtools.ingestion.file_watcher import (
-            watch_inbox, get_watcher_health, _reset_health
-        )
+        from emailtools.ingestion.file_watcher import _reset_health, get_watcher_health, watch_inbox
 
         _reset_health()
 
@@ -213,9 +203,7 @@ class TestWatcherHealth:
 
     def test_health_mixed_success_and_error(self, tmp_path):
         """Health correctly tracks mix of successes and failures."""
-        from emailtools.ingestion.file_watcher import (
-            watch_inbox, get_watcher_health, _reset_health
-        )
+        from emailtools.ingestion.file_watcher import _reset_health, get_watcher_health, watch_inbox
 
         _reset_health()
 
@@ -382,9 +370,7 @@ class TestWatcherHealthAccumulation:
 
     def test_health_accumulates_across_multiple_polls(self, tmp_path):
         """Health counters accumulate across multiple poll cycles."""
-        from emailtools.ingestion.file_watcher import (
-            watch_inbox, get_watcher_health, _reset_health
-        )
+        from emailtools.ingestion.file_watcher import _reset_health, get_watcher_health, watch_inbox
 
         _reset_health()
 
@@ -412,9 +398,7 @@ class TestWatcherHealthAccumulation:
 
     def test_health_error_count_accumulates(self, tmp_path):
         """Error count persists and accumulates across runs."""
-        from emailtools.ingestion.file_watcher import (
-            watch_inbox, get_watcher_health, _reset_health
-        )
+        from emailtools.ingestion.file_watcher import _reset_health, get_watcher_health, watch_inbox
 
         _reset_health()
 

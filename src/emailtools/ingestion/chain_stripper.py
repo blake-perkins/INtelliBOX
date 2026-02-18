@@ -2,7 +2,6 @@
 
 import re
 
-
 # Patterns that indicate the start of quoted/forwarded content.
 # Everything from the first match onward is removed.
 _QUOTE_PATTERNS = [

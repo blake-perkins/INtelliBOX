@@ -1,11 +1,9 @@
 """Tests for log rotation configuration."""
 
 import logging
-import os
 import tempfile
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from unittest.mock import patch
 
 
 def test_file_handler_created():

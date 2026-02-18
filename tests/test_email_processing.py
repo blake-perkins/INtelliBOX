@@ -13,28 +13,26 @@ by extract_msg, exercising the actual production code path.
 """
 
 import json
-import os
 import shutil
+
+# Import the .msg file factory (lives in tests/ alongside this file)
+import sys
 import tempfile
-import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from emailtools.models import Base, Email, Action, ProcessingLog
-from emailtools.ingestion.parser import parse_and_store_email, process_inbox
+from emailtools.ai.processor import process_unprocessed_emails
 from emailtools.ingestion.chain_stripper import strip_quoted_text
-from emailtools.ai.processor import process_email_with_ai, process_unprocessed_emails
+from emailtools.ingestion.parser import parse_and_store_email, process_inbox
+from emailtools.models import Action, Base, Email, ProcessingLog
 
-# Import the .msg file factory (lives in tests/ alongside this file)
-import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from msg_factory import make_msg
-
 
 # ---------------------------------------------------------------------------
 # Test database setup
@@ -194,7 +192,7 @@ class TestDuplicateMerging:
         parse_and_store_email(inbox_dir / "email2.msg", session)
 
         logs = session.query(ProcessingLog).filter_by(status="success").all()
-        merge_log = [l for l in logs if "Duplicate merged" in (l.message or "")]
+        merge_log = [log for log in logs if "Duplicate merged" in (log.message or "")]
         assert len(merge_log) == 1
         assert "bob@example.com" in merge_log[0].message
 

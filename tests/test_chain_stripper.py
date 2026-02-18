@@ -1,6 +1,5 @@
 """Tests for email chain stripping utility."""
 
-import pytest
 from emailtools.ingestion.chain_stripper import strip_quoted_text
 
 

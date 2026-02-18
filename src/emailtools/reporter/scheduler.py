@@ -5,8 +5,8 @@ from apscheduler.triggers.cron import CronTrigger
 
 from emailtools.config import settings
 from emailtools.database import get_session
-from emailtools.reporter.generator import generate_report_data
 from emailtools.reporter.email_sender import send_report_email
+from emailtools.reporter.generator import generate_report_data
 from emailtools.utils.logging import logger
 
 

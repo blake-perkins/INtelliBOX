@@ -3,31 +3,32 @@
 import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-
-from emailtools.utils.datetime_utils import utcnow
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
-from fastapi import FastAPI, Request, HTTPException, Query, Form, UploadFile, File
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import desc, func, case, or_
+from sqlalchemy import case, desc, func, or_
 from sqlalchemy.orm import joinedload
 
 from emailtools.database import get_session
 from emailtools.knowledge import search_knowledge_base
-from emailtools.models import Action, Assignment, Email, KnowledgeDocument, ProcessingLog, RosterMember
-from emailtools.reporter.generator import generate_report_data, get_cached_structured_program_news, generate_enhanced_report
-from emailtools.config import settings
+from emailtools.models import Action, Assignment, Email, KnowledgeDocument, RosterMember
+from emailtools.reporter.generator import (
+    generate_enhanced_report,
+    get_cached_structured_program_news,
+)
 from emailtools.settings_service import SettingsService
+from emailtools.utils.datetime_utils import utcnow
 
 
 def _start_background_watcher():
     """Start the file watcher in a background daemon thread with supervised restarts."""
+    from emailtools.ai.processor import process_email_with_ai
     from emailtools.ingestion.file_watcher import supervised_watch
     from emailtools.ingestion.parser import parse_and_store_email
-    from emailtools.ai.processor import process_email_with_ai
 
     inbox_dir = Path("data/inbox")
 
@@ -1260,6 +1261,7 @@ async def add_roster_member(
 async def upload_roster(request: Request, file: UploadFile = File(...)):
     """Upload an Excel file to populate the roster."""
     import io
+
     import openpyxl
 
     if not file.filename.endswith((".xlsx", ".xls")):
@@ -1339,14 +1341,14 @@ async def health_check():
 
 # --- Test-only endpoints (gated by TESTING env var) ---
 import os as _os
+
 if _os.environ.get("TESTING", "").lower() in ("true", "1", "yes"):
-    import json as _json
 
     @app.post("/api/test/reset")
     async def test_reset_database():
         """Drop and recreate all tables. Only available when TESTING=true."""
-        from emailtools.models import Base
         from emailtools.database import engine
+        from emailtools.models import Base
         Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
         return {"status": "reset", "tables": list(Base.metadata.tables.keys())}

@@ -1,8 +1,7 @@
 """Tests for AI client retry logic and helper functions."""
 
 import json
-import time
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -67,8 +66,8 @@ class TestAPIRetryLogic:
     @staticmethod
     def _make_rate_limit_error():
         """Create a RateLimitError with properly linked httpx Request+Response."""
+        from httpx import Request, Response
         from openai import RateLimitError
-        from httpx import Response, Request
 
         req = Request(method="POST", url="https://api.openai.com/v1/chat/completions")
         resp = Response(status_code=429, request=req)
@@ -104,8 +103,8 @@ class TestAPIRetryLogic:
 
     def test_retries_on_api_connection_error(self):
         """APIConnectionError triggers retry, eventually succeeds."""
-        from openai import APIConnectionError
         from httpx import Request
+        from openai import APIConnectionError
 
         client = self._make_client()
 
@@ -239,8 +238,8 @@ class TestRetryTimingAccuracy:
 
     @staticmethod
     def _make_rate_limit_error():
+        from httpx import Request, Response
         from openai import RateLimitError
-        from httpx import Response, Request
         req = Request(method="POST", url="https://api.openai.com/v1/chat/completions")
         resp = Response(status_code=429, request=req)
         return RateLimitError(message="Rate limit", response=resp, body=None)
@@ -279,8 +278,8 @@ class TestRetryTimingAccuracy:
 
     def test_mixed_error_types_all_retry(self):
         """Different retryable errors in sequence all trigger retries."""
-        from openai import APIConnectionError, APIStatusError
         from httpx import Request, Response
+        from openai import APIConnectionError, APIStatusError
 
         client = self._make_client(max_retries=3)
 

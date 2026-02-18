@@ -1,6 +1,5 @@
 """Command-line interface for EmailTools."""
 
-import json
 from pathlib import Path
 from typing import Optional
 
@@ -9,10 +8,9 @@ from sqlalchemy import func
 from tabulate import tabulate
 
 from emailtools.config import settings
-from emailtools.database import SessionLocal, get_session, init_db
+from emailtools.database import get_session, init_db
 from emailtools.ingestion.parser import parse_and_store_email, process_inbox
 from emailtools.models import Action, Assignment, Email, ProcessingLog
-from emailtools.utils.logging import logger
 
 
 @click.group()
@@ -27,7 +25,7 @@ def init():
     try:
         init_db()
         click.echo("[OK] Database initialized successfully")
-        click.echo(f"  Location: data/emailtools.db")
+        click.echo("  Location: data/emailtools.db")
     except Exception as e:
         click.echo(f"[ERROR] Failed to initialize database: {e}", err=True)
         raise click.Abort()
@@ -343,8 +341,8 @@ def report():
 )
 def report_generate(preview: bool):
     """Generate daily report."""
-    from emailtools.reporter.generator import generate_report_data
     from emailtools.reporter.email_sender import preview_report
+    from emailtools.reporter.generator import generate_report_data
 
     with get_session() as session:
         click.echo("Generating report...")
@@ -371,8 +369,8 @@ def report_generate(preview: bool):
 )
 def report_send(dry_run: bool):
     """Generate and send daily report email."""
-    from emailtools.reporter.generator import generate_report_data
     from emailtools.reporter.email_sender import send_report_email
+    from emailtools.reporter.generator import generate_report_data
 
     with get_session() as session:
         click.echo("Generating report...")
@@ -398,7 +396,7 @@ def report_schedule():
     """Start scheduler for nightly reports (runs in foreground)."""
     from emailtools.reporter.scheduler import start_scheduler
 
-    click.echo(f"Starting report scheduler...")
+    click.echo("Starting report scheduler...")
     click.echo(f"Reports will be sent daily at {settings.report_time}")
     click.echo("Press Ctrl+C to stop\n")
 
@@ -425,11 +423,11 @@ def report_schedule():
 def web(host: str, port: int, reload: bool):
     """Start the web interface server."""
     import uvicorn
-    from emailtools.web.app import app
 
-    click.echo(f"Starting EmailTools web interface...")
+
+    click.echo("Starting EmailTools web interface...")
     click.echo(f"  URL: http://{host if host != '0.0.0.0' else 'localhost'}:{port}")
-    click.echo(f"  Press Ctrl+C to stop")
+    click.echo("  Press Ctrl+C to stop")
 
     uvicorn.run(
         "emailtools.web.app:app",
@@ -445,7 +443,8 @@ def web(host: str, port: int, reload: bool):
 @click.option("--keep-caches", default=5, type=int, help="Number of cache entries to keep per table")
 def maintenance(retention_days: int, keep_caches: int):
     """Run database maintenance (cleanup old caches/logs, vacuum, analyze)."""
-    from emailtools.database import run_maintenance, engine as db_engine
+    from emailtools.database import engine as db_engine
+    from emailtools.database import run_maintenance
 
     click.echo("Running database maintenance...")
     with get_session() as session:

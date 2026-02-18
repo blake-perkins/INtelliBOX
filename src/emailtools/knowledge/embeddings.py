@@ -81,6 +81,7 @@ def compute_embedding(text: str) -> Optional[List[float]]:
 
     try:
         from openai import OpenAI
+
         from emailtools.config import settings
 
         client = OpenAI(api_key=settings.openai_api_key)
@@ -121,6 +122,7 @@ def embed_document(doc_id: int) -> int:
 
         try:
             from openai import OpenAI
+
             from emailtools.config import settings
 
             client = OpenAI(api_key=settings.openai_api_key)

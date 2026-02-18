@@ -5,18 +5,21 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from emailtools.utils.datetime_utils import utcnow
+from openai import APIConnectionError, APIError, OpenAI, RateLimitError
 
-from openai import OpenAI
-from openai import APIError, APIConnectionError, RateLimitError
-
-from emailtools.ai.prompts import ACTION_EXTRACTION_PROMPT, PROGRAM_NEWS_PROMPT, STRUCTURED_PROGRAM_NEWS_PROMPT, SYSTEM_PROMPT
+from emailtools.ai.prompts import (
+    ACTION_EXTRACTION_PROMPT,
+    PROGRAM_NEWS_PROMPT,
+    STRUCTURED_PROGRAM_NEWS_PROMPT,
+    SYSTEM_PROMPT,
+)
 from emailtools.config import settings
 from emailtools.knowledge import get_knowledge_context
 from emailtools.models import Action, Email
-from emailtools.utils.logging import logger
 from emailtools.priority_rules import PriorityRuleEngine
 from emailtools.settings_service import SettingsService
+from emailtools.utils.datetime_utils import utcnow
+from emailtools.utils.logging import logger
 
 # Exceptions eligible for automatic retry
 _RETRYABLE_EXCEPTIONS = (RateLimitError, APIConnectionError, APIError)

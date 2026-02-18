@@ -1,17 +1,16 @@
 """Tests for Knowledge Base routes and text extraction."""
 
 import io
+import tempfile
+from contextlib import contextmanager
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from contextlib import contextmanager
-from datetime import datetime
-from unittest.mock import patch
-import tempfile
 
 from emailtools.database import Base
-from emailtools.models import KnowledgeDocument, Settings
+from emailtools.models import KnowledgeDocument
 
 # Create test database
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_knowledge_base.db', prefix='test_emailtools_')
@@ -31,8 +30,8 @@ def override_get_session():
 
 
 # Patch before importing app
-import emailtools.web.app as app_module
 import emailtools.settings_service as settings_service_module
+import emailtools.web.app as app_module
 
 app_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session
@@ -315,7 +314,7 @@ class TestChunkText:
         assert len(result) >= 1
 
     def test_chunk_text_respects_size_limit(self):
-        from emailtools.knowledge.embeddings import chunk_text, CHUNK_SIZE
+        from emailtools.knowledge.embeddings import CHUNK_SIZE, chunk_text
         # Create a very long text
         long_text = "word " * 1000  # ~5000 chars
         chunks = chunk_text(long_text)
@@ -344,7 +343,7 @@ class TestTfidfSearch:
 
     def test_tfidf_search_returns_results(self, setup_database):
         """Upload a doc and search for a keyword — should get results."""
-        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache
+        from emailtools.knowledge.embeddings import invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -373,7 +372,7 @@ class TestTfidfSearch:
 
     def test_tfidf_cache_reused_on_second_call(self, setup_database):
         """Second TF-IDF search reuses cached vectorizer (no rebuild)."""
-        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache, _tfidf_cache
+        from emailtools.knowledge.embeddings import _tfidf_cache, invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -404,7 +403,7 @@ class TestTfidfSearch:
 
     def test_tfidf_cache_invalidated_on_doc_change(self, setup_database):
         """Cache is invalidated when document set changes."""
-        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache, _tfidf_cache
+        from emailtools.knowledge.embeddings import _tfidf_cache, invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -448,7 +447,7 @@ class TestKnowledgeContextCache:
 
     def test_context_returns_text(self, setup_database):
         """get_knowledge_context returns non-empty string when docs exist."""
-        from emailtools.knowledge import get_knowledge_context, _invalidate_kb_cache
+        from emailtools.knowledge import _invalidate_kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
@@ -473,7 +472,7 @@ class TestKnowledgeContextCache:
 
     def test_context_cache_avoids_repeated_queries(self, setup_database):
         """Second call to get_knowledge_context uses cached value."""
-        from emailtools.knowledge import get_knowledge_context, _invalidate_kb_cache, _kb_cache
+        from emailtools.knowledge import _invalidate_kb_cache, _kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
@@ -503,7 +502,7 @@ class TestKnowledgeContextCache:
 
     def test_context_empty_when_no_docs(self, setup_database):
         """get_knowledge_context returns empty string with no documents."""
-        from emailtools.knowledge import get_knowledge_context, _invalidate_kb_cache
+        from emailtools.knowledge import _invalidate_kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
@@ -519,9 +518,7 @@ class TestKnowledgeContextCache:
 
     def test_context_cache_expires_after_ttl(self, setup_database):
         """After TTL expires, cache is refreshed from DB on next call."""
-        from emailtools.knowledge import (
-            get_knowledge_context, _invalidate_kb_cache, _kb_cache, _KB_CACHE_TTL
-        )
+        from emailtools.knowledge import _invalidate_kb_cache, _kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
@@ -564,8 +561,9 @@ class TestKnowledgeContextCache:
 
     def test_context_cache_no_db_query_on_hit(self, setup_database):
         """Verify the cache actually prevents DB queries on subsequent calls."""
-        from emailtools.knowledge import get_knowledge_context, _invalidate_kb_cache, _kb_cache
         from unittest.mock import MagicMock
+
+        from emailtools.knowledge import _invalidate_kb_cache, get_knowledge_context
 
         _invalidate_kb_cache()
 
@@ -602,7 +600,7 @@ class TestTfidfStress:
 
     def test_tfidf_with_many_documents(self, setup_database):
         """TF-IDF search works correctly with 50+ documents."""
-        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache
+        from emailtools.knowledge.embeddings import invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -642,7 +640,7 @@ class TestTfidfStress:
 
     def test_tfidf_repeated_searches_use_cache(self, setup_database):
         """Running 20 different searches reuses the cached vectorizer."""
-        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache, _tfidf_cache
+        from emailtools.knowledge.embeddings import _tfidf_cache, invalidate_tfidf_cache, search_by_tfidf
 
         invalidate_tfidf_cache()
 
@@ -706,9 +704,10 @@ class TestTextExtractor:
 
     def test_extract_pdf(self):
         """Test PDF extraction with a minimal PDF."""
-        from emailtools.knowledge.extractor import extract_text
         # Create a minimal PDF using pypdf
         from pypdf import PdfWriter
+
+        from emailtools.knowledge.extractor import extract_text
         writer = PdfWriter()
         writer.add_blank_page(width=72, height=72)
         buf = io.BytesIO()
@@ -721,8 +720,9 @@ class TestTextExtractor:
 
     def test_extract_docx(self):
         """Test DOCX extraction with a minimal docx."""
-        from emailtools.knowledge.extractor import extract_text
         from docx import Document
+
+        from emailtools.knowledge.extractor import extract_text
 
         doc = Document()
         doc.add_paragraph("Test paragraph content")

@@ -5,17 +5,17 @@ Tests all routes, templates, and functionality to ensure everything works
 for end users.
 """
 
+import tempfile
+from contextlib import contextmanager
+from datetime import datetime, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime, timedelta
-from contextlib import contextmanager
-from unittest.mock import patch
-import tempfile
 
 from emailtools.database import Base
-from emailtools.models import Email, Action, Assignment, RosterMember, Settings
+from emailtools.models import Action, Assignment, Email, RosterMember
 
 # Create test database with unique temp file
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_web_interface.db', prefix='test_emailtools_')
@@ -36,8 +36,8 @@ def override_get_session():
 
 # Import app AFTER defining override function
 # Then patch get_session in the app module where it's used
-import emailtools.web.app as app_module
 import emailtools.settings_service as settings_service_module
+import emailtools.web.app as app_module
 
 app_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session
@@ -502,8 +502,8 @@ class TestSettingsPage:
 
     def test_reset_insights_prompt(self, setup_database):
         """Test resetting insights prompt to default."""
-        from emailtools.settings_service import SettingsService
         from emailtools.ai.prompts import REPORT_INSIGHTS_PROMPT
+        from emailtools.settings_service import SettingsService
 
         # Save a custom prompt
         SettingsService.set_setting("insights_prompt", "custom")

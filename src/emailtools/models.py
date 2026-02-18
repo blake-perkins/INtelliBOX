@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import List, Optional
+
 from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 

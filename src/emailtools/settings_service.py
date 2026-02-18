@@ -1,10 +1,10 @@
 """Service for managing application settings."""
 
 import json
-from typing import Any, List, Optional
-from sqlalchemy.orm import Session
-from .models import Settings
+from typing import Any, Optional
+
 from .database import get_session
+from .models import Settings
 
 
 class SettingsService:

@@ -2,15 +2,13 @@
 
 import json
 import time
-from datetime import datetime
-
-from emailtools.utils.datetime_utils import utcnow
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from emailtools.config import settings
 from emailtools.models import Email, ProcessingLog
+from emailtools.utils.datetime_utils import utcnow
 from emailtools.utils.logging import logger
 
 
