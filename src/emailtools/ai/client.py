@@ -1,6 +1,7 @@
 """OpenAI GPT-4 client for email analysis."""
 
 import json
+import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -16,6 +17,9 @@ from emailtools.models import Action, Email
 from emailtools.utils.logging import logger
 from emailtools.priority_rules import PriorityRuleEngine
 from emailtools.settings_service import SettingsService
+
+# Exceptions eligible for automatic retry
+_RETRYABLE_EXCEPTIONS = (RateLimitError, APIConnectionError, APIError)
 
 
 def strip_markdown_json(text: str) -> str:
@@ -73,6 +77,49 @@ class AIClient:
             + kb_context
         )
 
+    def _call_api(
+        self,
+        messages: List[Dict],
+        temperature: float = 0.3,
+        max_tokens: int = 1500,
+    ) -> str:
+        """Call the OpenAI API with automatic retry and exponential backoff.
+
+        Args:
+            messages: Chat messages to send
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens in response
+
+        Returns:
+            Raw response content string
+
+        Raises:
+            The original exception after max_retries exhausted
+        """
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    timeout=self.timeout,
+                )
+                return response.choices[0].message.content
+            except _RETRYABLE_EXCEPTIONS as e:
+                if attempt < self.max_retries:
+                    wait = 2 ** attempt  # 1, 2, 4, 8, ...
+                    logger.warning(
+                        f"API error (attempt {attempt + 1}/{self.max_retries + 1}), "
+                        f"retrying in {wait}s: {e}"
+                    )
+                    time.sleep(wait)
+                else:
+                    logger.error(
+                        f"API error after {self.max_retries + 1} attempts, giving up: {e}"
+                    )
+                    raise
+
     def extract_actions(
         self,
         email: Email,
@@ -112,50 +159,33 @@ class AIClient:
             categories=categories_text
         )
 
+        logger.info(f"Calling GPT-4 API for email ID {email.id}")
+
+        system_prompt = self._build_system_prompt()
+        raw_response = self._call_api(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=1500,
+        )
+
+        logger.debug(f"GPT-4 response: {raw_response[:200]}...")
+
+        # Parse JSON response (strip markdown code fences if present)
         try:
-            logger.info(f"Calling GPT-4 API for email ID {email.id}")
+            clean_json = strip_markdown_json(raw_response)
+            parsed = json.loads(clean_json)
+            actions = parsed.get("actions", [])
 
-            system_prompt = self._build_system_prompt()
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,  # Lower temperature for more consistent extraction
-                max_tokens=1500,
-                timeout=self.timeout
-            )
+            logger.info(f"Extracted {len(actions)} action(s) from email ID {email.id}")
+            return actions, raw_response
 
-            raw_response = response.choices[0].message.content
-            logger.debug(f"GPT-4 response: {raw_response[:200]}...")
-
-            # Parse JSON response (strip markdown code fences if present)
-            try:
-                clean_json = strip_markdown_json(raw_response)
-                parsed = json.loads(clean_json)
-                actions = parsed.get("actions", [])
-
-                logger.info(f"Extracted {len(actions)} action(s) from email ID {email.id}")
-                return actions, raw_response
-
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse GPT-4 JSON response: {e}")
-                logger.error(f"Raw response: {raw_response}")
-                return [], raw_response
-
-        except RateLimitError:
-            logger.error("OpenAI API rate limit exceeded")
-            raise
-        except APIConnectionError as e:
-            logger.error(f"Failed to connect to OpenAI API: {e}")
-            raise
-        except APIError as e:
-            logger.error(f"OpenAI API error: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error calling OpenAI API: {e}")
-            raise
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse GPT-4 JSON response: {e}")
+            logger.error(f"Raw response: {raw_response}")
+            return [], raw_response
 
     def create_action_objects(
         self,
@@ -262,20 +292,16 @@ class AIClient:
             logger.info(f"Generating program news from {len(emails)} emails")
 
             system_prompt = self._build_system_prompt()
-            response = self.client.chat.completions.create(
-                model=self.model,
+            summary = self._call_api(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.5,  # Slightly higher for more natural prose
+                temperature=0.5,
                 max_tokens=500,
-                timeout=self.timeout
-            )
+            ).strip()
 
-            summary = response.choices[0].message.content.strip()
             logger.info("Program news summary generated")
-
             return summary
 
         except Exception as e:
@@ -324,21 +350,17 @@ class AIClient:
             logger.info(f"Generating structured program news from {len(emails)} emails")
 
             system_prompt = self._build_system_prompt()
-            response = self.client.chat.completions.create(
-                model=self.model,
+            raw_response = self._call_api(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.4,  # Balanced for structured output
+                temperature=0.4,
                 max_tokens=800,
-                timeout=self.timeout
-            )
+            ).strip()
 
-            raw_response = response.choices[0].message.content.strip()
             logger.debug(f"Structured program news response: {raw_response[:200]}...")
 
-            # Parse JSON response
             try:
                 clean_json = strip_markdown_json(raw_response)
                 structured_news = json.loads(clean_json)
@@ -348,7 +370,6 @@ class AIClient:
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse structured news JSON: {e}")
                 logger.error(f"Raw response: {raw_response}")
-                # Return fallback structure
                 return {
                     "critical_updates": [],
                     "trending_topics": [],
@@ -436,18 +457,15 @@ class AIClient:
             logger.info(f"Generating KB-aware insights ({stats.get('total_actions', 0)} actions, {days}d)")
 
             system_prompt = self._build_system_prompt()
-            response = self.client.chat.completions.create(
-                model=self.model,
+            raw_response = self._call_api(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,
                 max_tokens=2000,
-                timeout=self.timeout
-            )
+            ).strip()
 
-            raw_response = response.choices[0].message.content.strip()
             logger.debug(f"Report insights response: {raw_response[:200]}...")
 
             try:
