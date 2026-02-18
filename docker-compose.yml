@@ -13,9 +13,14 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
-    # CMD from Dockerfile: emailtools web --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
-  # Testing profile: isolated DB via volume mount, TESTING=true enables /api/test/reset
+  # Testing profile: run the web app with test config
   emailtools-test:
     build:
       context: .
@@ -38,6 +43,17 @@ services:
       timeout: 3s
       start_period: 15s
       retries: 5
+
+  # Test runner: runs the full test suite and exits
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: emailtools-test-runner
+    env_file:
+      - .env.test
+    profiles:
+      - ci
 
   # Optional: PostgreSQL for production-like setup
   postgres:

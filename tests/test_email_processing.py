@@ -428,7 +428,10 @@ class TestChainStrippingIntegration:
             client.model = "gpt-4"
             client.max_retries = 1
             client.timeout = 30
-            client.extract_actions(email)
+            # Patch get_knowledge_context to avoid needing the KB table
+            # in this test's isolated DB
+            with patch("emailtools.ai.client.get_knowledge_context", return_value=""):
+                client.extract_actions(email)
 
         assert len(captured_prompts) == 1
         assert "Please send the report" in captured_prompts[0]
@@ -636,7 +639,9 @@ class TestVolumeProcessing:
             email = session.query(Email).filter_by(message_id=f"<mix-{i:03d}@outlook.local>").first()
             also = json.loads(email.also_received_from or "[]")
             assert len(also) == 1
-            assert also[0]["address"] == f"forwarder{i}@example.com"
+            # File processing order varies by OS, so either sender could be primary
+            all_senders = {email.from_address} | {a["address"] for a in also}
+            assert all_senders == {f"sender{i}@example.com", f"forwarder{i}@example.com"}
 
     def test_50_msg_files_mixed_with_chains(self, session, inbox_dir):
         """50 .msg files: some plain, some with chains, some duplicates."""

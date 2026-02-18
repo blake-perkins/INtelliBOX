@@ -65,9 +65,15 @@ def run_behave():
     print(f"{BOLD}Running: features/ (Behave BDD){RESET}")
     print(f"{BLUE}{'=' * 70}{RESET}\n")
 
-    behave_exe = Path("venv/Scripts/behave.exe")
+    # Use behave from venv on Windows, or system PATH in containers
+    if sys.platform == 'win32':
+        behave_cmd = str(Path("venv/Scripts/behave.exe"))
+    else:
+        import shutil
+        behave_cmd = shutil.which("behave") or "behave"
+
     result = subprocess.run(
-        [str(behave_exe), "features/", "--no-capture"],
+        [behave_cmd, "features/", "--no-capture"],
         capture_output=False,
         text=True
     )

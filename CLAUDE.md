@@ -1,52 +1,107 @@
-# CLAUDE.md — INtelliBOX
+# CLAUDE.md — EmailTools
 
 ## Project Overview
 
-INtelliBOX is an automated email action tracking system for fast-paced software teams. It parses emails using AI (GPT-4) to extract actionable items, stores them in a database, and generates nightly reports showing unassigned actions.
+EmailTools is an automated email action tracking system for fast-paced software teams. It parses emails using AI (GPT-4) to extract actionable items, stores them in a database, and provides a web dashboard for action management, assignment tracking, and AI-generated reports.
 
 ## Repository Structure
 
 ```
-INtelliBOX/
-├── src/intellibox/          # Main application code
-│   ├── ingestion/          # Email parsing and file watching
-│   ├── ai/                 # GPT-4 integration (Phase 2)
-│   ├── reporter/           # Report generation (Phase 3)
-│   ├── utils/              # Shared utilities
+EmailTools/
+├── src/emailtools/          # Main application code
+│   ├── ingestion/          # Email parsing (.eml/.msg), file watching, chain stripping
+│   ├── ai/                 # GPT-4 integration with retry logic, mock client for demo
+│   ├── reporter/           # Report generation, program news, email sending
+│   ├── knowledge/          # Knowledge base: document storage, embeddings, TF-IDF search
+│   ├── web/                # FastAPI web interface
+│   │   └── templates/      # Jinja2 HTML templates
+│   ├── utils/              # Logging (rotating), datetime utilities
 │   ├── config.py           # Pydantic settings
 │   ├── models.py           # SQLAlchemy ORM models
-│   ├── database.py         # Database initialization
+│   ├── database.py         # Database init, maintenance, cleanup
+│   ├── settings_service.py # Settings CRUD (JSON serialization)
+│   ├── priority_rules.py   # Priority rule engine
 │   └── cli.py              # Click CLI commands
-├── tests/                  # Test suite
-│   └── fixtures/
-│       └── sample_emails/  # .eml files for testing
+├── tests/                  # 13 pytest test modules
+│   ├── test_ai/            # AI-specific tests (priority integration)
+│   └── fixtures/           # Sample .eml files
+├── features/               # 165 BDD scenarios (Behave)
+│   └── steps/              # Step definitions
 ├── data/                   # Local data (gitignored)
-│   ├── inbox/             # Drop .eml files here
+│   ├── inbox/             # Drop .eml/.msg files here
 │   ├── emails/            # Archived emails
-│   └── intellibox.db      # SQLite database
+│   ├── logs/              # Rotating log files
+│   └── emailtools.db      # SQLite database
 ├── alembic/               # Database migrations
-├── pyproject.toml         # Dependencies and config
-└── .env                   # Environment variables (create from .env.example)
+├── docs/deployment/       # AWS, Azure, Podman guides
+├── Dockerfile             # Production container image
+├── Dockerfile.test        # Test runner container image
+├── docker-compose.yml     # Multi-service orchestration
+├── run_tests.py           # Test runner (isolated per module)
+├── .dockerignore          # Production build excludes tests
+├── .dockerignore.test     # Test build includes tests
+└── pyproject.toml         # Dependencies, ruff, pytest config
 ```
 
 ## Current State
 
-- **Status**: MVP Complete — All 3 phases implemented and tested
-  - ✅ Phase 1: Email ingestion and parsing
-  - ✅ Phase 2: AI action extraction (demo mode)
-  - ✅ Phase 3: Nightly reporting with email summaries
+- **Status**: Feature-complete with web dashboard, AI integration, and container support
+  - Email ingestion with chain stripping and deduplication
+  - AI action extraction with configurable priority rules
+  - Web dashboard: /, /actions, /emails, /insights, /settings, /knowledge-base, /roster, /analytics
+  - Knowledge base with TF-IDF and embedding search
+  - Database maintenance (cache cleanup, log retention, VACUUM/ANALYZE)
+  - File watcher with health monitoring and supervised restarts
+  - AI client retry logic with exponential backoff
+  - Rotating log files
+  - Container support (Dockerfile, Dockerfile.test, docker-compose.yml)
 - **Primary branch**: `main`
-- **Next Steps**: Production deployment (OpenAI API key, SMTP config, AWS migration)
+- **Python**: 3.12+
+- **Database**: SQLite (data/emailtools.db)
+
+## Testing
+
+Tests are run in isolation to avoid SQLite cross-contamination between modules:
+
+```bash
+# ALWAYS use this command to run all tests:
+python run_tests.py
+
+# NOT: pytest tests/  (causes cross-contamination errors)
+```
+
+**Test suite**: 13 pytest modules + 165 BDD scenarios (Behave).
+
+Container testing:
+```bash
+# Swap .dockerignore, build test image, run tests
+cp .dockerignore .dockerignore.bak && cp .dockerignore.test .dockerignore
+podman build -f Dockerfile.test -t emailtools:test-runner .
+cp .dockerignore.bak .dockerignore
+podman run --rm --env-file .env.test emailtools:test-runner
+```
+
+## CLI Commands
+
+```
+emailtools init            # Initialize database
+emailtools process         # Process emails from inbox
+emailtools web             # Start web server (http://localhost:8000)
+emailtools maintenance     # DB maintenance (cleanup, vacuum, analyze)
+emailtools actions list    # List actions
+emailtools ai process      # Run AI extraction
+emailtools report generate # Preview report
+emailtools report send     # Send report
+emailtools db show         # View database
+```
 
 ## Development Workflow
 
-_To be updated as the project takes shape._ When setting up the project, establish:
-
-1. A `README.md` with project description, setup instructions, and usage examples.
-2. A build/dependency configuration file appropriate to the chosen language (e.g., `package.json`, `pyproject.toml`).
-3. A test framework and test directory.
-4. Linting and formatting configuration.
-5. CI/CD pipeline (e.g., GitHub Actions).
+1. Local development uses `venv/` virtual environment
+2. `pip install -e ".[dev]"` for all dependencies including test tools
+3. Web server: `emailtools web` (or `./venv/Scripts/emailtools.exe web` on Windows)
+4. Template changes (HTML) take effect immediately; Python changes require server restart
+5. Run `python run_tests.py` before committing
 
 ## Conventions for AI Assistants
 
