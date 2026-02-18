@@ -4,9 +4,7 @@ Settings, categories, and roster Behave step definitions.
 
 from behave import given, when, then
 
-from emailtools.models import RosterMember
-from emailtools.settings_service import SettingsService
-from features.environment import make_session
+from features.environment import query_roster_count, query_roster_member
 
 
 @when("I add a category named {name}")
@@ -59,15 +57,11 @@ def step_settings_success(context):
 
 @then("the roster member is saved in the database")
 def step_member_in_db(context):
-    session = make_session(context)
-    count = session.query(RosterMember).count()
+    count = query_roster_count(context)
     assert count > 0, "Expected at least one roster member"
-    session.close()
 
 
 @then("the roster member is removed from the database")
 def step_member_removed_from_db(context):
-    session = make_session(context)
-    member = session.query(RosterMember).filter_by(id=context.last_member_id).first()
-    assert member is None, "Expected member to be deleted"
-    session.close()
+    data = query_roster_member(context, context.last_member_id)
+    assert data is None, "Expected member to be deleted"

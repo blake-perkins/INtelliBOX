@@ -47,6 +47,7 @@ dmypy.json
 .env
 *.env
 !.env.example
+!.env.test
 
 # Data directory (contains local database and emails)
 data/

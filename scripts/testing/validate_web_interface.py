@@ -152,7 +152,7 @@ def validate_web_interface():
 
     # Test report with longer timeout (AI processing takes time)
     try:
-        response = requests.get(f"{BASE_URL}/report", timeout=30)
+        response = requests.get(f"{BASE_URL}/insights", timeout=30)
         if response.status_code == 200 and b"Daily Report" in response.content:
             print_success("Daily Report: HTTP 200 (AI processing)")
             results["passed"] += 1

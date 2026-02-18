@@ -67,6 +67,16 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates.env.globals['get_program_name'] = lambda: SettingsService.get_setting('program_name', '')
 
 
+@app.middleware("http")
+async def no_cache_html(request: Request, call_next):
+    """Prevent browser caching of HTML pages so data is always fresh."""
+    response = await call_next(request)
+    ct = response.headers.get("content-type", "")
+    if "text/html" in ct:
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """Main dashboard showing summary statistics."""
@@ -486,8 +496,8 @@ async def view_email(request: Request, email_id: int):
         })
 
 
-@app.get("/report", response_class=HTMLResponse)
-async def view_report(request: Request):
+@app.get("/insights", response_class=HTMLResponse)
+async def view_insights(request: Request):
     """View AI-powered insights dashboard. Always loads instantly using cached data."""
     with get_session() as session:
         # Always use cached data — never block page load with AI calls
@@ -511,8 +521,8 @@ async def view_report(request: Request):
         })
 
 
-@app.post("/api/report-refresh")
-async def refresh_report():
+@app.post("/api/insights-refresh")
+async def refresh_insights():
     """Regenerate AI insights and program news. Called via AJAX from the Insights page."""
     with get_session() as session:
         generate_enhanced_report(session, days=7, force_refresh=True)
@@ -626,11 +636,13 @@ async def complete_action(action_id: int):
             assignment = Assignment(
                 action_id=action_id,
                 assigned_to="Unknown",
-                status="completed"
+                status="completed",
+                completed_at=datetime.utcnow()
             )
             session.add(assignment)
         else:
             assignment.status = "completed"
+            assignment.completed_at = datetime.utcnow()
 
         session.commit()
 
@@ -678,6 +690,10 @@ async def update_assignment_status(
             raise HTTPException(status_code=400, detail="Invalid status")
 
         assignment.status = status
+        if status == "completed":
+            assignment.completed_at = datetime.utcnow()
+        else:
+            assignment.completed_at = None
         session.commit()
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
@@ -1034,6 +1050,13 @@ async def add_roster_member(
     first_name = first_name.strip()
     last_name = last_name.strip()
     email = email.strip().lower()
+
+    if not email:
+        return RedirectResponse(
+            "/settings?roster_error=Email+is+required#roster",
+            status_code=303
+        )
+
     full_name = f"{first_name} {last_name}".lower()
 
     with get_session() as session:
@@ -1138,6 +1161,99 @@ async def delete_roster_member(member_id: int):
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+
+# --- Test-only endpoints (gated by TESTING env var) ---
+import os as _os
+if _os.environ.get("TESTING", "").lower() in ("true", "1", "yes"):
+    import json as _json
+
+    @app.post("/api/test/reset")
+    async def test_reset_database():
+        """Drop and recreate all tables. Only available when TESTING=true."""
+        from emailtools.models import Base
+        from emailtools.database import engine
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        return {"status": "reset", "tables": list(Base.metadata.tables.keys())}
+
+    @app.post("/api/test/seed")
+    async def test_seed_entity(request: Request):
+        """Create a test entity. Body: {"type": "email|action|assignment|roster_member", "data": {...}}"""
+        payload = await request.json()
+        entity_type = payload["type"]
+        data = payload["data"]
+
+        # Parse ISO date strings into datetime objects
+        _date_fields = {
+            "received_date", "processed_at", "due_date", "assigned_at", "completed_at", "created_at"
+        }
+        for key in list(data.keys()):
+            if key in _date_fields and isinstance(data[key], str):
+                data[key] = datetime.fromisoformat(data[key])
+
+        model_map = {
+            "email": Email,
+            "action": Action,
+            "assignment": Assignment,
+            "roster_member": RosterMember,
+        }
+        Model = model_map[entity_type]
+
+        with get_session() as session:
+            entity = Model(**data)
+            session.add(entity)
+            session.flush()
+            entity_id = entity.id
+        return {"id": entity_id}
+
+    @app.get("/api/test/query/action/{action_id}")
+    async def test_query_action(action_id: int):
+        """Query an action by ID for test assertions."""
+        with get_session() as session:
+            action = session.query(Action).filter_by(id=action_id).first()
+            if not action:
+                return {"found": False}
+            return {
+                "found": True,
+                "id": action.id,
+                "title": action.title,
+                "priority": action.priority,
+                "due_date": action.due_date.isoformat() if action.due_date else None,
+                "category": action.category,
+                "has_assignments": bool(action.assignments and len(action.assignments) > 0),
+            }
+
+    @app.get("/api/test/query/assignment")
+    async def test_query_assignment(action_id: int):
+        """Query an active assignment by action_id for test assertions."""
+        with get_session() as session:
+            assignment = session.query(Assignment).filter_by(action_id=action_id).first()
+            if not assignment:
+                return {"found": False}
+            return {
+                "found": True,
+                "id": assignment.id,
+                "action_id": assignment.action_id,
+                "assigned_to": assignment.assigned_to,
+                "status": assignment.status,
+            }
+
+    @app.get("/api/test/query/roster/count")
+    async def test_query_roster_count():
+        """Count roster members for test assertions."""
+        with get_session() as session:
+            count = session.query(RosterMember).count()
+            return {"count": count}
+
+    @app.get("/api/test/query/roster-member/{member_id}")
+    async def test_query_roster_member(member_id: int):
+        """Query a roster member by ID for test assertions."""
+        with get_session() as session:
+            member = session.query(RosterMember).filter_by(id=member_id).first()
+            if not member:
+                return {"found": False}
+            return {"found": True, "id": member.id}
 
 
 if __name__ == "__main__":

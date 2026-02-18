@@ -9,15 +9,35 @@ services:
     env_file:
       - .env
     volumes:
-      # Mount data directory for persistence
       - ./data:/app/data
-      # Optional: mount source for development
-      # - ./src:/app/src
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    # CMD from Dockerfile: emailtools web --host 0.0.0.0 --port 8000
+
+  # Testing profile: isolated DB via volume mount, TESTING=true enables /api/test/reset
+  emailtools-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: emailtools-test
+    env_file:
+      - .env.test
     environment:
       - DATABASE_URL=sqlite:///./data/emailtools.db
-      - LOG_LEVEL=INFO
-    restart: unless-stopped
-    command: emailtools report schedule
+      - TESTING=true
+    volumes:
+      - ./data/test:/app/data
+    ports:
+      - "8001:8000"
+    profiles:
+      - testing
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
 
   # Optional: PostgreSQL for production-like setup
   postgres:
@@ -34,20 +54,6 @@ services:
     restart: unless-stopped
     profiles:
       - production
-
-  # Email processor (one-time or cron)
-  processor:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: emailtools-processor
-    env_file:
-      - .env
-    volumes:
-      - ./data:/app/data
-    command: emailtools process
-    profiles:
-      - manual
 
 volumes:
   postgres_data:

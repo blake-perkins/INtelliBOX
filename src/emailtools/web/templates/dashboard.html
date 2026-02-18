@@ -21,7 +21,7 @@
             {% for action in overdue_actions %}
             <tr style="cursor: pointer; background-color: #fde8e8;" onclick="window.location='/actions/{{ action.id }}'">
                 <td style="padding-left: 1.5rem;">
-                    <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
+                    <div style="font-weight: 600;" title="{{ action.title }}">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
                     <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
                         {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
                         <span style="color: #ccc;">|</span>
@@ -39,6 +39,7 @@
                     </span>
                 </td>
                 <td onclick="event.stopPropagation()" style="white-space: nowrap;">
+                    {% if roster %}
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
                                 style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
@@ -51,11 +52,14 @@
                             </option>
                             {% endfor %}
                         </select>
-                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, false)"
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this)"
                                 style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">
                             Assign
                         </button>
                     </div>
+                    {% else %}
+                    <a href="/settings#roster" style="font-size: 0.85rem; color: #667eea;">Add roster</a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -84,7 +88,7 @@
             {% set is_overdue = action.due_date and action.due_date < current_time %}
             <tr style="cursor: pointer; background-color: #fef8f6;" onclick="window.location='/actions/{{ action.id }}'">
                 <td style="padding-left: 1.5rem;">
-                    <div style="font-weight: 600;">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
+                    <div style="font-weight: 600;" title="{{ action.title }}">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
                     <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
                         {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
                         <span style="color: #ccc;">|</span>
@@ -110,6 +114,7 @@
                     {% endif %}
                 </td>
                 <td onclick="event.stopPropagation()" style="white-space: nowrap;">
+                    {% if roster %}
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
                                 style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
@@ -122,11 +127,14 @@
                             </option>
                             {% endfor %}
                         </select>
-                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, true)"
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this)"
                                 style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">
                             Assign
                         </button>
                     </div>
+                    {% else %}
+                    <a href="/settings#roster" style="font-size: 0.85rem; color: #667eea;">Add roster</a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -160,7 +168,7 @@
                  onclick="window.location='/actions/{{ action.id }}'">
                 <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.5rem;">
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 600; font-size: 0.9rem;">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</div>
+                        <div style="font-weight: 600; font-size: 0.9rem;" title="{{ action.title }}">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</div>
                         <div style="font-size: 0.78rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
                             {{ action.email.from_address }}
                             <span style="color: #ccc;">|</span>
@@ -173,6 +181,7 @@
                         </div>
                     </div>
                     <div onclick="event.stopPropagation()" style="flex-shrink: 0; display: flex; gap: 0.35rem; align-items: center;">
+                        {% if roster %}
                         <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
                                 style="padding: 0.35rem 0.5rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.8rem; background: white; cursor: pointer; max-width: 150px;"
                                 onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
@@ -181,8 +190,11 @@
                             <option value="{{ member.full_name }}">{{ member.last_name }}, {{ member.first_name }}</option>
                             {% endfor %}
                         </select>
-                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, true)"
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this)"
                                 style="padding: 0.35rem 0.7rem; font-size: 0.8rem; white-space: nowrap;">Assign</button>
+                        {% else %}
+                        <a href="/settings#roster" onclick="event.stopPropagation()" style="font-size: 0.8rem; color: #667eea;">Add roster</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -211,7 +223,7 @@
                  onclick="window.location='/actions/{{ action.id }}'">
                 <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.5rem;">
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 600; font-size: 0.9rem;">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</div>
+                        <div style="font-weight: 600; font-size: 0.9rem;" title="{{ action.title }}">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</div>
                         <div style="font-size: 0.78rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
                             {{ action.email.from_address }}
                             <span style="color: #ccc;">|</span>
@@ -224,6 +236,7 @@
                         </div>
                     </div>
                     <div onclick="event.stopPropagation()" style="flex-shrink: 0; display: flex; gap: 0.35rem; align-items: center;">
+                        {% if roster %}
                         <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
                                 style="padding: 0.35rem 0.5rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.8rem; background: white; cursor: pointer; max-width: 150px;"
                                 onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
@@ -232,8 +245,11 @@
                             <option value="{{ member.full_name }}">{{ member.last_name }}, {{ member.first_name }}</option>
                             {% endfor %}
                         </select>
-                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this, true)"
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this)"
                                 style="padding: 0.35rem 0.7rem; font-size: 0.8rem; white-space: nowrap;">Assign</button>
+                        {% else %}
+                        <a href="/settings#roster" onclick="event.stopPropagation()" style="font-size: 0.8rem; color: #667eea;">Add roster</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -264,7 +280,7 @@
             {% if recent_assignments %}
                 {% for assignment, action in recent_assignments %}
                 <div style="padding: 0.75rem; margin-bottom: 0.5rem; background: #f8f9fa; border-radius: 4px; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
-                    <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem;">{{ action.title[:45] }}{% if action.title|length > 45 %}...{% endif %}</div>
+                    <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem;"><span title="{{ action.title }}">{{ action.title[:45] }}{% if action.title|length > 45 %}...{% endif %}</span></div>
                     <div style="font-size: 0.8rem; color: #7f8c8d;">
                         <span style="color: #3498db;">{{ assignment.assigned_to }}</span>
                         <span style="margin: 0 0.5rem;">•</span>
@@ -286,7 +302,7 @@
                 {% for assignment, action in recent_completions %}
                 <div style="padding: 0.75rem; margin-bottom: 0.5rem; background: #f0fdf4; border-radius: 4px; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
                     <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem;">
-                        {{ action.title[:45] }}{% if action.title|length > 45 %}...{% endif %}
+                        <span title="{{ action.title }}">{{ action.title[:45] }}{% if action.title|length > 45 %}...{% endif %}</span>
                         <span style="color: #27ae60; margin-left: 0.5rem;">✓</span>
                     </div>
                     <div style="font-size: 0.8rem; color: #7f8c8d;">
@@ -310,57 +326,58 @@
 
 {% block extra_js %}
 <script>
-async function quickAssign(actionId, btn, removeRow) {
+// Soft reload: fetch fresh HTML and swap content without full page navigation
+async function softReload() {
+    try {
+        const html = await fetch('/?_=' + Date.now()).then(r => r.text());
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const fresh = doc.querySelector('.container');
+        if (fresh) {
+            document.querySelector('.container').innerHTML = fresh.innerHTML;
+            // Re-bind local-time elements in new content
+            document.querySelectorAll('.container time.local-time').forEach(el => {
+                const d = new Date(el.getAttribute('datetime'));
+                if (!isNaN(d)) el.textContent = d.toLocaleString(undefined, {
+                    month: 'short', day: 'numeric', year: 'numeric',
+                    hour: 'numeric', minute: '2-digit'
+                });
+            });
+        }
+        refreshStats();
+    } catch (e) { /* silently ignore network errors */ }
+}
+
+function softReloadAfter(delay) {
+    setTimeout(softReload, delay);
+}
+
+async function quickAssign(actionId, btn) {
     const select = document.getElementById('sel-' + actionId);
     const name = select.value;
+
+    // Ignore if no roster member selected
+    if (!name) { select.focus(); return; }
 
     btn.disabled = true;
     btn.textContent = '...';
 
-    const unassigning = !name;
-    const url = unassigning
-        ? '/actions/' + actionId + '/unassign'
-        : '/actions/' + actionId + '/assign';
-
     const body = new FormData();
-    if (!unassigning) body.append('assigned_to', name);
+    body.append('assigned_to', name);
 
     try {
-        const resp = await fetch(url, { method: 'POST', body, redirect: 'manual' });
+        const resp = await fetch('/actions/' + actionId + '/assign', {
+            method: 'POST', body, redirect: 'manual'
+        });
         if (resp.ok || resp.type === 'opaqueredirect') {
-            refreshStats();
-            if (removeRow) {
-                const row = btn.closest('tr') || btn.closest('[class*="-row"]');
-                if (row) {
-                    row.style.transition = 'opacity 0.3s';
-                    row.style.opacity = '0';
-                    setTimeout(() => {
-                        const parent = row.parentElement;
-                        row.remove();
-                        // Check if section is now empty (works for both <tbody> and div containers)
-                        const remaining = parent ? (parent.querySelectorAll('tr').length + parent.querySelectorAll('[class*="-row"]').length) : 0;
-                        if (remaining === 0) {
-                            const card = parent.closest('.card');
-                            if (card) {
-                                card.style.transition = 'opacity 0.4s';
-                                card.style.opacity = '0';
-                                setTimeout(() => { card.style.display = 'none'; }, 400);
-                            }
-                        }
-                    }, 300);
-                }
-            } else {
-                // Overdue rows stay — flash button green to confirm
-                btn.textContent = '✓ Saved';
-                btn.style.background = '#27ae60';
-                btn.style.borderColor = '#27ae60';
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.textContent = 'Assign';
-                    btn.style.background = '';
-                    btn.style.borderColor = '';
-                }, 1500);
+            btn.textContent = '✓ Saved';
+            btn.style.background = '#27ae60';
+            btn.style.borderColor = '#27ae60';
+            const row = btn.closest('tr') || btn.closest('[class*="-row"]');
+            if (row) {
+                row.style.transition = 'opacity 0.4s';
+                row.style.opacity = '0.4';
             }
+            softReloadAfter(800);
         } else {
             btn.disabled = false;
             btn.textContent = 'Assign';
@@ -385,10 +402,9 @@ async function changePriority(actionId, select, removeRow) {
                 row.style.transition = 'opacity 0.3s';
                 row.style.opacity = '0';
             }
-            setTimeout(() => { location.reload(); }, 350);
+            softReloadAfter(350);
         }
     } else {
-        // Revert select on failure
         select.value = select.dataset.original || select.value;
     }
 }
@@ -403,9 +419,7 @@ function toggleSection(prefix) {
         : '▼ Show ' + extras.length + ' more';
 }
 
-    // Auto-refresh every 30 seconds
-    setInterval(() => {
-        location.reload();
-    }, 30000);
+// Auto-refresh every 30 seconds — silent content swap, no page flash
+setInterval(softReload, 30000);
 </script>
 {% endblock %}

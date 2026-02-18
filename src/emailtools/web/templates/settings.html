@@ -220,10 +220,14 @@
                            onchange="this.form.submit()">
                 </form>
                 <button type="button" onclick="document.getElementById('import-input').click()"
-                        style="font-size: 0.85rem; padding: 0.4rem 0.9rem; background: #f8f9fa; color: #555; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        style="font-size: 0.85rem; padding: 0.4rem 0.9rem; background: #f8f9fa; color: #555; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;"
+                        title="Excel file must have columns: first_name, last_name, email">
                     ↑ Import Excel
                 </button>
             </div>
+        </div>
+        <div style="padding: 0.4rem 1.5rem 0; text-align: right;">
+            <span style="font-size: 0.78rem; color: #aaa;">Excel format: columns named <code style="background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.75rem;">first_name</code>, <code style="background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.75rem;">last_name</code>, <code style="background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.75rem;">email</code></span>
         </div>
 
         <!-- Inline Add Member Form -->
@@ -241,7 +245,7 @@
                            style="padding: 0.45rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem; width: 140px;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                    <label style="font-size: 0.78rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.03em;">Email</label>
+                    <label style="font-size: 0.78rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.03em;">Email <span style="color: #e74c3c;">*</span></label>
                     <input type="email" name="email" placeholder="jane.smith@example.com" required
                            style="padding: 0.45rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem; width: 240px;">
                 </div>

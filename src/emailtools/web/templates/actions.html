@@ -87,14 +87,14 @@
             <span class="badge badge-{{ action.priority }}">{{ action.priority }}</span>
         </td>
         <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
-            <div style="font-weight: 600; margin-bottom: 0.25rem;">
+            <div style="font-weight: 600; margin-bottom: 0.25rem;" title="{{ action.title }}">
                 {{ action.title[:80] }}{% if action.title|length > 80 %}...{% endif %}
             </div>
-            <div style="font-size: 0.85rem; color: #666;">
+            <div style="font-size: 0.85rem; color: #666;" title="{{ action.email.subject }}">
                 {{ action.email.subject[:60] }}{% if action.email.subject|length > 60 %}...{% endif %}
             </div>
         </td>
-        <td style="font-size: 0.9rem; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+        <td style="font-size: 0.9rem; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'" title="{{ action.email.from_address }}">
             {{ action.email.from_address.split('@')[0] if '@' in action.email.from_address else action.email.from_address }}
         </td>
         <td style="font-size: 0.85rem; color: #666; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
@@ -144,9 +144,7 @@
                     {% endfor %}
                 </select>
                 {% else %}
-                <input type="text" name="assigned_to" placeholder="Name..." list="assignees"
-                       value="{{ assignment.assigned_to if assignment else '' }}"
-                       style="flex: 1; padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;" required>
+                <span style="font-size: 0.8rem; color: #999;"><a href="/settings#roster" style="color: #667eea;">Add roster members</a></span>
                 {% endif %}
                 <button type="submit" class="btn btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; white-space: nowrap;">
                     {% if assignment %}Re-assign{% else %}Assign{% endif %}

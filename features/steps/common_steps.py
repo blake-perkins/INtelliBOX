@@ -5,8 +5,7 @@ Common Behave step definitions: navigation, assertions, and test data setup.
 from behave import given, when, then
 from datetime import datetime, timedelta
 
-from emailtools.models import Email, Action, Assignment, RosterMember
-from features.environment import make_session
+from features.environment import seed
 
 
 # ---------------------------------------------------------------------------
@@ -21,8 +20,7 @@ def step_database_empty(context):
 
 @given('an email exists with subject "{subject}"')
 def step_email_exists(context, subject):
-    session = make_session(context)
-    email = Email(
+    eid = seed(context, "email",
         message_id=f"msg-{subject.lower().replace(' ', '-')}@test.com",
         subject=subject,
         from_address="sender@example.com",
@@ -33,17 +31,12 @@ def step_email_exists(context, subject):
         processed=True,
         processed_at=datetime.utcnow(),
     )
-    session.add(email)
-    session.commit()
-    context.last_email = email
-    context.last_email_id = email.id
-    session.close()
+    context.last_email_id = eid
 
 
 @given("an overdue unassigned high priority action exists")
 def step_overdue_action(context):
-    session = make_session(context)
-    email = Email(
+    eid = seed(context, "email",
         message_id="overdue-email@test.com",
         subject="Overdue Request",
         from_address="urgent@example.com",
@@ -54,10 +47,8 @@ def step_overdue_action(context):
         processed=True,
         processed_at=datetime.utcnow(),
     )
-    session.add(email)
-    session.commit()
-    action = Action(
-        email_id=email.id,
+    aid = seed(context, "action",
+        email_id=eid,
         title="Overdue action item",
         description="This is past its due date",
         priority="high",
@@ -65,16 +56,12 @@ def step_overdue_action(context):
         category="RFI",
         confidence_score=0.95,
     )
-    session.add(action)
-    session.commit()
-    context.last_action_id = action.id
-    session.close()
+    context.last_action_id = aid
 
 
 @given('an unassigned "{priority}" priority action exists with title "{title}"')
 def step_action_exists_unassigned(context, priority, title):
-    session = make_session(context)
-    email = Email(
+    eid = seed(context, "email",
         message_id=f"email-for-{title.lower().replace(' ', '-')}@test.com",
         subject=f"Subject for {title}",
         from_address="sender@example.com",
@@ -85,10 +72,8 @@ def step_action_exists_unassigned(context, priority, title):
         processed=True,
         processed_at=datetime.utcnow(),
     )
-    session.add(email)
-    session.commit()
-    action = Action(
-        email_id=email.id,
+    aid = seed(context, "action",
+        email_id=eid,
         title=title,
         description=f"Description for {title}",
         priority=priority,
@@ -96,17 +81,13 @@ def step_action_exists_unassigned(context, priority, title):
         category="RFI",
         confidence_score=0.9,
     )
-    session.add(action)
-    session.commit()
-    context.last_action_id = action.id
-    context.last_email_id = email.id
-    session.close()
+    context.last_action_id = aid
+    context.last_email_id = eid
 
 
 @given('an action titled "{title}" is assigned to "{assignee}"')
 def step_action_assigned(context, title, assignee):
-    session = make_session(context)
-    email = Email(
+    eid = seed(context, "email",
         message_id=f"email-assigned-{title.lower().replace(' ', '-')}@test.com",
         subject=f"Subject for {title}",
         from_address="sender@example.com",
@@ -117,10 +98,8 @@ def step_action_assigned(context, title, assignee):
         processed=True,
         processed_at=datetime.utcnow(),
     )
-    session.add(email)
-    session.commit()
-    action = Action(
-        email_id=email.id,
+    aid = seed(context, "action",
+        email_id=eid,
         title=title,
         description=f"Description for {title}",
         priority="medium",
@@ -128,25 +107,19 @@ def step_action_assigned(context, title, assignee):
         category="RFI",
         confidence_score=0.9,
     )
-    session.add(action)
-    session.commit()
-    assignment = Assignment(
-        action_id=action.id,
+    seed(context, "assignment",
+        action_id=aid,
         assigned_to=assignee,
         status="assigned",
         notes="",
     )
-    session.add(assignment)
-    session.commit()
-    context.last_action_id = action.id
-    context.last_email_id = email.id
-    session.close()
+    context.last_action_id = aid
+    context.last_email_id = eid
 
 
 @given('a completed action titled "{title}" exists')
 def step_completed_action(context, title):
-    session = make_session(context)
-    email = Email(
+    eid = seed(context, "email",
         message_id=f"email-completed-{title.lower().replace(' ', '-')}@test.com",
         subject=f"Subject for {title}",
         from_address="sender@example.com",
@@ -157,10 +130,8 @@ def step_completed_action(context, title):
         processed=True,
         processed_at=datetime.utcnow(),
     )
-    session.add(email)
-    session.commit()
-    action = Action(
-        email_id=email.id,
+    aid = seed(context, "action",
+        email_id=eid,
         title=title,
         description=f"Description for {title}",
         priority="medium",
@@ -168,25 +139,19 @@ def step_completed_action(context, title):
         category="RFI",
         confidence_score=0.9,
     )
-    session.add(action)
-    session.commit()
-    assignment = Assignment(
-        action_id=action.id,
+    seed(context, "assignment",
+        action_id=aid,
         assigned_to="someone@example.com",
         status="completed",
         notes="Done",
     )
-    session.add(assignment)
-    session.commit()
-    context.last_action_id = action.id
-    context.last_email_id = email.id
-    session.close()
+    context.last_action_id = aid
+    context.last_email_id = eid
 
 
 @given('an unassigned "{priority}" priority action exists for the same email with title "{title}"')
 def step_action_same_email(context, priority, title):
-    session = make_session(context)
-    action = Action(
+    seed(context, "action",
         email_id=context.last_email_id,
         title=title,
         description=f"Description for {title}",
@@ -195,16 +160,12 @@ def step_action_same_email(context, priority, title):
         category="RFI",
         confidence_score=0.9,
     )
-    session.add(action)
-    session.commit()
     # Don't overwrite last_action_id — keep the first one
-    session.close()
 
 
 @given('an overdue assigned action titled "{title}" is assigned to "{assignee}"')
 def step_overdue_assigned_action(context, title, assignee):
-    session = make_session(context)
-    email = Email(
+    eid = seed(context, "email",
         message_id=f"email-overdue-assigned-{title.lower().replace(' ', '-')}@test.com",
         subject=f"Subject for {title}",
         from_address="sender@example.com",
@@ -215,10 +176,8 @@ def step_overdue_assigned_action(context, title, assignee):
         processed=True,
         processed_at=datetime.utcnow(),
     )
-    session.add(email)
-    session.commit()
-    action = Action(
-        email_id=email.id,
+    aid = seed(context, "action",
+        email_id=eid,
         title=title,
         description=f"Description for {title}",
         priority="high",
@@ -226,25 +185,19 @@ def step_overdue_assigned_action(context, title, assignee):
         category="RFI",
         confidence_score=0.9,
     )
-    session.add(action)
-    session.commit()
-    assignment = Assignment(
-        action_id=action.id,
+    seed(context, "assignment",
+        action_id=aid,
         assigned_to=assignee,
         status="assigned",
         notes="",
     )
-    session.add(assignment)
-    session.commit()
-    context.last_action_id = action.id
-    context.last_email_id = email.id
-    session.close()
+    context.last_action_id = aid
+    context.last_email_id = eid
 
 
 @given('an unprocessed email exists with subject "{subject}"')
 def step_unprocessed_email(context, subject):
-    session = make_session(context)
-    email = Email(
+    eid = seed(context, "email",
         message_id=f"msg-unprocessed-{subject.lower().replace(' ', '-')}@test.com",
         subject=subject,
         from_address="sender@example.com",
@@ -254,25 +207,17 @@ def step_unprocessed_email(context, subject):
         body_text=f"Body of email: {subject}",
         processed=False,
     )
-    session.add(email)
-    session.commit()
-    context.last_email = email
-    context.last_email_id = email.id
-    session.close()
+    context.last_email_id = eid
 
 
 @given('a roster member "{first}" "{last}" with email "{email}" exists')
 def step_roster_member_exists(context, first, last, email):
-    session = make_session(context)
-    member = RosterMember(
+    mid = seed(context, "roster_member",
         first_name=first,
         last_name=last,
         email=email,
     )
-    session.add(member)
-    session.commit()
-    context.last_member_id = member.id
-    session.close()
+    context.last_member_id = mid
 
 
 # ---------------------------------------------------------------------------

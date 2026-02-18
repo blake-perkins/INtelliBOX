@@ -24,6 +24,10 @@ COPY alembic.ini /app/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -e .
 
+# Copy entrypoint
+COPY entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
+
 # Create data directories
 RUN mkdir -p /app/data/inbox /app/data/emails
 
@@ -40,9 +44,10 @@ RUN useradd -m -u 1000 emailtools && \
 
 USER emailtools
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "from emailtools.database import get_session; next(get_session()).execute('SELECT 1')" || exit 1
+# Health check using the /health endpoint
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Default command (can be overridden)
-CMD ["emailtools", "report", "schedule"]
+# Use entrypoint for migrations, CMD for the actual command
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["emailtools", "web", "--host", "0.0.0.0", "--port", "8000"]

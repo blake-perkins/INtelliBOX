@@ -300,7 +300,7 @@ class TestWebInterface:
 
     def test_report_page(self, setup_database):
         """Test daily report page."""
-        response = client.get("/report")
+        response = client.get("/insights")
         assert response.status_code == 200
         assert b"Insights" in response.content
         assert b"Awaiting Assignment" in response.content
@@ -358,7 +358,7 @@ class TestEmptyDatabase:
 
     def test_report_empty(self, empty_db):
         """Test report with no data."""
-        response = client.get("/report")
+        response = client.get("/insights")
         assert response.status_code == 200
         assert b"Insights" in response.content
 
@@ -430,7 +430,7 @@ class TestUserWorkflow:
         assert response.status_code == 200
 
         # 2. View report
-        response = client.get("/report")
+        response = client.get("/insights")
         assert response.status_code == 200
         # Should show unassigned high priority items
         assert b"high" in response.content.lower()

@@ -171,6 +171,12 @@
             background-color: #f8f9fa;
         }
 
+        /* Clickable rows get a stronger hover to signal interactivity */
+        tr[onclick]:hover, div[onclick]:hover {
+            background-color: #eef2ff !important;
+            transition: background-color 0.15s;
+        }
+
         .badge {
             display: inline-block;
             padding: 0.25rem 0.75rem;
@@ -270,7 +276,7 @@
                 <li><a href="/">Dashboard</a></li>
                 <li><a href="/actions">Actions</a></li>
                 <li><a href="/emails">Emails</a></li>
-                <li><a href="/report">Insights</a></li>
+                <li><a href="/insights">Insights</a></li>
                 <li><a href="/analytics">Analytics</a></li>
                 <li><a href="/settings">⚙️ Settings</a></li>
                 <li style="border-left: 1px solid rgba(255,255,255,0.2); padding-left: 1.5rem; margin-left: 0.25rem; font-size: 0.7rem; opacity: 0.55; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
@@ -337,6 +343,28 @@
             const href = a.getAttribute('href');
             if (href === '/' ? path === '/' : path.startsWith(href)) {
                 a.classList.add('active');
+            }
+        });
+
+        // Restore scroll position after page reload / form redirect
+        (function() {
+            const key = 'scrollY:' + window.location.pathname;
+            const y = sessionStorage.getItem(key);
+            if (y) { sessionStorage.removeItem(key); window.scrollTo(0, parseInt(y)); }
+        })();
+
+        // Save scroll position + prevent double-submit on all forms
+        document.addEventListener('submit', function(e) {
+            sessionStorage.setItem('scrollY:' + window.location.pathname, window.scrollY);
+            // Skip forms handled by JS (onsubmit with preventDefault)
+            if (e.defaultPrevented) return;
+            const btn = e.target.querySelector('button[type="submit"], button:not([type])');
+            if (btn && !btn.dataset.noDisable) {
+                btn.disabled = true;
+                btn.dataset.origText = btn.textContent;
+                btn.textContent = 'Saving...';
+                // Re-enable after 4s as safety net (e.g., validation failure)
+                setTimeout(() => { btn.disabled = false; btn.textContent = btn.dataset.origText; }, 4000);
             }
         });
     </script>

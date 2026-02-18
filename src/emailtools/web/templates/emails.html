@@ -82,7 +82,7 @@
             <tr style="cursor: pointer; {% if not email.processed %}background-color: #fffbf0;{% endif %}"
                 onclick="window.location='/emails/{{ email.id }}'">
                 <td>
-                    <div style="font-weight: 600; margin-bottom: 0.25rem;">
+                    <div style="font-weight: 600; margin-bottom: 0.25rem;" title="{{ email.subject }}">
                         {{ email.subject[:80] }}{% if email.subject|length > 80 %}...{% endif %}
                     </div>
                     {% if action_count > 0 %}
@@ -98,7 +98,7 @@
                     </div>
                     {% endif %}
                 </td>
-                <td style="font-size: 0.9rem;">
+                <td style="font-size: 0.9rem;" title="{{ email.from_address }}">
                     {{ email.from_address.split('@')[0] if '@' in email.from_address else email.from_address }}
                 </td>
                 <td style="font-size: 0.9rem; color: #666;">
