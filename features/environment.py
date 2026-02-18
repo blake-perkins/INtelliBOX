@@ -146,11 +146,12 @@ def seed(context, entity_type, **kwargs):
         assert resp.status_code == 200, f"Seed {entity_type} failed: {resp.text}"
         return resp.json()["id"]
     else:
-        from emailtools.models import Email, Action, Assignment, RosterMember, KnowledgeDocument
+        from emailtools.models import Email, Action, Assignment, RosterMember, KnowledgeDocument, KnowledgeChunk
         model_map = {
             "email": Email, "action": Action,
             "assignment": Assignment, "roster_member": RosterMember,
             "knowledge_document": KnowledgeDocument,
+            "knowledge_chunk": KnowledgeChunk,
         }
         session = make_session(context)
         entity = model_map[entity_type](**kwargs)

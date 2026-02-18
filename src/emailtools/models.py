@@ -292,3 +292,22 @@ class KnowledgeDocument(Base):
 
     def __repr__(self) -> str:
         return f"<KnowledgeDocument(id={self.id}, filename='{self.filename}')>"
+
+
+class KnowledgeChunk(Base):
+    """Chunk of a knowledge document with its OpenAI embedding vector."""
+
+    __tablename__ = "knowledge_chunks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    document_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("knowledge_documents.id", ondelete="CASCADE"), nullable=False
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list of floats
+
+    document: Mapped["KnowledgeDocument"] = relationship("KnowledgeDocument", backref="chunks")
+
+    def __repr__(self) -> str:
+        return f"<KnowledgeChunk(id={self.id}, doc_id={self.document_id}, idx={self.chunk_index})>"

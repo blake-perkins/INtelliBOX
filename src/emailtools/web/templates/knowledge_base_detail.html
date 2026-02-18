@@ -57,6 +57,21 @@
     </div>
 </div>
 
+<!-- Highlight banner (shown when navigating from action detail) -->
+{% if highlight %}
+<div id="highlight-bar" style="background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+    <div style="font-size: 0.85rem; color: #6d5800;">
+        Showing matches for <strong>"{{ highlight }}"</strong>
+        <span id="match-count" style="color: #999; margin-left: 0.25rem;"></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 0.4rem;">
+        <button onclick="navigateMatch(-1)" style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 0.2rem 0.5rem; font-size: 0.8rem; cursor: pointer;">&#9650;</button>
+        <button onclick="navigateMatch(1)" style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 0.2rem 0.5rem; font-size: 0.8rem; cursor: pointer;">&#9660;</button>
+        <a href="/knowledge-base/{{ doc.id }}" style="background: none; border: 1px solid #ddd; border-radius: 4px; padding: 0.2rem 0.5rem; font-size: 0.8rem; color: #999; cursor: pointer; text-decoration: none; margin-left: 0.25rem;">&#10005;</a>
+    </div>
+</div>
+{% endif %}
+
 <!-- Extracted Text -->
 <div class="card">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -89,4 +104,45 @@
         </button>
     </form>
 </div>
+
+{% if highlight %}
+<script>
+(function() {
+    var term = {{ highlight | tojson }};
+    if (!term) return;
+
+    var pre = document.getElementById('extracted-text');
+    if (!pre) return;
+
+    // Escape regex special chars
+    var escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var re = new RegExp('(' + escaped + ')', 'gi');
+
+    // Replace text content with highlighted spans (preserve HTML safety by working on textContent)
+    var html = pre.textContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    html = html.replace(re, '<mark class="kb-hl" style="background:#ffe082;padding:0.1rem 0;border-radius:2px;">$1</mark>');
+    pre.innerHTML = html;
+
+    var marks = pre.querySelectorAll('mark.kb-hl');
+    var countEl = document.getElementById('match-count');
+    if (countEl) countEl.textContent = '(' + marks.length + ' found)';
+
+    // Scroll to first match
+    if (marks.length > 0) {
+        marks[0].style.background = '#ffab00';
+        marks[0].scrollIntoView({ block: 'center' });
+    }
+
+    // Navigation
+    var currentIdx = 0;
+    window.navigateMatch = function(dir) {
+        if (marks.length === 0) return;
+        marks[currentIdx].style.background = '#ffe082';
+        currentIdx = (currentIdx + dir + marks.length) % marks.length;
+        marks[currentIdx].style.background = '#ffab00';
+        marks[currentIdx].scrollIntoView({ block: 'center' });
+    };
+})();
+</script>
+{% endif %}
 {% endblock %}

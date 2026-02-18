@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc, func, case, or_
 
 from emailtools.database import get_session
+from emailtools.knowledge import search_knowledge_base
 from emailtools.models import Action, Assignment, Email, KnowledgeDocument, ProcessingLog, RosterMember
 from emailtools.reporter.generator import generate_report_data, get_cached_structured_program_news, generate_enhanced_report
 from emailtools.config import settings
@@ -347,6 +348,14 @@ async def view_action(request: Request, action_id: int):
         ai_config = SettingsService.get_ai_config()
         categories = ai_config.get('categories', SettingsService.DEFAULT_CATEGORIES)
 
+        # Search KB for program context related to this action
+        kb_matches = search_knowledge_base(
+            sender=action.email.from_address,
+            title=action.title,
+            description=action.description or "",
+            category=action.category or "",
+        )
+
         return templates.TemplateResponse("action_detail.html", {
             "request": request,
             "action": action,
@@ -356,6 +365,7 @@ async def view_action(request: Request, action_id: int):
             "recent_assignees": recent_assignee_list,
             "current_time": datetime.utcnow(),
             "categories": categories,
+            "kb_matches": kb_matches,
         })
 
 
@@ -1093,6 +1103,7 @@ async def upload_knowledge_doc(
         )
         session.add(doc)
         session.commit()
+        doc_id = doc.id
 
     if status == "failed":
         return RedirectResponse(
@@ -1105,11 +1116,20 @@ async def upload_knowledge_doc(
             status_code=303,
         )
 
+    # Compute embeddings if API key is available (non-blocking best-effort)
+    from emailtools.knowledge.embeddings import embed_document
+    chunk_count = embed_document(doc_id)
+    if chunk_count > 0:
+        return RedirectResponse(
+            f"/knowledge-base?success=1&embedded={chunk_count}",
+            status_code=303,
+        )
+
     return RedirectResponse("/knowledge-base?success=1", status_code=303)
 
 
 @app.get("/knowledge-base/{doc_id}", response_class=HTMLResponse)
-async def knowledge_base_detail(request: Request, doc_id: int):
+async def knowledge_base_detail(request: Request, doc_id: int, highlight: Optional[str] = None):
     """View a knowledge base document and its extracted text."""
     with get_session() as session:
         doc = session.query(KnowledgeDocument).filter_by(id=doc_id).first()
@@ -1118,12 +1138,15 @@ async def knowledge_base_detail(request: Request, doc_id: int):
         return templates.TemplateResponse("knowledge_base_detail.html", {
             "request": request,
             "doc": doc,
+            "highlight": highlight or "",
         })
 
 
 @app.post("/knowledge-base/{doc_id}/delete")
 async def delete_knowledge_doc(doc_id: int):
-    """Delete a document from the knowledge base."""
+    """Delete a document and its embedding chunks from the knowledge base."""
+    from emailtools.knowledge.embeddings import remove_document_chunks
+    remove_document_chunks(doc_id)
     with get_session() as session:
         doc = session.query(KnowledgeDocument).filter_by(id=doc_id).first()
         if doc:
