@@ -224,6 +224,110 @@ class TestAPIRetryLogic:
         assert len(sleep_calls) == 0
 
 
+class TestRetryTimingAccuracy:
+    """Tests that verify the actual time.sleep values passed during retries."""
+
+    def _make_client(self, max_retries=3):
+        with patch("emailtools.ai.client.OpenAI"):
+            with patch("emailtools.ai.client.settings") as mock_settings:
+                mock_settings.openai_api_key = "test-key"
+                mock_settings.openai_model = "gpt-4"
+                mock_settings.openai_max_retries = max_retries
+                mock_settings.openai_timeout = 30
+                from emailtools.ai.client import AIClient
+                return AIClient()
+
+    @staticmethod
+    def _make_rate_limit_error():
+        from openai import RateLimitError
+        from httpx import Response, Request
+        req = Request(method="POST", url="https://api.openai.com/v1/chat/completions")
+        resp = Response(status_code=429, request=req)
+        return RateLimitError(message="Rate limit", response=resp, body=None)
+
+    def test_backoff_exact_values_5_retries(self):
+        """With max_retries=5, verify backoff is 1, 2, 4, 8, 16 seconds."""
+        client = self._make_client(max_retries=5)
+        exc = self._make_rate_limit_error()
+        client.client.chat.completions.create = MagicMock(side_effect=exc)
+
+        sleep_calls = []
+        with patch("time.sleep", side_effect=lambda s: sleep_calls.append(s)):
+            with pytest.raises(Exception):
+                client._call_api(
+                    messages=[{"role": "user", "content": "test"}],
+                    temperature=0.3, max_tokens=100,
+                )
+
+        assert sleep_calls == [1, 2, 4, 8, 16]
+
+    def test_total_retry_time_is_bounded(self):
+        """Total backoff time for max_retries=3 should be exactly 7 seconds (1+2+4)."""
+        client = self._make_client(max_retries=3)
+        exc = self._make_rate_limit_error()
+        client.client.chat.completions.create = MagicMock(side_effect=exc)
+
+        sleep_calls = []
+        with patch("time.sleep", side_effect=lambda s: sleep_calls.append(s)):
+            with pytest.raises(Exception):
+                client._call_api(
+                    messages=[{"role": "user", "content": "test"}],
+                    temperature=0.3, max_tokens=100,
+                )
+
+        assert sum(sleep_calls) == 7  # 1 + 2 + 4
+
+    def test_mixed_error_types_all_retry(self):
+        """Different retryable errors in sequence all trigger retries."""
+        from openai import APIConnectionError, APIStatusError
+        from httpx import Request, Response
+
+        client = self._make_client(max_retries=3)
+
+        req = Request(method="POST", url="https://api.openai.com/v1/chat/completions")
+        resp = Response(status_code=500, request=req)
+
+        rate_err = self._make_rate_limit_error()
+        conn_err = APIConnectionError(request=req)
+        api_err = APIStatusError(message="Server error", response=resp, body=None)
+
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock()]
+        mock_completion.choices[0].message.content = '{"ok": true}'
+
+        client.client.chat.completions.create = MagicMock(
+            side_effect=[rate_err, conn_err, api_err, mock_completion]
+        )
+
+        sleep_calls = []
+        with patch("time.sleep", side_effect=lambda s: sleep_calls.append(s)):
+            result = client._call_api(
+                messages=[{"role": "user", "content": "test"}],
+                temperature=0.3, max_tokens=100,
+            )
+
+        assert result == '{"ok": true}'
+        assert client.client.chat.completions.create.call_count == 4
+        assert len(sleep_calls) == 3  # 3 retries before success
+
+    def test_zero_retries_fails_immediately(self):
+        """With max_retries=0, no retries occur."""
+        client = self._make_client(max_retries=0)
+        exc = self._make_rate_limit_error()
+        client.client.chat.completions.create = MagicMock(side_effect=exc)
+
+        sleep_calls = []
+        with patch("time.sleep", side_effect=lambda s: sleep_calls.append(s)):
+            with pytest.raises(Exception):
+                client._call_api(
+                    messages=[{"role": "user", "content": "test"}],
+                    temperature=0.3, max_tokens=100,
+                )
+
+        assert client.client.chat.completions.create.call_count == 1
+        assert len(sleep_calls) == 0
+
+
 class TestGenerateReportInsightsEdgeCases:
     """Tests for generate_report_insights with empty/edge-case inputs."""
 

@@ -316,3 +316,121 @@ class TestSupervisedWatcher:
         # Backoff should increase: 5, 10, 15 (capped at 30)
         assert sleep_calls[0] < sleep_calls[1]
         assert sleep_calls[1] < sleep_calls[2]
+
+    def test_supervised_watcher_exact_backoff_values(self):
+        """Verify exact backoff: min(30, 5*(attempt+1)) = 5, 10, 15, 20, 25."""
+        from emailtools.ingestion.file_watcher import supervised_watch
+
+        sleep_calls = []
+
+        def crashing_watch(*args, **kwargs):
+            raise RuntimeError("crash")
+
+        with patch("emailtools.ingestion.file_watcher.watch_inbox", side_effect=crashing_watch):
+            with patch("time.sleep", side_effect=lambda s: sleep_calls.append(s)):
+                supervised_watch(
+                    inbox_dir=Path("data/inbox"),
+                    callback=lambda p: None,
+                    max_restarts=5,
+                )
+
+        assert sleep_calls == [5, 10, 15, 20, 25]
+
+    def test_supervised_watcher_backoff_capped_at_30(self):
+        """Backoff is capped at 30 seconds even with many restarts."""
+        from emailtools.ingestion.file_watcher import supervised_watch
+
+        sleep_calls = []
+
+        def crashing_watch(*args, **kwargs):
+            raise RuntimeError("crash")
+
+        with patch("emailtools.ingestion.file_watcher.watch_inbox", side_effect=crashing_watch):
+            with patch("time.sleep", side_effect=lambda s: sleep_calls.append(s)):
+                supervised_watch(
+                    inbox_dir=Path("data/inbox"),
+                    callback=lambda p: None,
+                    max_restarts=8,
+                )
+
+        # 5, 10, 15, 20, 25, 30, 30, 30
+        assert all(s <= 30 for s in sleep_calls)
+        assert sleep_calls[-1] == 30
+
+    def test_supervised_total_backoff_time(self):
+        """Total backoff time for max_restarts=3 is 5+10+15 = 30 seconds."""
+        from emailtools.ingestion.file_watcher import supervised_watch
+
+        sleep_calls = []
+
+        def crashing_watch(*args, **kwargs):
+            raise RuntimeError("crash")
+
+        with patch("emailtools.ingestion.file_watcher.watch_inbox", side_effect=crashing_watch):
+            with patch("time.sleep", side_effect=lambda s: sleep_calls.append(s)):
+                supervised_watch(
+                    inbox_dir=Path("data/inbox"),
+                    callback=lambda p: None,
+                    max_restarts=3,
+                )
+
+        assert sum(sleep_calls) == 30  # 5 + 10 + 15
+
+
+class TestWatcherHealthAccumulation:
+    """Tests verifying health counters accumulate correctly over time."""
+
+    def test_health_accumulates_across_multiple_polls(self, tmp_path):
+        """Health counters accumulate across multiple poll cycles."""
+        from emailtools.ingestion.file_watcher import (
+            watch_inbox, get_watcher_health, _reset_health
+        )
+
+        _reset_health()
+
+        # First poll: 2 files
+        (tmp_path / "a.eml").write_text("a")
+        (tmp_path / "b.eml").write_text("b")
+
+        with patch("emailtools.ingestion.file_watcher.SettingsService"):
+            watch_inbox(tmp_path, lambda p: None, run_once=True)
+
+        health1 = get_watcher_health()
+        assert health1["files_processed"] == 2
+
+        # Second poll: 1 more file (previous 2 already in processed_files set)
+        # Since run_once=True creates a fresh processed_files set each time,
+        # the health counter should accumulate
+        (tmp_path / "c.eml").write_text("c")
+
+        with patch("emailtools.ingestion.file_watcher.SettingsService"):
+            watch_inbox(tmp_path, lambda p: None, run_once=True)
+
+        health2 = get_watcher_health()
+        # Second run sees a, b, c (3 files) since processed_files is fresh
+        assert health2["files_processed"] == 5  # 2 + 3
+
+    def test_health_error_count_accumulates(self, tmp_path):
+        """Error count persists and accumulates across runs."""
+        from emailtools.ingestion.file_watcher import (
+            watch_inbox, get_watcher_health, _reset_health
+        )
+
+        _reset_health()
+
+        def always_fail(path):
+            raise ValueError("fail")
+
+        # First run: 1 error
+        (tmp_path / "err1.eml").write_text("e")
+        with patch("emailtools.ingestion.file_watcher.SettingsService"):
+            watch_inbox(tmp_path, always_fail, run_once=True)
+
+        assert get_watcher_health()["error_count"] == 1
+
+        # Second run: 2 more errors (err1 reprocessed + err2)
+        (tmp_path / "err2.eml").write_text("e")
+        with patch("emailtools.ingestion.file_watcher.SettingsService"):
+            watch_inbox(tmp_path, always_fail, run_once=True)
+
+        assert get_watcher_health()["error_count"] == 3  # 1 + 2

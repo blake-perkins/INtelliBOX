@@ -517,6 +517,170 @@ class TestKnowledgeContextCache:
         finally:
             kb_module.get_session = original_get_session
 
+    def test_context_cache_expires_after_ttl(self, setup_database):
+        """After TTL expires, cache is refreshed from DB on next call."""
+        from emailtools.knowledge import (
+            get_knowledge_context, _invalidate_kb_cache, _kb_cache, _KB_CACHE_TTL
+        )
+
+        _invalidate_kb_cache()
+
+        with override_get_session() as session:
+            doc = KnowledgeDocument(
+                filename="ttl.txt", file_type="txt", file_size=50,
+                extracted_text="Original content.",
+                extraction_status="success",
+            )
+            session.add(doc)
+            session.commit()
+
+        import emailtools.knowledge as kb_module
+        original_get_session = kb_module.get_session
+        kb_module.get_session = override_get_session
+
+        try:
+            # First call populates cache
+            result1 = get_knowledge_context()
+            assert "Original content" in result1
+
+            # Update the document behind the cache
+            with override_get_session() as session:
+                doc = session.query(KnowledgeDocument).first()
+                doc.extracted_text = "Updated content."
+                session.commit()
+
+            # Second call within TTL should still return old cached value
+            result2 = get_knowledge_context()
+            assert "Original content" in result2
+
+            # Advance the clock past TTL by manipulating expires directly
+            _kb_cache["expires"] = 0  # Force expiry
+
+            # Now the cache should miss and re-query the DB
+            result3 = get_knowledge_context()
+            assert "Updated content" in result3
+        finally:
+            kb_module.get_session = original_get_session
+
+    def test_context_cache_no_db_query_on_hit(self, setup_database):
+        """Verify the cache actually prevents DB queries on subsequent calls."""
+        from emailtools.knowledge import get_knowledge_context, _invalidate_kb_cache, _kb_cache
+        from unittest.mock import MagicMock
+
+        _invalidate_kb_cache()
+
+        with override_get_session() as session:
+            doc = KnowledgeDocument(
+                filename="spy.txt", file_type="txt", file_size=50,
+                extracted_text="Spy content.",
+                extraction_status="success",
+            )
+            session.add(doc)
+            session.commit()
+
+        import emailtools.knowledge as kb_module
+        original_get_session = kb_module.get_session
+        kb_module.get_session = override_get_session
+
+        try:
+            # First call: populates cache (hits DB)
+            get_knowledge_context()
+
+            # Now replace get_session with a spy to detect DB access
+            call_spy = MagicMock(side_effect=override_get_session)
+            kb_module.get_session = call_spy
+
+            # Second call should use cache (no DB call)
+            get_knowledge_context()
+            assert call_spy.call_count == 0, "Cache hit should not query DB"
+        finally:
+            kb_module.get_session = original_get_session
+
+
+class TestTfidfStress:
+    """Stress tests for TF-IDF search with larger corpora."""
+
+    def test_tfidf_with_many_documents(self, setup_database):
+        """TF-IDF search works correctly with 50+ documents."""
+        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache
+
+        invalidate_tfidf_cache()
+
+        topics = [
+            "machine learning algorithms neural networks deep learning",
+            "database optimization query performance indexing",
+            "web development frontend backend deployment",
+            "security authentication encryption protocols",
+            "testing quality assurance continuous integration",
+        ]
+
+        with override_get_session() as session:
+            for i in range(50):
+                topic = topics[i % len(topics)]
+                session.add(KnowledgeDocument(
+                    filename=f"doc_{i:03d}.txt",
+                    file_type="txt",
+                    file_size=len(topic),
+                    extracted_text=f"Document {i} covers: {topic}. " * 3,
+                    extraction_status="success",
+                ))
+            session.commit()
+
+        import emailtools.knowledge.embeddings as emb_module
+        original_get_session = emb_module.get_session
+        emb_module.get_session = override_get_session
+
+        try:
+            results = search_by_tfidf("machine learning", threshold=0.01)
+            assert len(results) >= 1
+            # All results should be from ML-related documents
+            for r in results:
+                assert r["method"] == "tfidf"
+                assert r["score"] > 0
+        finally:
+            emb_module.get_session = original_get_session
+
+    def test_tfidf_repeated_searches_use_cache(self, setup_database):
+        """Running 20 different searches reuses the cached vectorizer."""
+        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache, _tfidf_cache
+
+        invalidate_tfidf_cache()
+
+        with override_get_session() as session:
+            for i in range(10):
+                session.add(KnowledgeDocument(
+                    filename=f"multi_{i}.txt",
+                    file_type="txt",
+                    file_size=100,
+                    extracted_text=f"Topic {i}: various keywords and phrases for testing search number {i}.",
+                    extraction_status="success",
+                ))
+            session.commit()
+
+        import emailtools.knowledge.embeddings as emb_module
+        original_get_session = emb_module.get_session
+        emb_module.get_session = override_get_session
+
+        try:
+            queries = [
+                "keywords", "testing", "phrases", "topic", "various",
+                "search", "number", "text", "document", "content",
+                "alpha", "beta", "gamma", "delta", "epsilon",
+                "foo", "bar", "baz", "qux", "quux",
+            ]
+
+            # First search builds cache
+            search_by_tfidf(queries[0], threshold=0.01)
+            vectorizer_after_first = _tfidf_cache["vectorizer"]
+
+            # All subsequent searches should reuse the same vectorizer
+            for q in queries[1:]:
+                search_by_tfidf(q, threshold=0.01)
+                assert _tfidf_cache["vectorizer"] is vectorizer_after_first, \
+                    f"Vectorizer rebuilt unexpectedly on query '{q}'"
+        finally:
+            emb_module.get_session = original_get_session
+
 
 class TestTextExtractor:
     """Test the text extraction module."""

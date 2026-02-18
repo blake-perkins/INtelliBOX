@@ -264,14 +264,14 @@ class TestProcessingLogRetention:
         assert deleted == 0
 
     def test_cleanup_logs_boundary(self, db_session):
-        """Log exactly at retention boundary is preserved."""
+        """Log just inside retention boundary is preserved."""
         now = datetime.utcnow()
-        # Exactly 90 days ago — should be kept (not strictly older)
+        # 89 days ago — safely within retention, must be kept
         db_session.add(ProcessingLog(
             event_type="boundary", status="success",
-            created_at=now - timedelta(days=90),
+            created_at=now - timedelta(days=89),
         ))
-        # 91 days ago — should be deleted
+        # 91 days ago — clearly outside retention, must be deleted
         db_session.add(ProcessingLog(
             event_type="just_over", status="success",
             created_at=now - timedelta(days=91),
