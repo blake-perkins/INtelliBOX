@@ -55,7 +55,7 @@ data/
 !data/emails/.gitkeep
 
 # Alembic
-alembic.ini
+# alembic.ini is tracked (needed for container builds)
 
 # Logs
 *.log
