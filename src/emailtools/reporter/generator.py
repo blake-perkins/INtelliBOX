@@ -186,6 +186,11 @@ def get_cached_program_news(session: Session, days: int = None, force_refresh: b
     session.add(cache_entry)
     session.commit()
 
+    # Prune old cache entries
+    from emailtools.database import cleanup_cache_tables
+    cleanup_cache_tables(session, keep_program_news=5, keep_report=0)
+    session.commit()
+
     logger.info(f"Program news cached ({len(recent_emails)} emails)")
 
     return {
@@ -282,6 +287,10 @@ def get_cached_structured_program_news(session: Session, days: int = None, force
         generated_at=utcnow()
     )
     session.add(cache_entry)
+    session.commit()
+
+    from emailtools.database import cleanup_cache_tables
+    cleanup_cache_tables(session, keep_program_news=5, keep_report=0)
     session.commit()
 
     logger.info(f"Structured program news cached ({len(recent_emails)} emails)")
@@ -531,6 +540,10 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
             generated_at=now
         )
         session.add(cache_entry)
+        session.commit()
+
+        from emailtools.database import cleanup_cache_tables
+        cleanup_cache_tables(session, keep_program_news=0, keep_report=5)
         session.commit()
 
         logger.info(f"AI insights cached")

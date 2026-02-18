@@ -440,5 +440,24 @@ def web(host: str, port: int, reload: bool):
     )
 
 
+@cli.command()
+@click.option("--retention-days", default=90, type=int, help="Keep processing logs for this many days")
+@click.option("--keep-caches", default=5, type=int, help="Number of cache entries to keep per table")
+def maintenance(retention_days: int, keep_caches: int):
+    """Run database maintenance (cleanup old caches/logs, vacuum, analyze)."""
+    from emailtools.database import run_maintenance, engine as db_engine
+
+    click.echo("Running database maintenance...")
+    with get_session() as session:
+        results = run_maintenance(session, db_engine)
+
+    click.echo(f"  Program news cache pruned: {results['program_news_deleted']} removed")
+    click.echo(f"  Report cache pruned:       {results['report_deleted']} removed")
+    click.echo(f"  Processing logs pruned:    {results['logs_deleted']} removed")
+    click.echo(f"  ANALYZE: {results['analyze']}")
+    click.echo(f"  VACUUM:  {results['vacuum']}")
+    click.echo("Maintenance complete.")
+
+
 if __name__ == "__main__":
     cli()
