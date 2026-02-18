@@ -47,6 +47,13 @@
             </div>
 
             <form method="POST" action="/actions/{{ action.id }}/edit">
+                {% set is_completed = assignment and assignment.status == 'completed' %}
+                <fieldset {% if is_completed %}disabled{% endif %} style="border: none; padding: 0; margin: 0;">
+                {% if is_completed %}
+                <div style="background: #d4edda; color: #155724; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1.25rem; font-size: 0.9rem;">
+                    This action is completed. Click <strong>Reopen</strong> below to make changes.
+                </div>
+                {% endif %}
                 <div style="display: grid; gap: 1.25rem;">
                     <!-- Title -->
                     <div>
@@ -155,6 +162,7 @@
                         </button>
                     </div>
                 </div>
+                </fieldset>
             </form>
 
             {% if assignment %}

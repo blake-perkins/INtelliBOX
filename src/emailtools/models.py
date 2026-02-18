@@ -253,3 +253,42 @@ class ReportCache(Base):
 
     def __repr__(self) -> str:
         return f"<ReportCache(id={self.id}, generated_at='{self.generated_at}')>"
+
+
+class KnowledgeDocument(Base):
+    """Program document uploaded to the knowledge base for RAG context."""
+
+    __tablename__ = "knowledge_documents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_type: Mapped[str] = mapped_column(String(10), nullable=False)  # pdf, docx, txt
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)  # bytes
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    extracted_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    extraction_status: Mapped[str] = mapped_column(
+        String(20), default="success", nullable=False
+    )  # success, failed, partial
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+
+    @property
+    def file_size_display(self) -> str:
+        """Human-readable file size."""
+        if self.file_size < 1024:
+            return f"{self.file_size} B"
+        elif self.file_size < 1024 * 1024:
+            return f"{self.file_size / 1024:.1f} KB"
+        else:
+            return f"{self.file_size / (1024 * 1024):.1f} MB"
+
+    @property
+    def text_length(self) -> int:
+        return len(self.extracted_text) if self.extracted_text else 0
+
+    def __repr__(self) -> str:
+        return f"<KnowledgeDocument(id={self.id}, filename='{self.filename}')>"

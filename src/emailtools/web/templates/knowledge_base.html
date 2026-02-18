@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Knowledge Base - INtelliBOX{% endblock %}
+
+{% block content %}
+<div class="card-header" style="font-size: 1.75rem; margin-bottom: 1.5rem;">
+    Knowledge Base
+    <span style="font-weight: 400; color: #999; font-size: 0.85rem; margin-left: 0.75rem;">
+        program documents for AI context
+    </span>
+</div>
+
+<!-- Flash messages -->
+{% if request.query_params.get('success') %}
+<div class="kb-flash" style="margin-bottom: 1rem; background: #f0fdf4; border: 1px solid #27ae60; color: #1e8449; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+    <span>Document uploaded and text extracted successfully.</span>
+    <button onclick="this.closest('.kb-flash').remove()" style="background: none; border: none; color: #27ae60; cursor: pointer; font-size: 1rem; opacity: 0.6;">&times;</button>
+</div>
+{% endif %}
+{% if request.query_params.get('deleted') %}
+<div class="kb-flash" style="margin-bottom: 1rem; background: #f8f9fa; border: 1px solid #ddd; color: #555; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+    <span>Document removed from knowledge base.</span>
+    <button onclick="this.closest('.kb-flash').remove()" style="background: none; border: none; color: #aaa; cursor: pointer; font-size: 1rem;">&times;</button>
+</div>
+{% endif %}
+{% if request.query_params.get('error') %}
+<div class="kb-flash" style="margin-bottom: 1rem; background: #fee; border: 1px solid #e74c3c; color: #c0392b; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+    <span>{{ request.query_params.get('error') }}</span>
+    <button onclick="this.closest('.kb-flash').remove()" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 1rem; opacity: 0.6;">&times;</button>
+</div>
+{% endif %}
+{% if request.query_params.get('warning') %}
+<div class="kb-flash" style="margin-bottom: 1rem; background: #fff9e6; border: 1px solid #f39c12; color: #7d5a00; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+    <span>{{ request.query_params.get('warning') }}</span>
+    <button onclick="this.closest('.kb-flash').remove()" style="background: none; border: none; color: #f39c12; cursor: pointer; font-size: 1rem; opacity: 0.6;">&times;</button>
+</div>
+{% endif %}
+
+<!-- Summary Stats -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; padding: 1rem 1.5rem;">
+        <div>
+            <div style="font-size: 2rem; font-weight: 700; color: #3498db;">{{ total_docs }}</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 0.2rem;">Documents</div>
+        </div>
+        <div style="border-left: 1px solid #eee; border-right: 1px solid #eee;">
+            <div style="font-size: 2rem; font-weight: 700; color: #2c3e50;">{{ total_size_display }}</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 0.2rem;">Total Size</div>
+        </div>
+        <div>
+            <div style="font-size: 2rem; font-weight: 700; color: #8e44ad;">{{ "{:,}".format(total_chars) }}</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 0.2rem;">Characters Extracted</div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Section -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        Upload Document
+        <span style="font-weight: 400; color: #999; font-size: 0.8rem;">PDF, DOCX, or TXT &middot; max 10 MB</span>
+    </div>
+    <form method="POST" action="/knowledge-base/upload" enctype="multipart/form-data" style="padding: 1.25rem 1.5rem;">
+        <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 0 0 auto;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 0.3rem;">File</label>
+                <input type="file" name="file" accept=".pdf,.docx,.txt" required
+                       style="font-size: 0.875rem;">
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 0.3rem;">Description <span style="font-weight: 400; color: #999;">(optional)</span></label>
+                <input type="text" name="description" placeholder="e.g. SOW v2.1, CDR slides, test plan"
+                       style="width: 100%; padding: 0.45rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem;">
+            </div>
+            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">
+                Upload
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Document List -->
+<div class="card">
+    <div class="card-header">
+        Uploaded Documents
+        <span style="font-weight: 400; color: #999; font-size: 0.8rem; margin-left: 0.5rem;">{{ total_docs }} total</span>
+    </div>
+    {% if documents %}
+    <table>
+        <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Extracted</th>
+                <th>Description</th>
+                <th>Uploaded</th>
+                <th style="width: 60px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in documents %}
+            <tr>
+                <td style="font-weight: 600;" title="{{ doc.filename }}">
+                    <a href="/knowledge-base/{{ doc.id }}" style="color: #2c3e50; text-decoration: none; border-bottom: 1px dashed #ccc;"
+                       onmouseover="this.style.color='#3498db'" onmouseout="this.style.color='#2c3e50'">{{ doc.filename }}</a>
+                </td>
+                <td>
+                    <span class="badge" style="background: #eef2f7; color: #2c3e50;">{{ doc.file_type | upper }}</span>
+                </td>
+                <td style="white-space: nowrap; color: #666; font-size: 0.875rem;">{{ doc.file_size_display }}</td>
+                <td style="font-size: 0.875rem;">
+                    {% if doc.extraction_status == 'success' %}
+                    <span style="color: #27ae60;">{{ "{:,}".format(doc.text_length) }} chars</span>
+                    {% elif doc.extraction_status == 'partial' %}
+                    <span style="color: #f39c12;" title="Only partial text could be extracted">partial</span>
+                    {% else %}
+                    <span style="color: #e74c3c;" title="Text extraction failed">failed</span>
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.875rem; color: #666;">{{ doc.description or '—' }}</td>
+                <td style="white-space: nowrap; font-size: 0.85rem; color: #888;">
+                    <time class="local-time" datetime="{{ doc.uploaded_at.isoformat() }}Z">
+                        {{ doc.uploaded_at.strftime('%b %d, %Y') }}
+                    </time>
+                </td>
+                <td>
+                    <form method="POST" action="/knowledge-base/{{ doc.id }}/delete"
+                          onsubmit="return confirm('Remove {{ doc.filename }}?')">
+                        <button type="submit" title="Remove"
+                                style="background: none; border: none; color: #ccc; cursor: pointer; font-size: 1rem; padding: 0.2rem 0.5rem; transition: color 0.15s;"
+                                onmouseover="this.style.color='#e74c3c'" onmouseout="this.style.color='#ccc'">
+                            &#x2715;
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #bbb;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">&#x1F4DA;</div>
+        <div style="font-size: 0.95rem; color: #999; margin-bottom: 0.25rem;">No documents uploaded yet.</div>
+        <div style="font-size: 0.85rem;">Upload PDF, DOCX, or TXT files to build context for AI insights.</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

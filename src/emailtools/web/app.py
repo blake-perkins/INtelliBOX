@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc, func, case, or_
 
 from emailtools.database import get_session
-from emailtools.models import Action, Assignment, Email, ProcessingLog, RosterMember
+from emailtools.models import Action, Assignment, Email, KnowledgeDocument, ProcessingLog, RosterMember
 from emailtools.reporter.generator import generate_report_data, get_cached_structured_program_news, generate_enhanced_report
 from emailtools.config import settings
 from emailtools.settings_service import SettingsService
@@ -716,6 +716,11 @@ async def edit_action(
         if not action:
             raise HTTPException(status_code=404, detail="Action not found")
 
+        # Block edits on completed actions — must reopen first
+        existing_assignment = session.query(Assignment).filter_by(action_id=action_id).first()
+        if existing_assignment and existing_assignment.status == "completed":
+            return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
+
         action.title = title.strip()
         action.description = description.strip() if description.strip() else None
         action.category = category.strip() if category.strip() else None
@@ -1007,6 +1012,124 @@ async def view_analytics(request: Request):
             "top_categories": top_categories,
             "team_activity": team_activity,
         })
+
+
+# --- Knowledge Base ---
+
+ALLOWED_KB_EXTENSIONS = {".pdf": "pdf", ".docx": "docx", ".txt": "txt"}
+MAX_KB_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+@app.get("/knowledge-base", response_class=HTMLResponse)
+async def knowledge_base(request: Request):
+    """Knowledge base — uploaded program documents for RAG context."""
+    with get_session() as session:
+        documents = session.query(KnowledgeDocument).order_by(
+            desc(KnowledgeDocument.uploaded_at)
+        ).all()
+
+        total_docs = len(documents)
+        total_size = sum(d.file_size for d in documents)
+        total_chars = sum(d.text_length for d in documents)
+
+        if total_size < 1024:
+            total_size_display = f"{total_size} B"
+        elif total_size < 1024 * 1024:
+            total_size_display = f"{total_size / 1024:.1f} KB"
+        else:
+            total_size_display = f"{total_size / (1024 * 1024):.1f} MB"
+
+        return templates.TemplateResponse("knowledge_base.html", {
+            "request": request,
+            "documents": documents,
+            "total_docs": total_docs,
+            "total_size_display": total_size_display,
+            "total_chars": total_chars,
+        })
+
+
+@app.post("/knowledge-base/upload")
+async def upload_knowledge_doc(
+    file: UploadFile = File(...),
+    description: str = Form(""),
+):
+    """Upload a document to the knowledge base."""
+    from emailtools.knowledge.extractor import extract_text
+
+    filename = file.filename or "unknown"
+    ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext not in ALLOWED_KB_EXTENSIONS:
+        return RedirectResponse(
+            "/knowledge-base?error=Unsupported+file+type.+Please+upload+PDF,+DOCX,+or+TXT",
+            status_code=303,
+        )
+
+    file_type = ALLOWED_KB_EXTENSIONS[ext]
+    content = await file.read()
+    file_size = len(content)
+
+    if file_size > MAX_KB_FILE_SIZE:
+        return RedirectResponse(
+            "/knowledge-base?error=File+too+large.+Maximum+size+is+10+MB",
+            status_code=303,
+        )
+
+    if file_size == 0:
+        return RedirectResponse(
+            "/knowledge-base?error=File+is+empty",
+            status_code=303,
+        )
+
+    extracted_text, status = extract_text(content, file_type)
+
+    with get_session() as session:
+        doc = KnowledgeDocument(
+            filename=filename,
+            file_type=file_type,
+            file_size=file_size,
+            description=description.strip() if description.strip() else None,
+            extracted_text=extracted_text if extracted_text else None,
+            extraction_status=status,
+        )
+        session.add(doc)
+        session.commit()
+
+    if status == "failed":
+        return RedirectResponse(
+            "/knowledge-base?warning=File+uploaded+but+text+extraction+failed",
+            status_code=303,
+        )
+    elif status == "partial":
+        return RedirectResponse(
+            "/knowledge-base?warning=File+uploaded+but+only+partial+text+could+be+extracted",
+            status_code=303,
+        )
+
+    return RedirectResponse("/knowledge-base?success=1", status_code=303)
+
+
+@app.get("/knowledge-base/{doc_id}", response_class=HTMLResponse)
+async def knowledge_base_detail(request: Request, doc_id: int):
+    """View a knowledge base document and its extracted text."""
+    with get_session() as session:
+        doc = session.query(KnowledgeDocument).filter_by(id=doc_id).first()
+        if not doc:
+            return RedirectResponse("/knowledge-base", status_code=303)
+        return templates.TemplateResponse("knowledge_base_detail.html", {
+            "request": request,
+            "doc": doc,
+        })
+
+
+@app.post("/knowledge-base/{doc_id}/delete")
+async def delete_knowledge_doc(doc_id: int):
+    """Delete a document from the knowledge base."""
+    with get_session() as session:
+        doc = session.query(KnowledgeDocument).filter_by(id=doc_id).first()
+        if doc:
+            session.delete(doc)
+            session.commit()
+    return RedirectResponse("/knowledge-base?deleted=1", status_code=303)
 
 
 @app.get("/roster", response_class=HTMLResponse)
