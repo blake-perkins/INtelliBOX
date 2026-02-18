@@ -274,7 +274,32 @@ def search_by_embeddings(
     return unique
 
 
-# --- TF-IDF Fallback Search --------------------------------------------------
+# --- TF-IDF Cache & Fallback Search ------------------------------------------
+
+_tfidf_cache: Dict = {
+    "corpus_hash": None,
+    "vectorizer": None,
+    "corpus_vecs": None,
+    "corpus_meta": None,
+}
+
+
+def invalidate_tfidf_cache() -> None:
+    """Clear the TF-IDF cache (used by tests and after document changes)."""
+    _tfidf_cache["corpus_hash"] = None
+    _tfidf_cache["vectorizer"] = None
+    _tfidf_cache["corpus_vecs"] = None
+    _tfidf_cache["corpus_meta"] = None
+
+
+def _compute_corpus_hash(docs) -> str:
+    """Hash document IDs and text lengths to detect changes."""
+    import hashlib
+    parts = []
+    for doc in docs:
+        parts.append(f"{doc.id}:{doc.text_length}")
+    return hashlib.md5("|".join(parts).encode()).hexdigest()
+
 
 def search_by_tfidf(
     query_text: str,
@@ -283,8 +308,9 @@ def search_by_tfidf(
 ) -> List[Dict]:
     """Search KB using TF-IDF cosine similarity (no API key needed).
 
-    Chunks all documents, builds a TF-IDF matrix, and ranks chunks
-    by cosine similarity to the query text.
+    Caches the TF-IDF vectorizer and corpus vectors between calls.
+    The cache is invalidated when the document set changes (detected
+    via a hash of document IDs and text lengths).
 
     Args:
         query_text: The combined action text to search for.
@@ -305,37 +331,54 @@ def search_by_tfidf(
         if not docs:
             return []
 
-        # Build corpus: list of (chunk_text, doc_id, doc_filename) tuples
-        corpus_meta: List[Tuple[str, int, str]] = []
-        corpus_texts: List[str] = []
-
-        for doc in docs:
-            chunks = chunk_text(doc.extracted_text)
-            for chunk in chunks:
-                corpus_texts.append(chunk)
-                corpus_meta.append((chunk, doc.id, doc.filename))
-
-        if not corpus_texts:
-            return []
-
-        # Build TF-IDF matrix with query appended as last document
-        corpus_texts.append(query_text)
-
-        vectorizer = TfidfVectorizer(
-            stop_words="english",
-            max_features=5000,
-            ngram_range=(1, 2),  # unigrams + bigrams for better phrase matching
+        # Check if we can reuse the cached vectorizer
+        current_hash = _compute_corpus_hash(docs)
+        need_rebuild = (
+            _tfidf_cache["corpus_hash"] != current_hash
+            or _tfidf_cache["vectorizer"] is None
         )
 
-        try:
-            tfidf_matrix = vectorizer.fit_transform(corpus_texts)
-        except ValueError:
-            # Empty vocabulary (e.g., all stop words)
-            return []
+        if need_rebuild:
+            # Build corpus: list of (chunk_text, doc_id, doc_filename) tuples
+            corpus_meta: List[Tuple[str, int, str]] = []
+            corpus_texts: List[str] = []
 
-        # Query vector is the last row; corpus vectors are everything else
-        query_vec = tfidf_matrix[-1]
-        corpus_vecs = tfidf_matrix[:-1]
+            for doc in docs:
+                chunks = chunk_text(doc.extracted_text)
+                for chunk_str in chunks:
+                    corpus_texts.append(chunk_str)
+                    corpus_meta.append((chunk_str, doc.id, doc.filename))
+
+            if not corpus_texts:
+                return []
+
+            vectorizer = TfidfVectorizer(
+                stop_words="english",
+                max_features=5000,
+                ngram_range=(1, 2),
+            )
+
+            try:
+                corpus_vecs = vectorizer.fit_transform(corpus_texts)
+            except ValueError:
+                return []
+
+            # Cache everything
+            _tfidf_cache["corpus_hash"] = current_hash
+            _tfidf_cache["vectorizer"] = vectorizer
+            _tfidf_cache["corpus_vecs"] = corpus_vecs
+            _tfidf_cache["corpus_meta"] = corpus_meta
+        else:
+            # Reuse cached data
+            vectorizer = _tfidf_cache["vectorizer"]
+            corpus_vecs = _tfidf_cache["corpus_vecs"]
+            corpus_meta = _tfidf_cache["corpus_meta"]
+
+        # Transform query using the fitted vectorizer (no refit)
+        try:
+            query_vec = vectorizer.transform([query_text])
+        except ValueError:
+            return []
 
         # Compute similarities
         similarities = sklearn_cosine(query_vec, corpus_vecs).flatten()

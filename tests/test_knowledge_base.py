@@ -305,6 +305,219 @@ class TestKnowledgeBaseRoutes:
         assert b">3<" in response.content
 
 
+class TestChunkText:
+    """Tests for the text chunking utility."""
+
+    def test_chunk_text_returns_list(self):
+        from emailtools.knowledge.embeddings import chunk_text
+        result = chunk_text("Hello world")
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_chunk_text_respects_size_limit(self):
+        from emailtools.knowledge.embeddings import chunk_text, CHUNK_SIZE
+        # Create a very long text
+        long_text = "word " * 1000  # ~5000 chars
+        chunks = chunk_text(long_text)
+        for chunk in chunks:
+            assert len(chunk) <= CHUNK_SIZE + 50  # small tolerance for paragraph boundary
+
+    def test_chunk_text_empty(self):
+        from emailtools.knowledge.embeddings import chunk_text
+        assert chunk_text("") == []
+        assert chunk_text("   ") == []
+        assert chunk_text(None) == []
+
+    def test_chunk_text_preserves_content(self):
+        from emailtools.knowledge.embeddings import chunk_text
+        text = "Paragraph one.\n\nParagraph two.\n\nParagraph three."
+        chunks = chunk_text(text)
+        # All content should appear in at least one chunk
+        combined = " ".join(chunks)
+        assert "Paragraph one" in combined
+        assert "Paragraph two" in combined
+        assert "Paragraph three" in combined
+
+
+class TestTfidfSearch:
+    """Tests for TF-IDF search with caching."""
+
+    def test_tfidf_search_returns_results(self, setup_database):
+        """Upload a doc and search for a keyword — should get results."""
+        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache
+
+        invalidate_tfidf_cache()
+
+        # Seed a document with known content
+        with override_get_session() as session:
+            doc = KnowledgeDocument(
+                filename="test_search.txt", file_type="txt", file_size=100,
+                extracted_text="This document discusses machine learning algorithms and neural networks.",
+                extraction_status="success",
+            )
+            session.add(doc)
+            session.commit()
+
+        # Patch get_session in embeddings module to use our test session
+        import emailtools.knowledge.embeddings as emb_module
+        original_get_session = emb_module.get_session
+        emb_module.get_session = override_get_session
+
+        try:
+            results = search_by_tfidf("machine learning", threshold=0.01)
+            assert len(results) >= 1
+            assert results[0]["doc_filename"] == "test_search.txt"
+            assert results[0]["method"] == "tfidf"
+        finally:
+            emb_module.get_session = original_get_session
+
+    def test_tfidf_cache_reused_on_second_call(self, setup_database):
+        """Second TF-IDF search reuses cached vectorizer (no rebuild)."""
+        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache, _tfidf_cache
+
+        invalidate_tfidf_cache()
+
+        with override_get_session() as session:
+            doc = KnowledgeDocument(
+                filename="cache_test.txt", file_type="txt", file_size=50,
+                extracted_text="Python programming language features and syntax.",
+                extraction_status="success",
+            )
+            session.add(doc)
+            session.commit()
+
+        import emailtools.knowledge.embeddings as emb_module
+        original_get_session = emb_module.get_session
+        emb_module.get_session = override_get_session
+
+        try:
+            # First search builds cache
+            search_by_tfidf("python", threshold=0.01)
+            assert _tfidf_cache["vectorizer"] is not None
+            cached_vectorizer = _tfidf_cache["vectorizer"]
+
+            # Second search should reuse same vectorizer
+            search_by_tfidf("syntax", threshold=0.01)
+            assert _tfidf_cache["vectorizer"] is cached_vectorizer
+        finally:
+            emb_module.get_session = original_get_session
+
+    def test_tfidf_cache_invalidated_on_doc_change(self, setup_database):
+        """Cache is invalidated when document set changes."""
+        from emailtools.knowledge.embeddings import search_by_tfidf, invalidate_tfidf_cache, _tfidf_cache
+
+        invalidate_tfidf_cache()
+
+        with override_get_session() as session:
+            doc = KnowledgeDocument(
+                filename="first.txt", file_type="txt", file_size=50,
+                extracted_text="First document about testing.",
+                extraction_status="success",
+            )
+            session.add(doc)
+            session.commit()
+
+        import emailtools.knowledge.embeddings as emb_module
+        original_get_session = emb_module.get_session
+        emb_module.get_session = override_get_session
+
+        try:
+            # Build initial cache
+            search_by_tfidf("testing", threshold=0.01)
+            first_hash = _tfidf_cache["corpus_hash"]
+
+            # Add another document
+            with override_get_session() as session:
+                doc2 = KnowledgeDocument(
+                    filename="second.txt", file_type="txt", file_size=50,
+                    extracted_text="Second document about deployment.",
+                    extraction_status="success",
+                )
+                session.add(doc2)
+                session.commit()
+
+            # Next search should detect change and rebuild
+            search_by_tfidf("deployment", threshold=0.01)
+            assert _tfidf_cache["corpus_hash"] != first_hash
+        finally:
+            emb_module.get_session = original_get_session
+
+
+class TestKnowledgeContextCache:
+    """Tests for the get_knowledge_context TTL cache."""
+
+    def test_context_returns_text(self, setup_database):
+        """get_knowledge_context returns non-empty string when docs exist."""
+        from emailtools.knowledge import get_knowledge_context, _invalidate_kb_cache
+
+        _invalidate_kb_cache()
+
+        with override_get_session() as session:
+            doc = KnowledgeDocument(
+                filename="context.txt", file_type="txt", file_size=50,
+                extracted_text="Important program context here.",
+                extraction_status="success",
+            )
+            session.add(doc)
+            session.commit()
+
+        import emailtools.knowledge as kb_module
+        original_get_session = kb_module.get_session
+        kb_module.get_session = override_get_session
+
+        try:
+            context = get_knowledge_context()
+            assert "Important program context" in context
+        finally:
+            kb_module.get_session = original_get_session
+
+    def test_context_cache_avoids_repeated_queries(self, setup_database):
+        """Second call to get_knowledge_context uses cached value."""
+        from emailtools.knowledge import get_knowledge_context, _invalidate_kb_cache, _kb_cache
+
+        _invalidate_kb_cache()
+
+        with override_get_session() as session:
+            doc = KnowledgeDocument(
+                filename="cached.txt", file_type="txt", file_size=50,
+                extracted_text="Cached content.",
+                extraction_status="success",
+            )
+            session.add(doc)
+            session.commit()
+
+        import emailtools.knowledge as kb_module
+        original_get_session = kb_module.get_session
+        kb_module.get_session = override_get_session
+
+        try:
+            # First call populates cache
+            result1 = get_knowledge_context()
+            assert _kb_cache["text"] is not None
+
+            # Second call should return same object (cache hit)
+            result2 = get_knowledge_context()
+            assert result1 == result2
+        finally:
+            kb_module.get_session = original_get_session
+
+    def test_context_empty_when_no_docs(self, setup_database):
+        """get_knowledge_context returns empty string with no documents."""
+        from emailtools.knowledge import get_knowledge_context, _invalidate_kb_cache
+
+        _invalidate_kb_cache()
+
+        import emailtools.knowledge as kb_module
+        original_get_session = kb_module.get_session
+        kb_module.get_session = override_get_session
+
+        try:
+            context = get_knowledge_context()
+            assert context == ""
+        finally:
+            kb_module.get_session = original_get_session
+
+
 class TestTextExtractor:
     """Test the text extraction module."""
 

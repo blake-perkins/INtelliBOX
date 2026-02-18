@@ -1,5 +1,6 @@
 """Knowledge base package — document storage and RAG context."""
 
+import time
 from typing import Dict, List
 
 from emailtools.database import get_session
@@ -9,16 +10,31 @@ from emailtools.utils.logging import logger
 # Max characters of KB text to inject into AI prompts
 MAX_CONTEXT_CHARS = 30_000
 
+# TTL cache for get_knowledge_context (avoids repeated DB queries)
+_KB_CACHE_TTL = 300  # 5 minutes
+_kb_cache: Dict = {"text": None, "expires": 0}
+
+
+def _invalidate_kb_cache() -> None:
+    """Clear the knowledge context cache (used by tests and after uploads)."""
+    _kb_cache["text"] = None
+    _kb_cache["expires"] = 0
+
 
 def get_knowledge_context() -> str:
     """Build a knowledge base context string for AI prompt injection.
 
+    Uses a 5-minute TTL cache to avoid repeated database queries.
     Queries all successfully-extracted documents, concatenates their text
     with document headers, and truncates to MAX_CONTEXT_CHARS.
 
     Returns:
         Formatted context string, or empty string if no documents.
     """
+    # Check cache
+    if _kb_cache["text"] is not None and time.time() < _kb_cache["expires"]:
+        return _kb_cache["text"]
+
     with get_session() as session:
         docs = (
             session.query(KnowledgeDocument)
@@ -29,6 +45,8 @@ def get_knowledge_context() -> str:
         )
 
         if not docs:
+            _kb_cache["text"] = ""
+            _kb_cache["expires"] = time.time() + _KB_CACHE_TTL
             return ""
 
         sections = []
@@ -53,6 +71,8 @@ def get_knowledge_context() -> str:
 
         context = "\n\n".join(sections)
 
+    _kb_cache["text"] = context
+    _kb_cache["expires"] = time.time() + _KB_CACHE_TTL
     return context
 
 
