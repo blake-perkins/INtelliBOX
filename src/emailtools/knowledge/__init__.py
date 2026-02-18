@@ -19,7 +19,7 @@ def get_knowledge_context() -> str:
     with get_session() as session:
         docs = (
             session.query(KnowledgeDocument)
-            .filter(KnowledgeDocument.extraction_status.in_(["success", "partial"]))
+            .filter(KnowledgeDocument.extraction_status == "success")
             .filter(KnowledgeDocument.extracted_text.isnot(None))
             .order_by(KnowledgeDocument.uploaded_at.desc())
             .all()
