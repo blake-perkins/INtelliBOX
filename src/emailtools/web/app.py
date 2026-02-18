@@ -509,7 +509,10 @@ async def view_email(request: Request, email_id: int):
 @app.get("/insights", response_class=HTMLResponse)
 async def view_insights(request: Request):
     """View AI-powered insights dashboard. Always loads instantly using cached data."""
-    days = int(request.query_params.get("days", 14))
+    try:
+        days = int(request.query_params.get("days", 14))
+    except (ValueError, TypeError):
+        days = 14
     days = max(7, min(days, 90))  # clamp to 7-90
 
     with get_session() as session:
@@ -868,6 +871,19 @@ async def settings_page(request: Request, success: bool = False):
             RosterMember.last_name, RosterMember.first_name
         ).all()
 
+        # Knowledge Base data
+        kb_documents = session.query(KnowledgeDocument).order_by(
+            desc(KnowledgeDocument.uploaded_at)
+        ).all()
+        kb_total_size_bytes = sum(d.file_size for d in kb_documents)
+        kb_total_chars = sum(d.text_length for d in kb_documents)
+        if kb_total_size_bytes < 1024:
+            kb_total_size = f"{kb_total_size_bytes} B"
+        elif kb_total_size_bytes < 1024 * 1024:
+            kb_total_size = f"{kb_total_size_bytes / 1024:.1f} KB"
+        else:
+            kb_total_size = f"{kb_total_size_bytes / (1024 * 1024):.1f} MB"
+
         return templates.TemplateResponse(
             "settings.html",
             {
@@ -883,6 +899,9 @@ async def settings_page(request: Request, success: bool = False):
                 "insights_prompt": SettingsService.get_insights_prompt(),
                 "success": success,
                 "roster": roster,
+                "kb_documents": kb_documents,
+                "kb_total_size": kb_total_size,
+                "kb_total_chars": kb_total_chars,
             }
         )
 
@@ -1058,30 +1077,8 @@ MAX_KB_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 @app.get("/knowledge-base", response_class=HTMLResponse)
 async def knowledge_base(request: Request):
-    """Knowledge base — uploaded program documents for RAG context."""
-    with get_session() as session:
-        documents = session.query(KnowledgeDocument).order_by(
-            desc(KnowledgeDocument.uploaded_at)
-        ).all()
-
-        total_docs = len(documents)
-        total_size = sum(d.file_size for d in documents)
-        total_chars = sum(d.text_length for d in documents)
-
-        if total_size < 1024:
-            total_size_display = f"{total_size} B"
-        elif total_size < 1024 * 1024:
-            total_size_display = f"{total_size / 1024:.1f} KB"
-        else:
-            total_size_display = f"{total_size / (1024 * 1024):.1f} MB"
-
-        return templates.TemplateResponse("knowledge_base.html", {
-            "request": request,
-            "documents": documents,
-            "total_docs": total_docs,
-            "total_size_display": total_size_display,
-            "total_chars": total_chars,
-        })
+    """Redirect legacy KB page to the Settings Knowledge Base tab."""
+    return RedirectResponse("/settings?tab=kb", status_code=302)
 
 
 @app.post("/knowledge-base/upload")
@@ -1096,7 +1093,7 @@ async def upload_knowledge_doc(
     ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext not in ALLOWED_KB_EXTENSIONS:
         return RedirectResponse(
-            "/knowledge-base?error=Unsupported+file+type.+Please+upload+PDF,+DOCX,+or+TXT",
+            "/settings?tab=kb&kb_error=Unsupported+file+type.+Please+upload+PDF,+DOCX,+or+TXT",
             status_code=303,
         )
 
@@ -1106,13 +1103,13 @@ async def upload_knowledge_doc(
 
     if file_size > MAX_KB_FILE_SIZE:
         return RedirectResponse(
-            "/knowledge-base?error=File+too+large.+Maximum+size+is+10+MB",
+            "/settings?tab=kb&kb_error=File+too+large.+Maximum+size+is+10+MB",
             status_code=303,
         )
 
     if file_size == 0:
         return RedirectResponse(
-            "/knowledge-base?error=File+is+empty",
+            "/settings?tab=kb&kb_error=File+is+empty",
             status_code=303,
         )
 
@@ -1133,12 +1130,12 @@ async def upload_knowledge_doc(
 
     if status == "failed":
         return RedirectResponse(
-            "/knowledge-base?warning=File+uploaded+but+text+extraction+failed",
+            "/settings?tab=kb&kb_warning=File+uploaded+but+text+extraction+failed",
             status_code=303,
         )
     elif status == "partial":
         return RedirectResponse(
-            "/knowledge-base?warning=File+uploaded+but+only+partial+text+could+be+extracted",
+            "/settings?tab=kb&kb_warning=File+uploaded+but+only+partial+text+could+be+extracted",
             status_code=303,
         )
 
@@ -1147,11 +1144,11 @@ async def upload_knowledge_doc(
     chunk_count = embed_document(doc_id)
     if chunk_count > 0:
         return RedirectResponse(
-            f"/knowledge-base?success=1&embedded={chunk_count}",
+            f"/settings?tab=kb&kb_success=1&embedded={chunk_count}",
             status_code=303,
         )
 
-    return RedirectResponse("/knowledge-base?success=1", status_code=303)
+    return RedirectResponse("/settings?tab=kb&kb_success=1", status_code=303)
 
 
 @app.get("/knowledge-base/{doc_id}", response_class=HTMLResponse)
@@ -1160,7 +1157,7 @@ async def knowledge_base_detail(request: Request, doc_id: int, highlight: Option
     with get_session() as session:
         doc = session.query(KnowledgeDocument).filter_by(id=doc_id).first()
         if not doc:
-            return RedirectResponse("/knowledge-base", status_code=303)
+            return RedirectResponse("/settings?tab=kb", status_code=303)
         return templates.TemplateResponse("knowledge_base_detail.html", {
             "request": request,
             "doc": doc,
@@ -1178,7 +1175,7 @@ async def delete_knowledge_doc(doc_id: int):
         if doc:
             session.delete(doc)
             session.commit()
-    return RedirectResponse("/knowledge-base?deleted=1", status_code=303)
+    return RedirectResponse("/settings?tab=kb&kb_deleted=1", status_code=303)
 
 
 @app.get("/roster", response_class=HTMLResponse)

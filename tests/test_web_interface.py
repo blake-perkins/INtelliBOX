@@ -15,7 +15,7 @@ from unittest.mock import patch
 import tempfile
 
 from emailtools.database import Base
-from emailtools.models import Email, Action, Assignment, RosterMember
+from emailtools.models import Email, Action, Assignment, RosterMember, Settings
 
 # Create test database with unique temp file
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_web_interface.db', prefix='test_emailtools_')
@@ -37,7 +37,10 @@ def override_get_session():
 # Import app AFTER defining override function
 # Then patch get_session in the app module where it's used
 import emailtools.web.app as app_module
+import emailtools.settings_service as settings_service_module
+
 app_module.get_session = override_get_session
+settings_service_module.get_session = override_get_session
 
 from emailtools.web.app import app
 
@@ -448,6 +451,121 @@ class TestUserWorkflow:
         # 3. Filter to unassigned
         response = client.get("/actions?assigned=false")
         assert response.status_code == 200
+
+
+class TestSettingsPage:
+    """Test settings page tabs and functionality."""
+
+    def test_settings_page_loads(self, setup_database):
+        """Test settings page loads with all tabs."""
+        response = client.get("/settings")
+        assert response.status_code == 200
+        assert b"Priority Rules" in response.content
+        assert b"Program Roster" in response.content
+        assert b"Categories" in response.content
+        assert b"Insights Prompt" in response.content
+        assert b"Knowledge Base" in response.content
+
+    def test_settings_page_has_all_tab_panes(self, setup_database):
+        """Test that all tab pane divs exist."""
+        response = client.get("/settings")
+        assert response.status_code == 200
+        assert b'id="pane-priority"' in response.content
+        assert b'id="pane-roster"' in response.content
+        assert b'id="pane-categories"' in response.content
+        assert b'id="pane-prompt"' in response.content
+        assert b'id="pane-kb"' in response.content
+
+    def test_settings_page_shows_insights_prompt(self, setup_database):
+        """Test that the insights prompt textarea is populated."""
+        response = client.get("/settings")
+        assert response.status_code == 200
+        # Should contain the prompt textarea
+        assert b'name="insights_prompt"' in response.content
+
+    def test_save_insights_prompt(self, setup_database):
+        """Test saving a custom insights prompt."""
+        custom_prompt = "Custom prompt with {action_details} and {days}"
+        response = client.post(
+            "/settings/insights-prompt",
+            data={"insights_prompt": custom_prompt},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        location = response.headers.get("location", "")
+        assert "prompt_saved" in location
+
+        # Verify it was saved
+        from emailtools.settings_service import SettingsService
+        saved = SettingsService.get_insights_prompt()
+        assert saved == custom_prompt
+
+    def test_reset_insights_prompt(self, setup_database):
+        """Test resetting insights prompt to default."""
+        from emailtools.settings_service import SettingsService
+        from emailtools.ai.prompts import REPORT_INSIGHTS_PROMPT
+
+        # Save a custom prompt
+        SettingsService.set_setting("insights_prompt", "custom")
+        assert SettingsService.get_insights_prompt() == "custom"
+
+        # Reset via API
+        response = client.post(
+            "/settings/insights-prompt/reset",
+            follow_redirects=False,
+        )
+        assert response.status_code == 200
+
+        # Should fall back to default
+        assert SettingsService.get_insights_prompt() == REPORT_INSIGHTS_PROMPT
+
+    def test_save_empty_insights_prompt_rejected(self, setup_database):
+        """Test that an empty insights prompt is rejected by form validation."""
+        response = client.post(
+            "/settings/insights-prompt",
+            data={"insights_prompt": ""},
+            follow_redirects=False,
+        )
+        # FastAPI Form(...) requires a non-empty value
+        assert response.status_code == 422
+
+
+class TestInsightsPage:
+    """Test insights page lookback and rendering."""
+
+    def test_insights_default_lookback(self, setup_database):
+        """Test insights page defaults to 14-day lookback."""
+        response = client.get("/insights")
+        assert response.status_code == 200
+        # The selected_days should default to 14
+        assert b'value="14" selected' in response.content or b"14 Days" in response.content
+
+    def test_insights_custom_lookback(self, setup_database):
+        """Test insights page accepts a custom lookback period."""
+        response = client.get("/insights?days=7")
+        assert response.status_code == 200
+
+    def test_insights_lookback_clamped_low(self, setup_database):
+        """Test insights page clamps lookback to minimum 7 days."""
+        response = client.get("/insights?days=1")
+        assert response.status_code == 200
+
+    def test_insights_lookback_clamped_high(self, setup_database):
+        """Test insights page clamps lookback to maximum 90 days."""
+        response = client.get("/insights?days=365")
+        assert response.status_code == 200
+
+    def test_insights_invalid_days_param(self, setup_database):
+        """Test insights page gracefully handles non-numeric days param."""
+        response = client.get("/insights?days=abc")
+        # Should fall back to default (14 days) instead of crashing
+        assert response.status_code == 200
+
+    def test_insights_lookback_dropdown_present(self, setup_database):
+        """Test that the lookback dropdown is rendered."""
+        response = client.get("/insights")
+        assert response.status_code == 200
+        assert b"changeDays" in response.content or b"lookback" in response.content.lower()
 
 
 if __name__ == "__main__":

@@ -290,3 +290,60 @@ def test_format_categories_for_prompt(setup_database):
     prompt_text = SettingsService.format_categories_for_prompt(cats)
     assert '   - "RFI": Request for Information' in prompt_text
     assert '   - "other": Everything else' in prompt_text
+
+
+# ── Insights prompt ─────────────────────────────────────────────────────────
+
+def test_get_insights_prompt_default(setup_database):
+    """get_insights_prompt returns hardcoded default when no custom prompt saved."""
+    from emailtools.ai.prompts import REPORT_INSIGHTS_PROMPT
+    prompt = SettingsService.get_insights_prompt()
+    assert prompt == REPORT_INSIGHTS_PROMPT
+
+
+def test_get_insights_prompt_custom(setup_database):
+    """get_insights_prompt returns the custom prompt when one is saved."""
+    custom = "Analyze {action_details} and summarize."
+    SettingsService.set_setting("insights_prompt", custom)
+    prompt = SettingsService.get_insights_prompt()
+    assert prompt == custom
+
+
+def test_get_insights_prompt_roundtrip(setup_database):
+    """Saving and loading a custom insights prompt preserves it exactly."""
+    custom = "Prompt with {total_actions} and {days} placeholders and special chars: <>&\""
+    SettingsService.set_setting("insights_prompt", custom)
+    assert SettingsService.get_insights_prompt() == custom
+
+
+def test_get_insights_prompt_after_delete(setup_database):
+    """After delete_setting, get_insights_prompt falls back to the default."""
+    from emailtools.ai.prompts import REPORT_INSIGHTS_PROMPT
+    SettingsService.set_setting("insights_prompt", "custom prompt")
+    SettingsService.delete_setting("insights_prompt")
+    prompt = SettingsService.get_insights_prompt()
+    assert prompt == REPORT_INSIGHTS_PROMPT
+
+
+# ── delete_setting ──────────────────────────────────────────────────────────
+
+def test_delete_setting_removes_row(setup_database):
+    """delete_setting removes the row so get_setting returns default."""
+    SettingsService.set_setting("ephemeral_key", "value")
+    assert SettingsService.get_setting("ephemeral_key") == "value"
+    SettingsService.delete_setting("ephemeral_key")
+    assert SettingsService.get_setting("ephemeral_key", "gone") == "gone"
+
+
+def test_delete_setting_nonexistent_is_noop(setup_database):
+    """Deleting a key that doesn't exist doesn't raise."""
+    SettingsService.delete_setting("never_existed")  # should not raise
+
+
+def test_delete_setting_does_not_affect_others(setup_database):
+    """Deleting one key leaves other keys intact."""
+    SettingsService.set_setting("keep_me", "alive")
+    SettingsService.set_setting("delete_me", "bye")
+    SettingsService.delete_setting("delete_me")
+    assert SettingsService.get_setting("keep_me") == "alive"
+    assert SettingsService.get_setting("delete_me", None) is None

@@ -27,6 +27,11 @@
                     style="padding: 0.55rem 1.25rem; border: none; background: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; color: #999;">
                 Insights Prompt
             </button>
+            <button onclick="switchTab('kb')" id="tab-kb"
+                    style="padding: 0.55rem 1.25rem; border: none; background: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; color: #999;">
+                Knowledge Base
+                <span style="background: #ecf0f1; color: #666; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 10px; margin-left: 0.25rem;">{{ kb_documents|length }}</span>
+            </button>
         </div>
     </div>
 
@@ -449,6 +454,146 @@
         </form>
     </div><!-- /pane-prompt -->
 
+    <!-- ── Knowledge Base Pane ── -->
+    <div id="pane-kb" style="display: none;">
+
+        <!-- Flash messages -->
+        {% if request.query_params.get('kb_success') %}
+        <div class="kb-flash" style="margin: 1rem 1.5rem 0; background: #f0fdf4; border: 1px solid #27ae60; color: #1e8449; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>Document uploaded and text extracted successfully.{% if request.query_params.get('embedded') %} {{ request.query_params.get('embedded') }} embedding chunks created.{% endif %}</span>
+            <button onclick="this.closest('.kb-flash').remove()" style="background: none; border: none; color: #27ae60; cursor: pointer; font-size: 1rem; opacity: 0.6;">&times;</button>
+        </div>
+        {% endif %}
+        {% if request.query_params.get('kb_deleted') %}
+        <div class="kb-flash" style="margin: 1rem 1.5rem 0; background: #f8f9fa; border: 1px solid #ddd; color: #555; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>Document removed from knowledge base.</span>
+            <button onclick="this.closest('.kb-flash').remove()" style="background: none; border: none; color: #aaa; cursor: pointer; font-size: 1rem;">&times;</button>
+        </div>
+        {% endif %}
+        {% if request.query_params.get('kb_error') %}
+        <div class="kb-flash" style="margin: 1rem 1.5rem 0; background: #fee; border: 1px solid #e74c3c; color: #c0392b; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>{{ request.query_params.get('kb_error') }}</span>
+            <button onclick="this.closest('.kb-flash').remove()" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 1rem; opacity: 0.6;">&times;</button>
+        </div>
+        {% endif %}
+        {% if request.query_params.get('kb_warning') %}
+        <div class="kb-flash" style="margin: 1rem 1.5rem 0; background: #fff9e6; border: 1px solid #f39c12; color: #7d5a00; padding: 0.7rem 1rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>{{ request.query_params.get('kb_warning') }}</span>
+            <button onclick="this.closest('.kb-flash').remove()" style="background: none; border: none; color: #f39c12; cursor: pointer; font-size: 1rem; opacity: 0.6;">&times;</button>
+        </div>
+        {% endif %}
+
+        <!-- Summary Stats -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f0f0f0;">
+            <div>
+                <div style="font-size: 1.75rem; font-weight: 700; color: #3498db;">{{ kb_documents|length }}</div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 0.2rem;">Documents</div>
+            </div>
+            <div style="border-left: 1px solid #eee; border-right: 1px solid #eee;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #2c3e50;">{{ kb_total_size }}</div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 0.2rem;">Total Size</div>
+            </div>
+            <div>
+                <div style="font-size: 1.75rem; font-weight: 700; color: #8e44ad;">{{ "{:,}".format(kb_total_chars) }}</div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 0.2rem;">Characters Extracted</div>
+            </div>
+        </div>
+
+        <!-- Upload Form -->
+        <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #f0f0f0; background: #f8f9fa;">
+            <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.6rem; font-size: 0.9rem;">Upload Document
+                <span style="font-weight: 400; color: #999; font-size: 0.8rem; margin-left: 0.5rem;">PDF, DOCX, or TXT &middot; max 10 MB</span>
+            </div>
+            <form method="POST" action="/knowledge-base/upload" enctype="multipart/form-data">
+                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="flex: 0 0 auto;">
+                        <input type="file" name="file" accept=".pdf,.docx,.txt" required style="font-size: 0.875rem;">
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <input type="text" name="description" placeholder="e.g. SOW v2.1, CDR slides, test plan"
+                               style="width: 100%; padding: 0.45rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem;">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">Upload</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Document List -->
+        {% if kb_documents %}
+        <table style="margin: 0;">
+            <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Extracted</th>
+                    <th>Description</th>
+                    <th>Uploaded</th>
+                    <th style="width: 60px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in kb_documents %}
+                <tr>
+                    <td style="font-weight: 600;" title="{{ doc.filename }}">
+                        <a href="/knowledge-base/{{ doc.id }}" style="color: #2c3e50; text-decoration: none; border-bottom: 1px dashed #ccc;"
+                           onmouseover="this.style.color='#3498db'" onmouseout="this.style.color='#2c3e50'">{{ doc.filename }}</a>
+                    </td>
+                    <td>
+                        <span class="badge" style="background: #eef2f7; color: #2c3e50;">{{ doc.file_type | upper }}</span>
+                    </td>
+                    <td style="white-space: nowrap; color: #666; font-size: 0.875rem;">{{ doc.file_size_display }}</td>
+                    <td style="font-size: 0.875rem;">
+                        {% if doc.extraction_status == 'success' %}
+                        <span style="color: #27ae60;">{{ "{:,}".format(doc.text_length) }} chars</span>
+                        {% elif doc.extraction_status == 'partial' %}
+                        <span style="color: #f39c12;" title="Only partial text could be extracted">partial</span>
+                        {% else %}
+                        <span style="color: #e74c3c;" title="Text extraction failed">failed</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.875rem; color: #666;">{{ doc.description or '—' }}</td>
+                    <td style="white-space: nowrap; font-size: 0.85rem; color: #888;">
+                        <time class="local-time" datetime="{{ doc.uploaded_at.isoformat() }}Z">
+                            {{ doc.uploaded_at.strftime('%b %d, %Y') }}
+                        </time>
+                    </td>
+                    <td>
+                        <form method="POST" action="/knowledge-base/{{ doc.id }}/delete"
+                              onsubmit="return confirm('Remove {{ doc.filename }}?')">
+                            <button type="submit" title="Remove"
+                                    style="background: none; border: none; color: #ccc; cursor: pointer; font-size: 1rem; padding: 0.2rem 0.5rem; transition: color 0.15s;"
+                                    onmouseover="this.style.color='#e74c3c'" onmouseout="this.style.color='#ccc'">
+                                &#x2715;
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #bbb;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">&#x1F4DA;</div>
+            <div style="font-size: 0.95rem; color: #999; margin-bottom: 0.25rem;">No documents uploaded yet.</div>
+            <div style="font-size: 0.85rem;">Upload PDF, DOCX, or TXT files to build context for AI insights.</div>
+        </div>
+        {% endif %}
+
+        <!-- How it works -->
+        <details style="margin: 1rem 1.5rem 1.25rem; border: 1px solid #e8e8e8; border-radius: 6px; overflow: hidden;">
+            <summary style="padding: 0.6rem 1rem; font-size: 0.85rem; color: #666; cursor: pointer; background: #fafafa; list-style: none; display: flex; align-items: center; gap: 0.5rem; user-select: none;">
+                <span>&#9656;</span> How the Knowledge Base works
+            </summary>
+            <div style="padding: 0.75rem 1rem; font-size: 0.85rem; color: #555; line-height: 1.8;">
+                Uploaded documents are extracted to text and injected into the AI system prompt.<br>
+                This gives GPT-4 program context (SOW terms, deliverables, processes) to produce more relevant action extraction and insights.<br>
+                Supported formats: PDF, DOCX, TXT. Only successfully extracted documents are used for AI context.
+            </div>
+        </details>
+
+    </div><!-- /pane-kb -->
+
 </div><!-- /card -->
 
 {% if success %}
@@ -468,7 +613,8 @@
     #pane-priority select:focus,
     #pane-priority textarea:focus,
     #add-form-panel input:focus,
-    #pane-prompt textarea:focus {
+    #pane-prompt textarea:focus,
+    #pane-kb input:focus {
         outline: none;
         border-color: #3498db;
         box-shadow: 0 0 0 3px rgba(52,152,219,0.12);
@@ -477,7 +623,7 @@
 
 <script>
     function switchTab(tab) {
-        ['priority', 'roster', 'categories', 'prompt'].forEach(t => {
+        ['priority', 'roster', 'categories', 'prompt', 'kb'].forEach(t => {
             document.getElementById('pane-' + t).style.display = (t === tab) ? 'block' : 'none';
             const btn = document.getElementById('tab-' + t);
             btn.style.borderBottom = (t === tab) ? '3px solid #3498db' : '3px solid transparent';
@@ -515,12 +661,15 @@
         const rosterTriggers = ['roster_error', 'roster_added', 'roster_fuzzy', 'roster_deleted'];
         const catTriggers = ['cat_error', 'cat_added', 'cat_deleted'];
         const promptTriggers = ['prompt_saved', 'prompt_reset'];
+        const kbTriggers = ['kb_success', 'kb_deleted', 'kb_error', 'kb_warning'];
         if (window.location.hash === '#roster' || rosterTriggers.some(p => params.has(p))) {
             switchTab('roster');
         } else if (params.get('tab') === 'categories' || catTriggers.some(p => params.has(p))) {
             switchTab('categories');
         } else if (params.get('tab') === 'prompt' || promptTriggers.some(p => params.has(p))) {
             switchTab('prompt');
+        } else if (params.get('tab') === 'kb' || kbTriggers.some(p => params.has(p))) {
+            switchTab('kb');
         }
         {% if success %}
         setTimeout(() => {
