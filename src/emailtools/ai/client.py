@@ -9,6 +9,7 @@ from openai import APIError, APIConnectionError, RateLimitError
 
 from emailtools.ai.prompts import ACTION_EXTRACTION_PROMPT, PROGRAM_NEWS_PROMPT, REPORT_INSIGHTS_PROMPT, STRUCTURED_PROGRAM_NEWS_PROMPT, SYSTEM_PROMPT
 from emailtools.config import settings
+from emailtools.knowledge import get_knowledge_context
 from emailtools.models import Action, Email
 from emailtools.utils.logging import logger
 from emailtools.priority_rules import PriorityRuleEngine
@@ -56,6 +57,20 @@ class AIClient:
         self.max_retries = settings.openai_max_retries
         self.timeout = settings.openai_timeout
 
+    def _build_system_prompt(self) -> str:
+        """Build system prompt with optional knowledge base context."""
+        kb_context = get_knowledge_context()
+        if not kb_context:
+            return SYSTEM_PROMPT
+        return (
+            SYSTEM_PROMPT
+            + "\n\n## Program Knowledge Base\n"
+            "The following documents have been uploaded as program context. "
+            "Use this information to better understand program terminology, "
+            "deliverables, processes, and priorities.\n\n"
+            + kb_context
+        )
+
     def extract_actions(
         self,
         email: Email,
@@ -98,10 +113,11 @@ class AIClient:
         try:
             logger.info(f"Calling GPT-4 API for email ID {email.id}")
 
+            system_prompt = self._build_system_prompt()
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,  # Lower temperature for more consistent extraction
@@ -243,10 +259,11 @@ class AIClient:
         try:
             logger.info(f"Generating program news from {len(emails)} emails")
 
+            system_prompt = self._build_system_prompt()
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.5,  # Slightly higher for more natural prose
@@ -304,10 +321,11 @@ class AIClient:
         try:
             logger.info(f"Generating structured program news from {len(emails)} emails")
 
+            system_prompt = self._build_system_prompt()
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,  # Balanced for structured output
@@ -451,10 +469,11 @@ class AIClient:
         try:
             logger.info(f"Generating report insights from {unassigned_count} unassigned actions, {len(emails)} emails, {overdue_count} overdue")
 
+            system_prompt = self._build_system_prompt()
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,  # Balanced for insights

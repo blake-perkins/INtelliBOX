@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
+from emailtools.knowledge import get_knowledge_context
 from emailtools.models import Action, Email
 from emailtools.utils.logging import logger
 from emailtools.priority_rules import PriorityRuleEngine
@@ -329,6 +330,14 @@ class MockAIClient:
             "Key focus areas include compliance deliverables, technical documentation updates, "
             "and ongoing infrastructure improvements."
         )
+
+        # Note KB context availability
+        kb_context = get_knowledge_context()
+        if kb_context:
+            summary_parts.append(
+                " (Note: Knowledge base documents are available for enhanced AI analysis "
+                "when using the production OpenAI client.)"
+            )
 
         return "".join(summary_parts)
 
