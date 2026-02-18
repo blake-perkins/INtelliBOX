@@ -1,0 +1,39 @@
+ENGINEERING STANDARDS AND PROCESSES
+
+Version: 2.1 | Effective: January 2026
+
+CODE REVIEW POLICY:
+- All PRs require at least one approval before merge
+- Security-sensitive changes require Sarah Johnson's approval
+- Infrastructure changes require Blake Perkins' review
+- PRs open longer than 3 business days are flagged as blockers
+
+DEPLOYMENT PROCESS:
+1. Feature branch → PR → Code review → Merge to main
+2. CI/CD pipeline runs: lint, test, build, deploy to staging
+3. QA verification on staging (Lisa Park signs off)
+4. Production deployment window: Tuesday and Thursday, 6-8am EST
+5. Hotfixes may deploy outside the window with David Chen's approval
+
+INCIDENT RESPONSE:
+- P1 (Critical): Service down or data loss. Response within 15 minutes. War room established immediately.
+- P2 (High): Major feature broken, workaround exists. Response within 1 hour.
+- P3 (Medium): Minor feature issue, low user impact. Address in next sprint.
+- P4 (Low): Cosmetic or documentation issues. Backlog.
+
+SECURITY REQUIREMENTS:
+- OWASP Top 10 compliance required for all endpoints
+- SQL injection prevention: use parameterized queries only
+- All API endpoints must enforce rate limiting
+- Session tokens must rotate on privilege changes (login, password reset)
+- No PII in log files at any log level
+- Dependency scans run weekly; critical CVEs patched within 48 hours
+- SSL certificates tracked in shared certificate inventory; renew 30 days before expiry
+
+DEFINITION OF DONE:
+- Code reviewed and approved
+- Unit tests passing (>80% coverage on new code)
+- Integration tests passing
+- Documentation updated (API docs, README)
+- Security scan clean
+- QA sign-off on staging

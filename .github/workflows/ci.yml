@@ -35,6 +35,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -e ".[dev]"
+      - run: playwright install --with-deps chromium
       - run: python run_tests.py
 
   container-build-and-test:

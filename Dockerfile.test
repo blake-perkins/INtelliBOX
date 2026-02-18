@@ -26,7 +26,8 @@ COPY run_tests.py /app/
 
 # Install Python dependencies (including dev/test)
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -e ".[dev]"
+    pip install --no-cache-dir -e ".[dev]" && \
+    playwright install --with-deps chromium
 
 # Create data directories
 RUN mkdir -p /app/data/inbox /app/data/emails

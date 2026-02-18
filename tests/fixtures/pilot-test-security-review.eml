@@ -1,0 +1,26 @@
+From: security-team@example.com
+To: dev-leads@example.com
+Subject: Security Review Findings - Q1 Audit
+Date: Tue, 18 Feb 2026 11:00:00 -0500
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+
+Development Leads,
+
+The Q1 security audit is complete. Below are findings that require action:
+
+CRITICAL (fix within 48 hours):
+- SQL injection vulnerability found in the /api/search endpoint. Blake, patch this immediately and deploy a hotfix by Thursday.
+- Expired SSL certificate on the internal reporting dashboard. Mike, renew the cert today.
+
+HIGH (fix within 1 week):
+- Session tokens not rotating after password change. Sarah, update the auth service to invalidate old sessions on password reset. Due by next Tuesday.
+- API rate limiting not enforced on the public endpoints. Blake, implement rate limiting using the API gateway. Due by next Wednesday.
+
+MEDIUM (fix within 30 days):
+- Dependency scan found 3 packages with known CVEs. Lisa, update the vulnerable packages and run regression tests. Due by March 15.
+- Logging PII in debug mode. Mike, scrub sensitive fields from debug logs. Due by March 10.
+
+Please confirm receipt and provide your estimated completion dates by end of day Wednesday.
+
+Security Team

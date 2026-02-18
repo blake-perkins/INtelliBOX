@@ -117,7 +117,7 @@ async def dashboard(request: Request):
         ).outerjoin(Assignment).join(Email).filter(
             Action.due_date < today,
             (Assignment.id.is_(None)) | (Assignment.status != "completed")
-        ).order_by(Action.due_date).limit(5).all()
+        ).order_by(Action.due_date).all()
 
         # Get high priority unassigned actions
         high_priority_actions = session.query(Action).options(
@@ -125,7 +125,7 @@ async def dashboard(request: Request):
         ).outerjoin(Assignment).join(Email).filter(
             Assignment.id.is_(None),
             Action.priority == "high"
-        ).order_by(Action.due_date.asc().nullslast()).limit(5).all()
+        ).order_by(Action.due_date.asc().nullslast()).all()
 
         # Get medium and low priority unassigned actions
         medium_priority_actions = session.query(Action).options(

@@ -1,0 +1,22 @@
+From: sarah.johnson@example.com
+To: engineering-team@example.com
+Subject: Sprint 24 Planning - Action Items
+Date: Tue, 18 Feb 2026 09:30:00 -0500
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+
+Team,
+
+Great sprint planning session today. Here are the follow-ups:
+
+1. Blake - Set up the staging environment for load testing by Friday Feb 20
+2. Sarah - Review the authentication module PR and submit findings by Wednesday
+3. Mike - Update the API documentation to reflect the new endpoints, due Thursday
+4. Lisa - Schedule a meeting with the security team to discuss the pen test results
+5. Everyone - Complete your sprint capacity estimates in Jira by end of day Tuesday
+
+Also, please remember that the client demo is next Monday. Blake and Mike, make sure the demo environment is stable by Friday.
+
+Thanks,
+Sarah Johnson
+Engineering Lead

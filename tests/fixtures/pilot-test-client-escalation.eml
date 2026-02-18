@@ -1,0 +1,24 @@
+From: david.chen@example.com
+To: project-leads@example.com
+Subject: URGENT: Client Escalation - DataSync Integration Failures
+Date: Tue, 18 Feb 2026 14:15:00 -0500
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+
+All,
+
+We received an escalation from Acme Corp this afternoon. Their DataSync integration has been failing intermittently since last Thursday. This is a P1 issue.
+
+Immediate actions needed:
+
+- Blake: Pull the error logs from the production DataSync service and identify the root cause. Need an initial assessment by end of day today.
+- Mike: Contact the Acme Corp technical lead (Tom Richards) and provide a status update. They need to hear from us before 5pm EST.
+- Sarah: Check if the recent API gateway changes from Sprint 23 could be related. Compare the deployment timeline with the failure pattern.
+- Lisa: Draft a customer communication for Acme Corp's management. Have it ready for my review by 9am tomorrow morning.
+
+This is our top priority. Please drop everything else until we have a root cause identified.
+
+I've scheduled a war room call at 4pm EST today. Bridge details: 555-0199, code 4421.
+
+David Chen
+Director of Engineering

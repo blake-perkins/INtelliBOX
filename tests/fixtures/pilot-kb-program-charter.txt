@@ -1,0 +1,41 @@
+PROJECT ALPHA - Program Charter
+
+Program Name: Project Alpha - Enterprise Data Platform Modernization
+Program Manager: David Chen
+Start Date: January 6, 2026
+Target Delivery: March 1, 2026
+Client: Acme Corporation
+
+OVERVIEW:
+Project Alpha is a 12-week initiative to modernize Acme Corp's legacy data platform. The project involves migrating from on-premise Oracle databases to AWS-hosted PostgreSQL, building new RESTful APIs, and delivering a modern web dashboard for data analytics.
+
+TEAM:
+- Blake Perkins - Senior Developer (backend, infrastructure, DevOps)
+- Sarah Johnson - Engineering Lead (architecture, code review, auth systems)
+- Mike Torres - Developer (API development, client communications, documentation)
+- Lisa Park - QA Lead (testing, dependency management, client-facing communications)
+- David Chen - Director of Engineering (program oversight, escalation point)
+
+KEY MILESTONES:
+- Sprint 22 (Jan 27): Database schema design complete
+- Sprint 23 (Feb 10): API gateway and core endpoints deployed to staging
+- Sprint 24 (Feb 24): Integration testing complete, client UAT begins
+- Sprint 25 (Mar 1): Production deployment and client handoff
+
+TECHNOLOGY STACK:
+- Backend: Python 3.12, FastAPI
+- Database: PostgreSQL 16 on AWS RDS
+- Infrastructure: AWS (EC2, RDS, S3, API Gateway)
+- CI/CD: GitHub Actions
+- Monitoring: CloudWatch, Datadog
+- Authentication: OAuth2 / Keycloak
+
+RISKS:
+1. Third-party vendor API dependency (VendorX) - timeline uncertain
+2. Client data migration volume larger than estimated
+3. Security compliance requirements may require additional sprint
+
+ESCALATION PATH:
+P1 issues → David Chen → VP Engineering (within 1 hour)
+P2 issues → Sarah Johnson → David Chen (within 4 hours)
+P3 issues → Sprint backlog (next planning session)

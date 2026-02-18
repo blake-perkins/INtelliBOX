@@ -1,0 +1,43 @@
+TEAM ROSTER AND RESPONSIBILITIES
+
+Last Updated: February 2026
+
+BLAKE PERKINS - Senior Developer
+- Role: Backend development, infrastructure, DevOps
+- Expertise: Python, AWS, PostgreSQL, Docker/Podman, CI/CD pipelines
+- Responsibilities: Database migrations, staging/production environments, auto-scaling, security patches (code-level)
+- Sprint Capacity: 8 story points
+- Email: blake.perkins@example.com
+
+SARAH JOHNSON - Engineering Lead
+- Role: Architecture, code review, authentication systems
+- Expertise: System design, OAuth2/Keycloak, API security, Python
+- Responsibilities: PR reviews, auth service, technical debt decisions, workaround assessments
+- Sprint Capacity: 6 story points (40% management overhead)
+- Email: sarah.johnson@example.com
+
+MIKE TORRES - Developer
+- Role: API development, client communications, documentation
+- Expertise: REST APIs, OpenAPI/Swagger, technical writing, client relations
+- Responsibilities: API endpoints, API documentation, client status updates, SSL/cert management
+- Sprint Capacity: 8 story points
+- Email: mike.torres@example.com
+
+LISA PARK - QA Lead
+- Role: Testing, dependency management, client-facing communications
+- Expertise: Test automation, regression testing, vulnerability scanning, stakeholder communication
+- Responsibilities: QA plans, regression suites, dependency updates, customer communications, team logistics
+- Sprint Capacity: 7 story points
+- Email: lisa.park@example.com
+
+DAVID CHEN - Director of Engineering
+- Role: Program oversight, escalation point
+- Expertise: Program management, vendor relations, executive communication
+- Responsibilities: Escalation handling, resource allocation, vendor management, leadership reporting
+- Sprint Capacity: N/A (management)
+- Email: david.chen@example.com
+
+ON-CALL ROTATION:
+Week of Feb 17: Blake Perkins
+Week of Feb 24: Mike Torres
+Week of Mar 3: Sarah Johnson

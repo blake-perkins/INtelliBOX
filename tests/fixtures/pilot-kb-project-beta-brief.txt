@@ -1,0 +1,38 @@
+PROJECT BETA - Technical Brief
+
+Program Name: Project Beta - Real-Time Analytics Dashboard
+Status: In Progress (Phase 2 of 3)
+Lead: Sarah Johnson
+Client: Internal (Business Intelligence Team)
+
+OVERVIEW:
+Project Beta delivers a real-time analytics dashboard for the BI team. It consumes data from the Project Alpha data platform and provides interactive visualizations, automated alerts, and scheduled reports.
+
+DEPENDENCIES:
+- Project Alpha API endpoints (critical path)
+- VendorX Analytics SDK for chart rendering (risk: delivery timeline uncertain)
+- Keycloak SSO for user authentication (shared with Project Alpha)
+
+CURRENT STATUS (as of Feb 18):
+- Phase 1 (data ingestion pipeline): COMPLETE
+- Phase 2 (dashboard UI and API integration): IN PROGRESS
+  - Blocked: VendorX SDK delivery delayed, original ETA was Feb 10, no new date provided
+  - Workaround options being evaluated by Sarah Johnson
+- Phase 3 (alerts and scheduled reports): NOT STARTED, depends on Phase 2
+
+KEY RISKS:
+1. VendorX SDK delay - if not received by Feb 21, must pivot to open-source alternative (D3.js)
+2. Project Alpha API changes in Sprint 23 may break Beta's data ingestion
+3. BI team requested 3 additional dashboard widgets not in original scope
+
+ARCHITECTURE:
+- Frontend: React 18 + TypeScript
+- Charting: VendorX SDK (pending) or D3.js (fallback)
+- Backend: FastAPI (shared infrastructure with Project Alpha)
+- Data: PostgreSQL views on Project Alpha database
+- Auth: Keycloak SSO (same realm as Project Alpha)
+
+TIMELINE:
+- Phase 2 target completion: March 7, 2026
+- Phase 3 target completion: March 21, 2026
+- Final delivery: March 28, 2026

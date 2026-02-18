@@ -97,6 +97,10 @@ def main():
     bdd_success = run_behave()
     results["features/ (BDD)"] = bdd_success
 
+    # Run Playwright E2E suite
+    e2e_success = run_test_module("tests/e2e/")
+    results["tests/e2e/ (E2E)"] = e2e_success
+
     # Print summary
     print(f"\n{BOLD}{BLUE}{'=' * 70}{RESET}")
     print(f"{BOLD}TEST SUMMARY{RESET}")

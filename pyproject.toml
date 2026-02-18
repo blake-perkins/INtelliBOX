@@ -32,6 +32,8 @@ dev = [
     "ruff>=0.1.13",
     "behave>=1.2.6",
     "requests>=2.31.0",
+    "pytest-playwright>=0.5.0",
+    "playwright>=1.40.0",
 ]
 
 [project.scripts]
@@ -61,6 +63,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "features/steps/*.py" = ["F401", "F811"]
+"tests/e2e/*.py" = ["F401", "F811"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -68,6 +71,7 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 addopts = "-v --cov=src/intellibox --cov-report=term-missing"
+markers = ["e2e: End-to-end browser tests (Playwright)"]
 
 [tool.coverage.run]
 source = ["src"]

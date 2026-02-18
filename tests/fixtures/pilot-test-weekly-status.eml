@@ -1,0 +1,33 @@
+From: pm-office@example.com
+To: all-hands@example.com
+Subject: Weekly Status Report - Week of Feb 16
+Date: Mon, 18 Feb 2026 08:00:00 -0500
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+
+Good morning everyone,
+
+Here is this week's status update and action items from Friday's leadership meeting:
+
+PROJECT ALPHA:
+- On track for March 1 delivery
+- Blake needs to finalize the database migration scripts by Wednesday
+- QA team should begin regression testing by Thursday
+
+PROJECT BETA:
+- Risk: dependency on third-party vendor API is blocking progress
+- Mike to follow up with VendorX on their API timeline - need answer by Tuesday
+- Sarah to identify a workaround in case VendorX misses their deadline - document options by Friday
+
+INFRASTRUCTURE:
+- AWS cost review showed 15% overspend last month
+- Lisa to audit unused EC2 instances and RDS snapshots, report findings by Wednesday
+- Blake to implement the auto-scaling policy changes discussed in the meeting, target Friday
+
+GENERAL:
+- Performance review self-assessments are due by end of month (Feb 28)
+- Everyone please submit your training requests for Q2 to HR by Friday Feb 20
+- Team lunch next Wednesday at noon - please RSVP to Lisa
+
+Regards,
+Program Management Office
