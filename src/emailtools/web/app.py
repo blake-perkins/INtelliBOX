@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc, func, case, or_
+from sqlalchemy.orm import joinedload
 
 from emailtools.database import get_session
 from emailtools.knowledge import search_knowledge_base
@@ -84,36 +85,25 @@ async def no_cache_html(request: Request, call_next):
 async def dashboard(request: Request):
     """Main dashboard showing summary statistics."""
     with get_session() as session:
-        # Get statistics
-        total_emails = session.query(Email).count()
-        total_actions = session.query(Action).count()
+        # Get statistics — single aggregated query
+        total_emails = session.query(func.count(Email.id)).scalar()
+        stats = session.query(
+            func.count(Action.id).label("total_actions"),
+            func.count(case((Assignment.id.is_(None), Action.id))).label("unassigned"),
+            func.count(case(((Assignment.id.is_(None)) & (Action.priority == "high"), Action.id))).label("high"),
+            func.count(case(((Assignment.id.is_(None)) & (Action.priority == "medium"), Action.id))).label("medium"),
+            func.count(case(((Assignment.id.is_(None)) & (Action.priority == "low"), Action.id))).label("low"),
+            func.count(case((Assignment.id.isnot(None), Action.id))).label("assigned"),
+            func.count(case((Assignment.status == "completed", Action.id))).label("completed"),
+        ).select_from(Action).outerjoin(Assignment).one()
 
-        unassigned_actions = session.query(Action).outerjoin(Assignment).filter(
-            Assignment.id.is_(None)
-        ).count()
-
-        # Priority breakdown for unassigned actions
-        high_priority = session.query(Action).outerjoin(Assignment).filter(
-            Assignment.id.is_(None),
-            Action.priority == "high"
-        ).count()
-
-        medium_priority = session.query(Action).outerjoin(Assignment).filter(
-            Assignment.id.is_(None),
-            Action.priority == "medium"
-        ).count()
-
-        low_priority = session.query(Action).outerjoin(Assignment).filter(
-            Assignment.id.is_(None),
-            Action.priority == "low"
-        ).count()
-
-        # Assignment statistics
-        assigned_actions = session.query(Action).join(Assignment).count()
-
-        completed_actions = session.query(Action).join(Assignment).filter(
-            Assignment.status == "completed"
-        ).count()
+        total_actions = stats.total_actions
+        unassigned_actions = stats.unassigned
+        high_priority = stats.high
+        medium_priority = stats.medium
+        low_priority = stats.low
+        assigned_actions = stats.assigned
+        completed_actions = stats.completed
 
         # Get overdue actions (assigned or unassigned, exclude completed)
         today = utcnow().date()
@@ -121,24 +111,32 @@ async def dashboard(request: Request):
             Action.due_date < today,
             (Assignment.id.is_(None)) | (Assignment.status != "completed")
         ).count()
-        overdue_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
+        overdue_actions = session.query(Action).options(
+            joinedload(Action.assignments), joinedload(Action.email),
+        ).outerjoin(Assignment).join(Email).filter(
             Action.due_date < today,
             (Assignment.id.is_(None)) | (Assignment.status != "completed")
         ).order_by(Action.due_date).limit(5).all()
 
         # Get high priority unassigned actions
-        high_priority_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
+        high_priority_actions = session.query(Action).options(
+            joinedload(Action.assignments), joinedload(Action.email),
+        ).outerjoin(Assignment).join(Email).filter(
             Assignment.id.is_(None),
             Action.priority == "high"
         ).order_by(Action.due_date.asc().nullslast()).limit(5).all()
 
         # Get medium and low priority unassigned actions
-        medium_priority_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
+        medium_priority_actions = session.query(Action).options(
+            joinedload(Action.assignments), joinedload(Action.email),
+        ).outerjoin(Assignment).join(Email).filter(
             Assignment.id.is_(None),
             Action.priority == "medium"
         ).order_by(Action.due_date.asc().nullslast()).all()
 
-        low_priority_actions = session.query(Action).outerjoin(Assignment).join(Email).filter(
+        low_priority_actions = session.query(Action).options(
+            joinedload(Action.assignments), joinedload(Action.email),
+        ).outerjoin(Assignment).join(Email).filter(
             Assignment.id.is_(None),
             Action.priority == "low"
         ).order_by(Action.due_date.asc().nullslast()).all()
@@ -214,33 +212,31 @@ async def list_actions(
 ):
     """List all actions with filtering."""
     with get_session() as session:
-        # Get stats for header
-        total_actions = session.query(Action).count()
-        unassigned_actions = session.query(Action).outerjoin(Assignment).filter(
-            Assignment.id.is_(None)
-        ).count()
-        high_priority = session.query(Action).outerjoin(Assignment).filter(
-            Action.priority == "high",
-            Assignment.id.is_(None)
-        ).count()
-        medium_priority = session.query(Action).outerjoin(Assignment).filter(
-            Action.priority == "medium",
-            Assignment.id.is_(None)
-        ).count()
-        low_priority = session.query(Action).outerjoin(Assignment).filter(
-            Action.priority == "low",
-            Assignment.id.is_(None)
-        ).count()
-
-        # Get overdue count
+        # Get stats for header — single aggregated query
         today = utcnow().date()
-        overdue_count = session.query(Action).outerjoin(Assignment).filter(
-            Action.due_date < today,
-            (Assignment.id.is_(None)) | (Assignment.status != "completed")
-        ).count()
+        action_stats = session.query(
+            func.count(Action.id).label("total"),
+            func.count(case((Assignment.id.is_(None), Action.id))).label("unassigned"),
+            func.count(case(((Assignment.id.is_(None)) & (Action.priority == "high"), Action.id))).label("high"),
+            func.count(case(((Assignment.id.is_(None)) & (Action.priority == "medium"), Action.id))).label("medium"),
+            func.count(case(((Assignment.id.is_(None)) & (Action.priority == "low"), Action.id))).label("low"),
+            func.count(case((
+                (Action.due_date < today) & ((Assignment.id.is_(None)) | (Assignment.status != "completed")), Action.id
+            ))).label("overdue"),
+        ).select_from(Action).outerjoin(Assignment).one()
 
-        # Base query
-        query = session.query(Action).outerjoin(Assignment).join(Email)
+        total_actions = action_stats.total
+        unassigned_actions = action_stats.unassigned
+        high_priority = action_stats.high
+        medium_priority = action_stats.medium
+        low_priority = action_stats.low
+        overdue_count = action_stats.overdue
+
+        # Base query with eager loading to prevent N+1 in templates
+        query = session.query(Action).options(
+            joinedload(Action.assignments),
+            joinedload(Action.email),
+        ).outerjoin(Assignment).join(Email)
 
         # Apply filters
         if priority:
@@ -572,44 +568,45 @@ async def get_stats():
                     last_sync = f"{int(delta.total_seconds() / 86400)}d ago"
             except (ValueError, TypeError):
                 pass
+        # Single aggregated query for all action/assignment stats
+        s = session.query(
+            func.count(Action.id).label("total_actions"),
+            func.count(case((Assignment.id.is_(None), Action.id))).label("unassigned"),
+            func.count(case(((Assignment.id.is_(None)) & (Action.priority == "high"), Action.id))).label("unassigned_high"),
+            func.count(case(((Assignment.id.is_(None)) & (Action.priority == "medium"), Action.id))).label("unassigned_medium"),
+            func.count(case(((Assignment.id.is_(None)) & (Action.priority == "low"), Action.id))).label("unassigned_low"),
+            func.count(case((
+                (Action.due_date < today) & ((Assignment.id.is_(None)) | (Assignment.status != "completed")), Action.id
+            ))).label("overdue"),
+            func.count(case(((Assignment.id.isnot(None)) & (Assignment.status != "completed"), Action.id))).label("assigned"),
+            func.count(case((
+                (Assignment.status != "completed") & (Action.priority == "high") & (Assignment.id.isnot(None)), Action.id
+            ))).label("assigned_high"),
+            func.count(case((
+                (Assignment.status != "completed") & (Action.priority == "medium") & (Assignment.id.isnot(None)), Action.id
+            ))).label("assigned_medium"),
+            func.count(case((
+                (Assignment.status != "completed") & (Action.priority == "low") & (Assignment.id.isnot(None)), Action.id
+            ))).label("assigned_low"),
+            func.count(case((Assignment.status == "completed", Action.id))).label("completed"),
+        ).select_from(Action).outerjoin(Assignment).one()
+
+        total_emails = session.query(func.count(Email.id)).scalar()
+
         return {
             "last_sync": last_sync,
-            "total_emails": session.query(Email).count(),
-            "total_actions": session.query(Action).count(),
-            # To Do (unassigned)
-            "unassigned_actions": session.query(Action).outerjoin(Assignment).filter(
-                Assignment.id.is_(None)
-            ).count(),
-            "unassigned_high": session.query(Action).outerjoin(Assignment).filter(
-                Assignment.id.is_(None), Action.priority == "high"
-            ).count(),
-            "unassigned_medium": session.query(Action).outerjoin(Assignment).filter(
-                Assignment.id.is_(None), Action.priority == "medium"
-            ).count(),
-            "unassigned_low": session.query(Action).outerjoin(Assignment).filter(
-                Assignment.id.is_(None), Action.priority == "low"
-            ).count(),
-            "overdue_count": session.query(Action).outerjoin(Assignment).filter(
-                Action.due_date < today,
-                (Assignment.id.is_(None)) | (Assignment.status != "completed")
-            ).count(),
-            # In Progress (assigned, not completed)
-            "assigned_actions": session.query(Assignment).filter(
-                Assignment.status != "completed"
-            ).count(),
-            "assigned_high": session.query(Action).join(Assignment).filter(
-                Assignment.status != "completed", Action.priority == "high"
-            ).count(),
-            "assigned_medium": session.query(Action).join(Assignment).filter(
-                Assignment.status != "completed", Action.priority == "medium"
-            ).count(),
-            "assigned_low": session.query(Action).join(Assignment).filter(
-                Assignment.status != "completed", Action.priority == "low"
-            ).count(),
-            # Done
-            "completed_actions": session.query(Assignment).filter(
-                Assignment.status == "completed"
-            ).count(),
+            "total_emails": total_emails,
+            "total_actions": s.total_actions,
+            "unassigned_actions": s.unassigned,
+            "unassigned_high": s.unassigned_high,
+            "unassigned_medium": s.unassigned_medium,
+            "unassigned_low": s.unassigned_low,
+            "overdue_count": s.overdue,
+            "assigned_actions": s.assigned,
+            "assigned_high": s.assigned_high,
+            "assigned_medium": s.assigned_medium,
+            "assigned_low": s.assigned_low,
+            "completed_actions": s.completed,
         }
 
 
