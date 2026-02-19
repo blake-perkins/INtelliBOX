@@ -173,8 +173,9 @@ jobs:
           git reset --hard origin/main
           echo "HEAD: $(git rev-parse --short HEAD) — $(git log -1 --format='%s')"
 
-          sudo podman stop intellibox --time 30 || true
-          sudo podman rm intellibox || true
+          sudo podman stop intellibox --time 30 2>/dev/null || true
+          sudo podman rm -f intellibox 2>/dev/null || true
+          sleep 2  # ensure port is released
 
           echo "=== Building container image ==="
           sudo podman build -t intellibox:prod -f Dockerfile .

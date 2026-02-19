@@ -59,13 +59,10 @@ jobs:
 
           # ── Stop existing container (if any) ────────────────────────
           echo "=== Stopping existing container ==="
-          if sudo podman ps -a --format '{{.Names}}' | grep -q '^intellibox$'; then
-              sudo podman stop intellibox --time 30 || true
-              sudo podman rm intellibox || true
-              echo "Container stopped and removed."
-          else
-              echo "No existing container found."
-          fi
+          sudo podman stop intellibox --time 30 2>/dev/null || true
+          sudo podman rm -f intellibox 2>/dev/null || true
+          sleep 2  # ensure port is released
+          echo "Container stopped and removed."
           echo ""
 
           # ── Remove old image (force clean build) ────────────────────
