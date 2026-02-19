@@ -4,10 +4,10 @@ Run against the deployed instance to verify all pages and API endpoints
 are functional after a deploy.
 
 Usage:
-    pytest tests/smoke/test_pilot.py -v --base-url https://intellibox-pilot.duckdns.org
+    PILOT_USER=bperkins PILOT_PASSWORD=... pytest tests/smoke/test_pilot.py -v
 
 Or with a custom host:
-    PILOT_HOST=your-host.duckdns.org pytest tests/smoke/test_pilot.py -v
+    PILOT_HOST=your-host.duckdns.org PILOT_USER=x PILOT_PASSWORD=y pytest tests/smoke/test_pilot.py -v
 """
 
 import os
@@ -24,14 +24,20 @@ FIXTURES_DIR = os.path.join(
     os.path.dirname(__file__), "..", "fixtures"
 )
 
+_user = os.environ.get("PILOT_USER")
+_password = os.environ.get("PILOT_PASSWORD")
+AUTH = (_user, _password) if _user and _password else None
+
 pytestmark = pytest.mark.smoke
 
 
 def get(path, **kwargs):
+    kwargs.setdefault("auth", AUTH)
     return requests.get(f"{BASE_URL}{path}", timeout=15, **kwargs)
 
 
 def post(path, **kwargs):
+    kwargs.setdefault("auth", AUTH)
     return requests.post(f"{BASE_URL}{path}", timeout=30, **kwargs)
 
 
