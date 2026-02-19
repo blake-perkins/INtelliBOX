@@ -59,6 +59,7 @@ jobs:
 
           # ── Stop existing container (if any) ────────────────────────
           echo "=== Stopping existing container ==="
+          sudo systemctl stop intellibox.service 2>/dev/null || true
           sudo podman stop intellibox --time 30 2>/dev/null || true
           sudo podman rm -f intellibox 2>/dev/null || true
           sleep 2  # ensure port is released

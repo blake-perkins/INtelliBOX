@@ -173,6 +173,7 @@ jobs:
           git reset --hard origin/main
           echo "HEAD: $(git rev-parse --short HEAD) — $(git log -1 --format='%s')"
 
+          sudo systemctl stop intellibox.service 2>/dev/null || true
           sudo podman stop intellibox --time 30 2>/dev/null || true
           sudo podman rm -f intellibox 2>/dev/null || true
           sleep 2  # ensure port is released
@@ -195,6 +196,10 @@ jobs:
                   echo ""
                   echo "Healthy after ${i}s"
                   curl -s http://127.0.0.1:8000/health
+                  echo ""
+                  sudo podman generate systemd --name intellibox --new | sudo tee /etc/systemd/system/intellibox.service > /dev/null
+                  sudo systemctl daemon-reload
+                  sudo systemctl enable intellibox.service
                   exit 0
               fi
               sleep 1
