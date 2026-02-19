@@ -71,7 +71,10 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 addopts = "-v --cov=src/intellibox --cov-report=term-missing"
-markers = ["e2e: End-to-end browser tests (Playwright)"]
+markers = [
+    "e2e: End-to-end browser tests (Playwright)",
+    "smoke: Smoke tests against the live pilot server",
+]
 
 [tool.coverage.run]
 source = ["src"]
