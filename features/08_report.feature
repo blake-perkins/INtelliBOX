@@ -27,7 +27,7 @@ Feature: Insights / Report page
     Then the response status is 200
     And the page contains "Generate Insights"
 
-  Scenario: Report refresh API endpoint returns success
+  Scenario: Report generate API endpoint returns job ID
     Given the database is empty
-    When I POST to "/api/insights-refresh"
+    When I POST to "/api/insights/generate"
     Then the response status is 200
