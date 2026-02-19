@@ -32,7 +32,7 @@ def test_insights_refresh_disables_button(page: Page, api):
     if refresh_btn.count() > 0:
         refresh_btn.first.click()
         # Button should show "Generating..." text after click
-        expect(page.locator("text=Generating")).to_be_visible(timeout=5000)
+        expect(page.locator("text=Generating").first).to_be_visible(timeout=5000)
 
 
 def test_insights_empty_state(page: Page, api):
