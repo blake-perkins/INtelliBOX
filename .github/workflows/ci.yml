@@ -43,6 +43,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Log in to IronBank registry
+        run: echo "${{ secrets.IRONBANK_PASSWORD }}" | docker login registry1.dso.mil -u "${{ secrets.IRONBANK_USER }}" --password-stdin
       - name: Build production image
         run: docker build -t intellibox:prod .
       - name: Build test runner image
@@ -82,6 +84,8 @@ jobs:
       TESTING: 'true'
     steps:
       - uses: actions/checkout@v4
+      - name: Log in to IronBank registry
+        run: echo "${{ secrets.IRONBANK_PASSWORD }}" | docker login registry1.dso.mil -u "${{ secrets.IRONBANK_USER }}" --password-stdin
       - name: Build production image
         run: docker build -t intellibox:prod .
       - name: Start production container
@@ -156,6 +160,8 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         env:
           SSH_HOST: ${{ secrets.PILOT_HOST }}
+          IRONBANK_USER: ${{ secrets.IRONBANK_USER }}
+          IRONBANK_PASSWORD: ${{ secrets.IRONBANK_PASSWORD }}
         run: |
           ssh -o StrictHostKeyChecking=no \
               -o ConnectTimeout=10 \
@@ -195,6 +201,9 @@ jobs:
               exit 1
           fi
           echo "Port 8000 confirmed free."
+
+          echo "=== Logging in to IronBank registry ==="
+          echo "$IRONBANK_PASSWORD" | sudo podman login registry1.dso.mil -u "$IRONBANK_USER" --password-stdin
 
           echo "=== Building container image ==="
           sudo podman build -t intellibox:prod -f Dockerfile .

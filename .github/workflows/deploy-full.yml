@@ -33,6 +33,8 @@ jobs:
       - name: Deploy via SSH
         env:
           SSH_HOST: ${{ secrets.PILOT_HOST }}
+          IRONBANK_USER: ${{ secrets.IRONBANK_USER }}
+          IRONBANK_PASSWORD: ${{ secrets.IRONBANK_PASSWORD }}
         run: |
           ssh -o StrictHostKeyChecking=no \
               -o ConnectTimeout=10 \
@@ -81,6 +83,10 @@ jobs:
           sudo podman rmi intellibox:prod --force 2>/dev/null || echo "No old image to remove."
           sudo podman image prune --force 2>/dev/null || true
           echo ""
+
+          # ── Log in to IronBank registry ─────────────────────────────
+          echo "=== Logging in to IronBank registry ==="
+          echo "$IRONBANK_PASSWORD" | sudo podman login registry1.dso.mil -u "$IRONBANK_USER" --password-stdin
 
           # ── Build new image ─────────────────────────────────────────
           echo "=== Building new container image (no cache) ==="
