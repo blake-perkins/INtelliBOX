@@ -173,19 +173,28 @@ jobs:
           git reset --hard origin/main
           echo "HEAD: $(git rev-parse --short HEAD) — $(git log -1 --format='%s')"
 
-          sudo systemctl stop intellibox.service 2>/dev/null || true
-          sudo podman stop intellibox --time 30 2>/dev/null || true
-          sudo podman rm -f intellibox 2>/dev/null || true
+          # Stop systemd service and disable to prevent auto-restart
+          sudo systemctl disable --now intellibox.service 2>/dev/null || true
 
-          # Wait until port 8000 is free (max 15s)
-          for i in $(seq 1 15); do
-              if ! ss -tlnp | grep -q ':8000 '; then
-                  echo "Port 8000 is free."
-                  break
-              fi
-              echo "Port 8000 still in use, waiting... (${i}s)"
-              sleep 1
-          done
+          # Stop and remove all intellibox containers
+          sudo podman stop -a --time 10 2>/dev/null || true
+          sudo podman rm -af 2>/dev/null || true
+
+          # Debug: show what's on port 8000
+          echo "=== Port 8000 status ==="
+          sudo ss -tlnp | grep ':8000 ' || echo "Port 8000 is free."
+
+          # Nuclear option: kill anything on port 8000
+          sudo fuser -k 8000/tcp 2>/dev/null || true
+          sleep 2
+
+          # Verify port is free
+          if sudo ss -tlnp | grep -q ':8000 '; then
+              echo "ERROR: Port 8000 still in use after cleanup!"
+              sudo ss -tlnp | grep ':8000 '
+              exit 1
+          fi
+          echo "Port 8000 confirmed free."
 
           echo "=== Building container image ==="
           sudo podman build -t intellibox:prod -f Dockerfile .
