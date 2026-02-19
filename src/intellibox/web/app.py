@@ -1507,12 +1507,12 @@ if _deploy_token:
         subprocess.Popen(
             ["bash", "-c",
              "sleep 2 && cd ~/INtelliBOX && git pull && "
-             "sudo podman build -t intellibox:prod -f Dockerfile . && "
-             "sudo podman stop intellibox; sudo podman rm intellibox; "
-             "sudo podman run -d --name intellibox --restart=always "
+             "podman build -t intellibox:latest -f Dockerfile . && "
+             "podman stop intellibox; podman rm intellibox; "
+             "podman run -d --name intellibox --restart=always "
              "--env-file deploy/.env.production "
              "-v /opt/intellibox/data:/app/data:Z "
-             "-p 127.0.0.1:8000:8000 intellibox:prod"],
+             "-p 127.0.0.1:8000:8000 intellibox:latest"],
             stdout=open("/tmp/deploy.log", "w"),
             stderr=subprocess.STDOUT,
         )
