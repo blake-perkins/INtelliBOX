@@ -1,4 +1,4 @@
-"""E2E tests for the Insights page — days dropdown, refresh overlay."""
+"""E2E tests for the Insights page — days dropdown, refresh button feedback."""
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -19,20 +19,20 @@ def test_insights_days_dropdown_changes_url(page: Page, api):
     expect(page.locator("body")).not_to_contain_text("Internal Server Error")
 
 
-def test_insights_refresh_shows_loading(page: Page, api):
-    """Clicking refresh should show the loading overlay."""
+def test_insights_refresh_disables_button(page: Page, api):
+    """Clicking refresh should disable the button and show loading text."""
     eid = make_email(api)
     make_action(api, eid, priority="high")
 
     page.goto("/insights")
-    # The refresh/generate button triggers startRefresh()
+    # Auto-dismiss the confirm dialog
+    page.on("dialog", lambda d: d.accept())
+
     refresh_btn = page.locator("button:has-text('Generate'), button:has-text('Refresh')")
     if refresh_btn.count() > 0:
         refresh_btn.first.click()
-        # The loading overlay should appear briefly
-        overlay = page.locator("#loadingOverlay")
-        if overlay.count() > 0:
-            expect(overlay).to_be_visible(timeout=3000)
+        # Button should become disabled and show "Generating..." text
+        expect(refresh_btn.first).to_be_disabled(timeout=3000)
 
 
 def test_insights_empty_state(page: Page, api):

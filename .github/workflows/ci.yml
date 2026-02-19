@@ -21,7 +21,7 @@ jobs:
     env:
       DATABASE_URL: sqlite:///./data/intellibox.db
       OPENAI_API_KEY: sk-test-dummy-key
-      OPENAI_MODEL: gpt-4-turbo-preview
+      OPENAI_MODEL: gpt-4o-mini
       SMTP_HOST: smtp.test.invalid
       SMTP_PORT: '587'
       SMTP_USER: test@test.invalid
@@ -56,7 +56,7 @@ jobs:
           docker run --rm
           -e DATABASE_URL=sqlite:///./data/intellibox.db
           -e OPENAI_API_KEY=sk-test-dummy-key
-          -e OPENAI_MODEL=gpt-4-turbo-preview
+          -e OPENAI_MODEL=gpt-4o-mini
           -e SMTP_HOST=smtp.test.invalid
           -e SMTP_PORT=587
           -e SMTP_USER=test@test.invalid
@@ -72,7 +72,7 @@ jobs:
     env:
       DATABASE_URL: sqlite:///./data/intellibox.db
       OPENAI_API_KEY: sk-test-dummy-key
-      OPENAI_MODEL: gpt-4-turbo-preview
+      OPENAI_MODEL: gpt-4o-mini
       SMTP_HOST: smtp.test.invalid
       SMTP_PORT: '587'
       SMTP_USER: test@test.invalid
@@ -90,7 +90,7 @@ jobs:
           docker run -d --name intellibox -p 8000:8000 \
             -e DATABASE_URL=sqlite:///./data/intellibox.db \
             -e OPENAI_API_KEY=sk-test-dummy-key \
-            -e OPENAI_MODEL=gpt-4-turbo-preview \
+            -e OPENAI_MODEL=gpt-4o-mini \
             -e SMTP_HOST=smtp.test.invalid \
             -e SMTP_PORT=587 \
             -e SMTP_USER=test@test.invalid \
@@ -129,37 +129,88 @@ jobs:
     needs: [test, container-build-and-test, container-integration]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
     steps:
-      - name: Trigger deploy webhook
-        env:
-          PILOT_HOST: ${{ secrets.PILOT_HOST }}
-          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+      - name: Check deploy secrets
+        id: check
         run: |
-          if [ -z "$PILOT_HOST" ] || [ -z "$DEPLOY_TOKEN" ]; then
-            echo "Skipping deploy: PILOT_HOST or DEPLOY_TOKEN secret not configured"
-            exit 0
+          if [ -z "${{ secrets.PILOT_SSH_KEY }}" ] || [ -z "${{ secrets.PILOT_HOST }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping deploy: PILOT_SSH_KEY or PILOT_HOST secret not configured"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-          RESPONSE=$(curl -sf --max-time 30 \
-            -X POST "https://$PILOT_HOST/api/deploy" \
-            -H "Authorization: Bearer $DEPLOY_TOKEN")
-          echo "Deploy triggered: $RESPONSE"
-      - name: Wait for rebuild and verify
-        env:
-          PILOT_HOST: ${{ secrets.PILOT_HOST }}
+
+      - name: Set up SSH key
+        if: steps.check.outputs.skip != 'true'
         run: |
-          if [ -z "$PILOT_HOST" ]; then
-            echo "Skipping verify: PILOT_HOST secret not configured"
-            exit 0
-          fi
-          echo "Waiting 60s for container rebuild..."
-          sleep 60
-          for i in $(seq 1 36); do
-            if curl -sf --max-time 5 "https://$PILOT_HOST/health"; then
-              echo ""
-              echo "Pilot healthy after $((60 + i * 5))s"
-              exit 0
-            fi
-            sleep 5
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PILOT_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Deploy via SSH
+        if: steps.check.outputs.skip != 'true'
+        env:
+          SSH_HOST: ${{ secrets.PILOT_HOST }}
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=10 \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=4 \
+              -i ~/.ssh/deploy_key \
+              "ubuntu@${SSH_HOST}" \
+              'bash -s' << 'DEPLOY_SCRIPT'
+          set -euo pipefail
+
+          echo "=== Quick deploy: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
+
+          cd /home/ubuntu/INtelliBOX
+          git fetch origin main
+          git reset --hard origin/main
+          echo "HEAD: $(git rev-parse --short HEAD) — $(git log -1 --format='%s')"
+
+          sudo podman stop intellibox --time 30 || true
+          sudo podman rm intellibox || true
+
+          echo "=== Building container image ==="
+          sudo podman build -t intellibox:prod -f Dockerfile .
+
+          echo "=== Starting container ==="
+          sudo podman run -d \
+              --name intellibox \
+              --restart=always \
+              --env-file /home/ubuntu/INtelliBOX/deploy/.env.production \
+              -v /opt/intellibox/data:/app/data:Z \
+              -p 127.0.0.1:8000:8000 \
+              intellibox:prod
+
+          echo "=== Waiting for health check ==="
+          for i in $(seq 1 30); do
+              if curl -sf --max-time 3 http://127.0.0.1:8000/health; then
+                  echo ""
+                  echo "Healthy after ${i}s"
+                  curl -s http://127.0.0.1:8000/health
+                  exit 0
+              fi
+              sleep 1
           done
-          echo "Pilot failed health check after 240s"
+          echo "Health check failed after 30s"
+          sudo podman logs --tail 30 intellibox
           exit 1
+          DEPLOY_SCRIPT
+
+      - name: Verify external endpoint
+        if: steps.check.outputs.skip != 'true'
+        env:
+          SSH_HOST: ${{ secrets.PILOT_HOST }}
+        run: |
+          sleep 5
+          curl -sf --max-time 10 "https://${SSH_HOST}/health" && echo "External check passed" || echo "::warning::External check failed — verify manually"
+
+      - name: Clean up SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

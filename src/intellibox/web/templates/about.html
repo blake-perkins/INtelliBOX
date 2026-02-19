@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}About - INtelliBOX{% endblock %}
+
+{% block extra_css %}
+<style>
+    .about-hero {
+        text-align: center;
+        padding: 2.5rem 1rem 2rem;
+    }
+    .about-hero .logo-pill {
+        display: inline-block;
+        background: #1e2a3a;
+        border-radius: 12px;
+        padding: 0.75rem 1.75rem;
+        margin-bottom: 1rem;
+    }
+    .about-hero .tagline {
+        font-size: 1.15rem;
+        color: #555;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+    .about-section {
+        max-width: 820px;
+        margin: 0 auto 2rem;
+    }
+    .about-section h2 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .about-section p, .about-section li {
+        color: #555;
+        line-height: 1.75;
+        font-size: 0.95rem;
+    }
+    .about-section ul {
+        padding-left: 1.25rem;
+        margin: 0.5rem 0;
+    }
+    .about-section li {
+        margin-bottom: 0.4rem;
+    }
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.25rem;
+        margin: 1.25rem 0;
+    }
+    .feature-card {
+        background: white;
+        border: 1px solid #e8e8e8;
+        border-radius: 10px;
+        padding: 1.25rem;
+        transition: box-shadow 0.2s;
+    }
+    .feature-card:hover {
+        box-shadow: 0 4px 16px rgba(102,126,234,0.12);
+    }
+    .feature-card .icon {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
+    .feature-card h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.35rem;
+    }
+    .feature-card p {
+        font-size: 0.85rem;
+        color: #666;
+        line-height: 1.6;
+        margin: 0;
+    }
+    .how-it-works {
+        display: flex;
+        gap: 1rem;
+        margin: 1.25rem 0;
+        flex-wrap: wrap;
+    }
+    .step {
+        flex: 1;
+        min-width: 180px;
+        text-align: center;
+        padding: 1rem;
+        background: white;
+        border: 1px solid #e8e8e8;
+        border-radius: 10px;
+        position: relative;
+    }
+    .step .number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 50%;
+        font-weight: 800;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    .step h3 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+    .step p {
+        font-size: 0.82rem;
+        color: #666;
+        line-height: 1.5;
+        margin: 0;
+    }
+    .highlight-box {
+        background: linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08));
+        border: 1px solid rgba(102,126,234,0.2);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin: 1.25rem 0;
+    }
+    .highlight-box p {
+        margin: 0;
+    }
+    .about-footer {
+        text-align: center;
+        padding: 1.5rem 0 0.5rem;
+        color: #999;
+        font-size: 0.82rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="about-hero">
+    <div class="logo-pill">
+        <img src="/static/logo.png" alt="INtelliBOX" style="height: 2.5rem; display: block;">
+    </div>
+    <p class="tagline">An AI-powered inbox assistant that reads your team's emails, finds the action items hiding inside them, and makes sure nothing falls through the cracks.</p>
+</div>
+
+<div class="about-section">
+    <h2>The Problem</h2>
+    <p>In large software programs, critical action items are buried in hundreds of daily emails — status updates, meeting notes, vendor requests, change orders, and more. Important tasks get missed, deadlines slip, and teams waste hours manually tracking who needs to do what.</p>
+    <p>The bigger the program, the worse it gets. A single missed action item in an email can cascade into schedule delays, compliance issues, or costly rework.</p>
+</div>
+
+<div class="about-section">
+    <h2>How INtelliBOX Solves It</h2>
+    <p>INtelliBOX uses <strong>artificial intelligence</strong> to automatically read every email your team receives, understand what's being asked, and extract the specific action items — who needs to do what, by when, and how urgent it is.</p>
+    <p>Instead of relying on people to manually read, interpret, and track every email, the AI does it instantly and consistently, 24/7.</p>
+
+    <div class="how-it-works">
+        <div class="step">
+            <div class="number">1</div>
+            <h3>Emails Come In</h3>
+            <p>Upload emails or connect your inbox. INtelliBOX accepts standard email formats automatically.</p>
+        </div>
+        <div class="step">
+            <div class="number">2</div>
+            <h3>AI Reads &amp; Extracts</h3>
+            <p>A large language model analyzes each email, identifies action items, assigns priority levels, and detects deadlines.</p>
+        </div>
+        <div class="step">
+            <div class="number">3</div>
+            <h3>Team Takes Action</h3>
+            <p>Actions appear on a shared dashboard where they can be assigned, tracked, and completed.</p>
+        </div>
+        <div class="step">
+            <div class="number">4</div>
+            <h3>Nothing Gets Missed</h3>
+            <p>Overdue alerts, daily reports, and analytics keep everyone accountable and informed.</p>
+        </div>
+    </div>
+</div>
+
+<div class="about-section">
+    <h2>Key Features</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="icon">🤖</div>
+            <h3>AI-Powered Extraction</h3>
+            <p>An AI model reads emails the way a person would — understanding context, urgency, and intent — but does it in seconds instead of hours.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">📊</div>
+            <h3>Live Dashboard</h3>
+            <p>See every action item across your program in one place. Filter by priority, assignee, status, or date. No more digging through inboxes.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">👥</div>
+            <h3>Team Assignment</h3>
+            <p>Assign actions to team members, track who's working on what, and see workload at a glance with the team roster.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">⚡</div>
+            <h3>Smart Priority</h3>
+            <p>Configurable rules automatically flag high-priority items based on keywords, senders, or deadlines so urgent work surfaces first.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">📬</div>
+            <h3>Automated Reports</h3>
+            <p>Scheduled email reports summarize open actions, overdue items, and program news — delivered to your team's inbox every morning.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">📚</div>
+            <h3>Knowledge Base</h3>
+            <p>Upload reference documents and let the AI search them when processing emails, giving it the context to make smarter decisions.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">📈</div>
+            <h3>Analytics &amp; Insights</h3>
+            <p>Track trends over time — email volume, action completion rates, team workload — so you can spot bottlenecks before they become problems.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">🔒</div>
+            <h3>Self-Hosted &amp; Private</h3>
+            <p>Runs on your own infrastructure. Your emails and data never leave your control. No third-party access to sensitive communications.</p>
+        </div>
+    </div>
+</div>
+
+<div class="about-section">
+    <h2>Why AI Changes Everything</h2>
+    <div class="highlight-box">
+        <p>Consider a large software program with 500+ emails per week across multiple teams, vendors, and stakeholders. A human would need to carefully read each email, decide which ones contain action items, categorize them by urgency, figure out who's responsible, and enter them into a tracking system. That's easily <strong>10–20 hours of work per week</strong> — and things still get missed.</p>
+        <p style="margin-top: 0.75rem;">INtelliBOX does the same work in <strong>minutes</strong>, with consistent accuracy, and never takes a day off. It doesn't replace your team's judgment — it gives them a complete, organized picture so they can focus on <em>doing</em> the work instead of <em>finding</em> it.</p>
+    </div>
+</div>
+
+<div class="about-section">
+    <h2>Built For</h2>
+    <ul>
+        <li><strong>Program managers</strong> who need visibility across dozens of workstreams and can't afford to miss commitments.</li>
+        <li><strong>Engineering leads</strong> who receive a flood of technical emails and need action items tracked without added overhead.</li>
+        <li><strong>Operations teams</strong> managing vendor communications, compliance requests, and cross-team coordination.</li>
+        <li><strong>Any team</strong> where important work hides in email threads and manual tracking isn't scaling.</li>
+    </ul>
+</div>
+
+<div class="about-footer">
+    INtelliBOX v{{ app_version }}
+</div>
+{% endblock %}

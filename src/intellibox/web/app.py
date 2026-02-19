@@ -1,6 +1,7 @@
 """FastAPI web application for INtelliBOX."""
 
 import threading
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -82,6 +83,18 @@ async def no_cache_html(request: Request, call_next):
     if "text/html" in ct:
         response.headers["Cache-Control"] = "no-store"
     return response
+
+
+# --- Background insights generation jobs ---
+_insights_jobs: dict = {}  # {job_id: {"status": "running"|"done"|"error", "started_at": datetime}}
+
+
+def _cleanup_old_jobs():
+    """Remove insight generation jobs older than 5 minutes."""
+    cutoff = utcnow() - timedelta(minutes=5)
+    stale = [jid for jid, j in _insights_jobs.items() if j["started_at"] < cutoff]
+    for jid in stale:
+        _insights_jobs.pop(jid, None)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -554,15 +567,16 @@ async def view_email(request: Request, email_id: int):
 
 @app.get("/insights", response_class=HTMLResponse)
 async def view_insights(request: Request):
-    """View AI-powered insights dashboard. Always loads instantly using cached data."""
+    """View AI-powered insights dashboard. Serves cached data; generation is triggered via the async API."""
     try:
         days = int(request.query_params.get("days", 14))
     except (ValueError, TypeError):
         days = 14
     days = max(7, min(days, 90))  # clamp to 7-90
 
+    refreshed_status = request.query_params.get("refreshed", "")  # "ok", "error", or ""
+
     with get_session() as session:
-        # Always use cached data — never block page load with AI calls
         report_data = generate_enhanced_report(session, days=days, force_refresh=False)
 
         # Calculate cache age in minutes for display
@@ -580,21 +594,53 @@ async def view_insights(request: Request):
             "program_news": program_news_data,
             "current_time": utcnow(),
             "datetime": datetime,
-            "selected_days": days
+            "selected_days": days,
+            "just_refreshed": refreshed_status in ("ok", "error"),
+            "refresh_failed": refreshed_status == "error"
         })
 
 
-@app.post("/api/insights-refresh")
-async def refresh_insights(request: Request):
-    """Regenerate AI insights and program news. Called via AJAX from the Insights page."""
+@app.post("/api/insights/generate")
+async def start_insights_generation(request: Request):
+    """Start AI insights generation in a background thread. Returns a job ID for polling."""
     body = await request.json() if request.headers.get("content-type") == "application/json" else {}
     days = int(body.get("days", 14))
     days = max(7, min(days, 90))
 
-    with get_session() as session:
-        generate_enhanced_report(session, days=days, force_refresh=True)
-        get_cached_structured_program_news(session, days=days, force_refresh=True)
-    return JSONResponse({"status": "ok"})
+    _cleanup_old_jobs()
+
+    job_id = uuid.uuid4().hex[:8]
+    _insights_jobs[job_id] = {"status": "running", "started_at": utcnow()}
+
+    def run():
+        try:
+            with get_session() as session:
+                result = generate_enhanced_report(session, days=days, force_refresh=True)
+                get_cached_structured_program_news(session, days=days, force_refresh=True)
+            _insights_jobs[job_id]["status"] = "error" if result.get("ai_failed") else "done"
+        except Exception:
+            _insights_jobs[job_id]["status"] = "error"
+
+    threading.Thread(target=run, daemon=True, name=f"insights-{job_id}").start()
+    return {"job_id": job_id}
+
+
+@app.get("/api/insights/status/{job_id}")
+async def insights_generation_status(job_id: str):
+    """Poll generation status. Returns running, done, error, or unknown."""
+    job = _insights_jobs.get(job_id)
+    if not job:
+        return {"status": "unknown"}
+    return {"status": job["status"]}
+
+
+@app.get("/api/insights/active-job")
+async def insights_active_job():
+    """Check if there's a currently running insights generation job."""
+    for job_id, job in _insights_jobs.items():
+        if job["status"] == "running":
+            return {"job_id": job_id}
+    return {"job_id": None}
 
 
 @app.get("/api/stats")
@@ -1374,6 +1420,12 @@ async def delete_roster_member(member_id: int):
     return RedirectResponse("/settings#roster", status_code=303)
 
 
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    """About page describing the product."""
+    return templates.TemplateResponse("about.html", {"request": request})
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint with watcher status."""
@@ -1487,36 +1539,6 @@ if _os.environ.get("TESTING", "").lower() in ("true", "1", "yes"):
         with get_session() as session:
             count = session.query(KnowledgeDocument).count()
             return {"count": count}
-
-
-# --- Deploy webhook (gated by DEPLOY_TOKEN env var) ---
-
-_deploy_token = _os.environ.get("DEPLOY_TOKEN", "")
-
-if _deploy_token:
-
-    @app.post("/api/deploy")
-    async def trigger_deploy(request: Request):
-        """Pull latest code, rebuild container, and restart. Requires Bearer token."""
-        auth = request.headers.get("Authorization", "")
-        if auth != f"Bearer {_deploy_token}":
-            raise HTTPException(status_code=403, detail="Invalid deploy token")
-
-        import subprocess
-        # Run deploy in background — this process will be replaced
-        subprocess.Popen(
-            ["bash", "-c",
-             "sleep 2 && cd ~/INtelliBOX && git pull && "
-             "podman build -t intellibox:latest -f Dockerfile . && "
-             "podman stop intellibox; podman rm intellibox; "
-             "podman run -d --name intellibox --restart=always "
-             "--env-file deploy/.env.production "
-             "-v /opt/intellibox/data:/app/data:Z "
-             "-p 127.0.0.1:8000:8000 intellibox:latest"],
-            stdout=open("/tmp/deploy.log", "w"),
-            stderr=subprocess.STDOUT,
-        )
-        return {"status": "deploying", "message": "Deploy started in background"}
 
 
 if __name__ == "__main__":

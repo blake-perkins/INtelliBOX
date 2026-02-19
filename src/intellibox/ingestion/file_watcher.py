@@ -99,11 +99,12 @@ def watch_inbox(
                 _health.is_alive = True
                 _health.last_poll_at = utcnow()
 
-            # Record this poll as the last sync time (even if no new files)
-            try:
-                SettingsService.update_last_sync_time()
-            except Exception:
-                pass
+            # Record sync time only when files were actually processed
+            if new_files:
+                try:
+                    SettingsService.update_last_sync_time()
+                except Exception:
+                    pass
 
             if run_once:
                 logger.info("Single run complete, exiting")

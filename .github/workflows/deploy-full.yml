@@ -1,0 +1,167 @@
+name: Deploy (Full Rebuild)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.PILOT_SSH_KEY }}" ]; then
+            echo "::error::PILOT_SSH_KEY secret is not configured"
+            exit 1
+          fi
+          if [ -z "${{ secrets.PILOT_HOST }}" ]; then
+            echo "::error::PILOT_HOST secret is not configured"
+            exit 1
+          fi
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PILOT_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Deploy via SSH
+        env:
+          SSH_HOST: ${{ secrets.PILOT_HOST }}
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=10 \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=4 \
+              -i ~/.ssh/deploy_key \
+              "ubuntu@${SSH_HOST}" \
+              'bash -s' << 'DEPLOY_SCRIPT'
+          set -euo pipefail
+
+          echo "=== INtelliBOX Full Redeploy ==="
+          echo "Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+
+          REPO_DIR="/home/ubuntu/INtelliBOX"
+          cd "$REPO_DIR"
+
+          # ── Pull latest code ────────────────────────────────────────
+          echo "=== Pulling latest code ==="
+          git fetch origin main
+          git reset --hard origin/main
+          echo "HEAD: $(git rev-parse --short HEAD) — $(git log -1 --format='%s')"
+          echo ""
+
+          # ── Stop existing container (if any) ────────────────────────
+          echo "=== Stopping existing container ==="
+          if sudo podman ps -a --format '{{.Names}}' | grep -q '^intellibox$'; then
+              sudo podman stop intellibox --time 30 || true
+              sudo podman rm intellibox || true
+              echo "Container stopped and removed."
+          else
+              echo "No existing container found."
+          fi
+          echo ""
+
+          # ── Remove old image (force clean build) ────────────────────
+          echo "=== Removing old image ==="
+          sudo podman rmi intellibox:prod --force 2>/dev/null || echo "No old image to remove."
+          sudo podman image prune --force 2>/dev/null || true
+          echo ""
+
+          # ── Build new image ─────────────────────────────────────────
+          echo "=== Building new container image (no cache) ==="
+          sudo podman build --no-cache -t intellibox:prod -f Dockerfile .
+          echo ""
+          echo "Image built successfully."
+          echo ""
+
+          # ── Ensure data directory exists ────────────────────────────
+          sudo mkdir -p /opt/intellibox/data/inbox /opt/intellibox/data/emails
+
+          # Fix ownership (container runs as UID 1000)
+          sudo podman run --rm --user root --entrypoint bash \
+              -v /opt/intellibox/data:/app/data:Z \
+              intellibox:prod \
+              -c "chown -R 1000:1000 /app/data"
+
+          # ── Start new container ─────────────────────────────────────
+          echo "=== Starting new container ==="
+          sudo podman run -d \
+              --name intellibox \
+              --restart=always \
+              --env-file "$REPO_DIR/deploy/.env.production" \
+              -v /opt/intellibox/data:/app/data:Z \
+              -p 127.0.0.1:8000:8000 \
+              intellibox:prod
+          echo ""
+
+          # ── Wait for health check ───────────────────────────────────
+          echo "=== Waiting for health check ==="
+          HEALTHY=false
+          for i in $(seq 1 60); do
+              if curl -sf --max-time 3 http://127.0.0.1:8000/health; then
+                  echo ""
+                  echo "Container healthy after ${i}s"
+                  HEALTHY=true
+                  break
+              fi
+              if [ "$((i % 10))" -eq 0 ]; then
+                  echo "  Still waiting... (${i}s)"
+              fi
+              sleep 1
+          done
+
+          if [ "$HEALTHY" = "false" ]; then
+              echo ""
+              echo "ERROR: Container failed health check after 60s"
+              echo ""
+              echo "=== Container logs ==="
+              sudo podman logs --tail 50 intellibox
+              exit 1
+          fi
+
+          # ── Show health response ────────────────────────────────────
+          echo ""
+          echo "=== Health check response ==="
+          curl -s http://127.0.0.1:8000/health | python3 -m json.tool 2>/dev/null || curl -s http://127.0.0.1:8000/health
+          echo ""
+
+          # ── Regenerate systemd service ──────────────────────────────
+          echo "=== Updating systemd service ==="
+          sudo podman generate systemd --name intellibox --new | sudo tee /etc/systemd/system/intellibox.service > /dev/null
+          sudo systemctl daemon-reload
+          sudo systemctl enable intellibox.service
+          echo "systemd service updated."
+
+          echo ""
+          echo "=== Deploy complete ==="
+          echo "Finished: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Commit: $(git rev-parse --short HEAD)"
+          DEPLOY_SCRIPT
+
+      - name: Verify external health check
+        env:
+          SSH_HOST: ${{ secrets.PILOT_HOST }}
+        run: |
+          echo "Verifying external HTTPS health check..."
+          sleep 5
+          for i in $(seq 1 12); do
+            RESPONSE=$(curl -sf --max-time 5 "https://${SSH_HOST}/health" 2>/dev/null) && {
+              echo "External health check passed after $((i * 5))s"
+              echo "Response: $RESPONSE"
+              exit 0
+            }
+            sleep 5
+          done
+          echo "::warning::External health check did not pass within 60s (nginx/DNS may need time)"
+          echo "Internal deploy succeeded — check https://${SSH_HOST} manually"
+
+      - name: Clean up SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

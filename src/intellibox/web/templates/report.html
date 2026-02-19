@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Insights - INtelliBOX{% endblock %}
+{% block title %}AI Insights - INtelliBOX{% endblock %}
 
 {% block content %}
 <div class="card-header" style="font-size: 1.75rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
     <div>
-        Insights
+        AI Insights
         <span style="font-size: 1rem; color: #666; font-weight: normal;">
             {% if report.generated_at %}
             <time class="local-time" datetime="{{ report.generated_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"></time>
@@ -39,9 +39,24 @@
         </button>
         {% else %}
         <span style="color: #999; font-size: 0.8rem;">Just now</span>
+        <button class="btn" style="padding: 0.4rem 1rem; font-size: 0.85rem; background: #e9ecef; color: #555;" onclick="startRefresh()">
+            Refresh
+        </button>
         {% endif %}
     </div>
 </div>
+
+<div id="insightsContent">
+<!-- AI error banner -->
+{% if report.ai_failed %}
+<div style="background: #fff3cd; border: 1px solid #ffc107; border-left: 4px solid #e67e22; border-radius: 6px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.75rem;">
+    <span style="font-size: 1.3rem;">&#9888;</span>
+    <div>
+        <strong style="color: #856404;">AI service unavailable</strong>
+        <span style="color: #856404;"> — The insights below are from basic analysis only. Check your API key and billing, then refresh to get full AI-powered insights.</span>
+    </div>
+</div>
+{% endif %}
 
 <!-- Empty state -->
 {% if not report.generated_at %}
@@ -58,7 +73,7 @@
 
 <!-- Executive Summary -->
 {% set es = report.insights.executive_summary if (report.insights and report.insights.executive_summary) else None %}
-{% if es %}
+{% if es and not report.ai_failed %}
 <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 1.5rem;">
     <div style="padding: 1.75rem;">
         {% if es is mapping %}
@@ -270,54 +285,25 @@
     Generated <time class="local-time" datetime="{{ report.generated_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"></time>
     {% endif %}
 </div>
-
-<!-- Loading Overlay (shown on-page during AJAX refresh) -->
-<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center;">
-    <div style="text-align: center; color: white;">
-        <div style="margin-bottom: 1.5rem;">
-            <div style="
-                border: 4px solid rgba(255,255,255,0.3);
-                border-top: 4px solid #667eea;
-                border-radius: 50%;
-                width: 60px;
-                height: 60px;
-                animation: spin 1s linear infinite;
-                margin: 0 auto;
-            "></div>
-        </div>
-        <div style="font-size: 1.3rem; font-weight: 500; margin-bottom: 0.5rem;">
-            Generating Insights...
-        </div>
-        <div style="font-size: 0.95rem; color: rgba(255,255,255,0.8);">
-            Cross-referencing actions against program documents
-        </div>
-        <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-top: 0.5rem;">
-            This typically takes 15-30 seconds
-        </div>
-    </div>
-</div>
+</div><!-- /insightsContent -->
 
 <style>
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.btn-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: btn-spin 0.6s linear infinite;
+    vertical-align: middle;
+}
+@keyframes btn-spin {
+    to { transform: rotate(360deg); }
 }
 </style>
 
 <script>
-function showToast(msg, isError) {
-    const toast = document.createElement('div');
-    toast.textContent = msg;
-    Object.assign(toast.style, {
-        position: 'fixed', top: '20px', right: '20px', zIndex: '9999',
-        background: isError ? '#e74c3c' : '#27ae60', color: 'white',
-        padding: '0.875rem 1.25rem', borderRadius: '8px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.15)', fontSize: '0.9rem',
-    });
-    document.body.appendChild(toast);
-    setTimeout(() => { toast.style.transition = 'opacity 0.3s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
-}
-
 function getSelectedDays() {
     return document.getElementById('daysSelect').value;
 }
@@ -326,29 +312,109 @@ function changeDays(days) {
     window.location.href = '/insights?days=' + days;
 }
 
-async function startRefresh() {
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.style.display = 'flex';
-    const days = getSelectedDays();
+// Show toast after refresh completes, and clean URL
+{% if just_refreshed %}
+(function() {
+    // Clean refreshed param from URL so browser refresh doesn't show toast again
+    var clean = window.location.pathname + '?days=' + getSelectedDays();
+    history.replaceState(null, '', clean);
 
-    try {
-        const resp = await fetch('/api/insights-refresh', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({days: parseInt(days)})
-        });
-        if (resp.ok) {
-            sessionStorage.setItem('scrollY:' + window.location.pathname, window.scrollY);
-            window.location.href = '/insights?days=' + days + '&_=' + Date.now();
-        } else {
-            overlay.style.display = 'none';
-            showToast('Failed to generate insights. Please try again.', true);
-        }
-    } catch (err) {
-        overlay.style.display = 'none';
-        showToast('Network error. Please try again.', true);
+    var toast = document.createElement('div');
+    {% if refresh_failed %}
+    toast.textContent = 'AI service error — insights could not be generated. Check your API key and billing.';
+    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;background:#e74c3c;color:white;padding:0.875rem 1.25rem;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);font-size:0.9rem;max-width:450px;';
+    {% else %}
+    toast.textContent = 'Insights updated successfully';
+    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;background:#27ae60;color:white;padding:0.875rem 1.25rem;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);font-size:0.9rem;';
+    {% endif %}
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.style.transition='opacity 0.3s'; toast.style.opacity='0'; setTimeout(function(){toast.remove()},300); }, 5000);
+})();
+{% endif %}
+
+var _pollTimer = null;
+
+// On bfcache restore: stop any active polling and reload to show latest cached data
+window.addEventListener('pageshow', function(e) {
+    if (e.persisted) {
+        if (_pollTimer) { clearTimeout(_pollTimer); _pollTimer = null; }
+        window.location.reload();
     }
+});
+
+function setButtonsLoading() {
+    document.querySelectorAll('[onclick="startRefresh()"]').forEach(function(btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-spinner"></span> Generating...';
+        btn.style.opacity = '0.7';
+        btn.style.cursor = 'wait';
+    });
 }
+
+function startRefresh() {
+    if (!confirm('This will call the AI API and may incur usage costs on your API key. Continue?')) {
+        return;
+    }
+    setButtonsLoading();
+
+    var days = getSelectedDays();
+    // Start background generation — server returns immediately with a job ID
+    fetch('/api/insights/generate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({days: parseInt(days)})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.job_id) {
+            pollStatus(data.job_id, days);
+        } else {
+            window.location.href = '/insights?days=' + days + '&refreshed=error';
+        }
+    })
+    .catch(function() {
+        window.location.href = '/insights?days=' + days + '&refreshed=error';
+    });
+}
+
+function pollStatus(jobId, days) {
+    var started = Date.now();
+    function poll() {
+        // Safety timeout: stop polling after 2 minutes
+        if (Date.now() - started > 120000) {
+            window.location.href = '/insights?days=' + days + '&refreshed=error';
+            return;
+        }
+        fetch('/api/insights/status/' + jobId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.status === 'done') {
+                window.location.href = '/insights?days=' + days + '&refreshed=ok';
+            } else if (data.status === 'error' || data.status === 'unknown') {
+                window.location.href = '/insights?days=' + days + '&refreshed=error';
+            } else {
+                _pollTimer = setTimeout(poll, 2000);
+            }
+        })
+        .catch(function() {
+            _pollTimer = setTimeout(poll, 3000);
+        });
+    }
+    _pollTimer = setTimeout(poll, 1500);
+}
+
+// On page load, check if generation is already running (user navigated away and back)
+(function checkActiveJob() {
+    fetch('/api/insights/active-job')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.job_id) {
+            setButtonsLoading();
+            pollStatus(data.job_id, getSelectedDays());
+        }
+    })
+    .catch(function() { /* ignore */ });
+})();
 
 document.querySelectorAll('time.local-time').forEach(el => {
     const utc = el.getAttribute('datetime');

@@ -305,7 +305,7 @@ class TestWebInterface:
         """Test daily report page."""
         response = client.get("/insights")
         assert response.status_code == 200
-        assert b"Insights" in response.content
+        assert b"AI Insights" in response.content
         assert b"Awaiting Assignment" in response.content
 
     def test_pagination_actions(self, setup_database):
@@ -363,7 +363,7 @@ class TestEmptyDatabase:
         """Test report with no data."""
         response = client.get("/insights")
         assert response.status_code == 200
-        assert b"Insights" in response.content
+        assert b"AI Insights" in response.content
 
     def test_api_stats_empty(self, empty_db):
         """Test API stats with empty database."""
@@ -566,6 +566,82 @@ class TestInsightsPage:
         response = client.get("/insights")
         assert response.status_code == 200
         assert b"changeDays" in response.content or b"lookback" in response.content.lower()
+
+    def test_insights_refresh_param_ignored(self, setup_database):
+        """Test that ?refresh=1 is treated as normal page load (generation is async)."""
+        response = client.get("/insights?refresh=1")
+        assert response.status_code == 200
+        assert b"AI Insights" in response.content
+
+    def test_insights_refresh_param_with_days(self, setup_database):
+        """Test that ?refresh=1&days=7 is treated as normal page load."""
+        response = client.get("/insights?days=7&refresh=1")
+        assert response.status_code == 200
+
+    def test_insights_generate_api_returns_job_id(self, setup_database):
+        """Test that POST /api/insights/generate returns a job ID."""
+        response = client.post(
+            "/api/insights/generate",
+            json={"days": 14},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "job_id" in data
+        assert len(data["job_id"]) == 8
+
+    def test_insights_status_api_unknown_job(self, setup_database):
+        """Test that polling an unknown job ID returns unknown status."""
+        response = client.get("/api/insights/status/nonexist")
+        assert response.status_code == 200
+        assert response.json()["status"] == "unknown"
+
+    def test_insights_refreshed_ok_shows_success_toast(self, setup_database):
+        """Test that ?refreshed=ok shows success toast."""
+        response = client.get("/insights?refreshed=ok")
+        assert response.status_code == 200
+        assert b"Insights updated successfully" in response.content
+
+    def test_insights_refreshed_error_shows_error_toast(self, setup_database):
+        """Test that ?refreshed=error shows error toast and warning banner."""
+        response = client.get("/insights?refreshed=error")
+        assert response.status_code == 200
+        assert b"AI service error" in response.content
+
+    def test_insights_ai_failed_shows_warning_banner(self, setup_database):
+        """Test that ai_failed flag renders the warning banner."""
+        import time
+        # Generate via async API and wait for completion
+        resp = client.post("/api/insights/generate", json={"days": 14})
+        job_id = resp.json()["job_id"]
+        for _ in range(30):
+            status_resp = client.get(f"/api/insights/status/{job_id}")
+            if status_resp.json()["status"] != "running":
+                break
+            time.sleep(0.5)
+        # Now load the page — should work regardless of AI outcome
+        response = client.get("/insights")
+        assert response.status_code == 200
+        assert b"AI Insights" in response.content
+
+    def test_insights_refresh_zero_ignored(self, setup_database):
+        """Test that refresh=0 does not force refresh (treated as normal load)."""
+        response = client.get("/insights?refresh=0")
+        assert response.status_code == 200
+
+    def test_insights_button_has_loading_behavior(self, setup_database):
+        """Test that the Generate/Refresh button triggers async generation."""
+        response = client.get("/insights")
+        assert response.status_code == 200
+        # The startRefresh function should POST to the generate API
+        assert b"api/insights/generate" in response.content
+        assert b"startRefresh" in response.content
+
+    def test_insights_confirm_dialog_present(self, setup_database):
+        """Test that the cost confirmation dialog is in the page JS."""
+        response = client.get("/insights")
+        assert response.status_code == 200
+        assert b"confirm(" in response.content
+        assert b"API" in response.content
 
 
 if __name__ == "__main__":

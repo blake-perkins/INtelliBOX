@@ -507,6 +507,8 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         }
 
         client = get_ai_client()
+        ai_failed = False
+        ai_error_message = ""
         try:
             insights = client.generate_report_insights(
                 action_details_text, email_summaries_text, days,
@@ -514,6 +516,8 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
             )
         except Exception as e:
             logger.error(f"Failed to generate AI insights: {e}")
+            ai_failed = True
+            ai_error_message = str(e)
             insights = {
                 "executive_summary": {
                     "headline": "Unable to generate insights at this time",
@@ -531,7 +535,9 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
         # Save insights to cache
         cache_data = {
             "insights": insights,
-            "email_count": len(recent_emails) if 'recent_emails' in locals() else 0
+            "email_count": len(recent_emails) if 'recent_emails' in locals() else 0,
+            "ai_failed": ai_failed,
+            "ai_error_message": ai_error_message
         }
 
         cache_entry = ReportCache(
@@ -561,11 +567,21 @@ def generate_enhanced_report(session: Session, days: int = 7, force_refresh: boo
             if newest_action and newest_action.created_at > insights_generated_at:
                 is_stale = True
 
+    # Determine ai_failed status from fresh generation or cached data
+    if not is_cached and 'ai_failed' in locals():
+        report_ai_failed = ai_failed
+    elif is_cached and latest_cache:
+        cached = json.loads(latest_cache.report_data)
+        report_ai_failed = cached.get("ai_failed", False)
+    else:
+        report_ai_failed = False
+
     # Build report data with fresh actions and cached/fresh insights
     report_data = {
         "generated_at": insights_generated_at,
         "is_cached": is_cached,
         "is_stale": is_stale,
+        "ai_failed": report_ai_failed,
         "days_analyzed": days,
         "total_actions": len(unassigned_actions),
         "high_priority_count": high_priority_count,
