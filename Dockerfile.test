@@ -1,15 +1,44 @@
 # INtelliBOX - Test Docker Image (includes test suite and dev dependencies)
-FROM python:3.12-slim
+FROM registry1.dso.mil/ironbank/redhat/ubi/ubi9
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install Python 3.12, build tools, and Chromium dependencies for Playwright
+RUN dnf install -y \
+    python3.12 \
+    python3.12-pip \
+    python3.12-devel \
     gcc \
-    g++ \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    gcc-c++ \
+    libpq-devel \
+    nss \
+    nspr \
+    atk \
+    at-spi2-atk \
+    cups-libs \
+    libdrm \
+    libXcomposite \
+    libXdamage \
+    libXrandr \
+    libXext \
+    libX11 \
+    libXfixes \
+    libXcursor \
+    mesa-libgbm \
+    pango \
+    cairo \
+    alsa-lib \
+    libxshmfence \
+    libxkbcommon \
+    dbus-libs \
+    expat \
+    && dnf clean all
+
+# Make python3.12 the default
+RUN alternatives --set python3 /usr/bin/python3.12 || true && \
+    ln -sf /usr/bin/python3.12 /usr/bin/python && \
+    ln -sf /usr/bin/pip3.12 /usr/bin/pip
 
 # Copy dependency files
 COPY pyproject.toml /app/
@@ -27,7 +56,7 @@ COPY run_tests.py /app/
 # Install Python dependencies (including dev/test)
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -e ".[dev]" && \
-    playwright install --with-deps chromium
+    playwright install chromium
 
 # Create data directories
 RUN mkdir -p /app/data/inbox /app/data/emails

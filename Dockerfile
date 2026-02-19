@@ -1,16 +1,24 @@
 # INtelliBOX - Production Docker Image
-FROM python:3.12-slim
+FROM registry1.dso.mil/ironbank/redhat/ubi/ubi9
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install Python 3.12 and system dependencies
+RUN dnf install -y \
+    python3.12 \
+    python3.12-pip \
+    python3.12-devel \
     gcc \
-    g++ \
-    libpq-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    gcc-c++ \
+    libpq-devel \
+    && dnf clean all
+# Note: curl-minimal is pre-installed in UBI 9 (used by HEALTHCHECK)
+
+# Make python3.12 the default
+RUN alternatives --set python3 /usr/bin/python3.12 || true && \
+    ln -sf /usr/bin/python3.12 /usr/bin/python && \
+    ln -sf /usr/bin/pip3.12 /usr/bin/pip
 
 # Copy dependency files
 COPY pyproject.toml /app/
