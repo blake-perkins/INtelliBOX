@@ -42,7 +42,7 @@ jobs:
               -o ServerAliveCountMax=4 \
               -i ~/.ssh/deploy_key \
               "ubuntu@${SSH_HOST}" \
-              'bash -s' << 'DEPLOY_SCRIPT'
+              "export IRONBANK_USER='${IRONBANK_USER}'; export IRONBANK_PASSWORD='${IRONBANK_PASSWORD}'; bash -s" << 'DEPLOY_SCRIPT'
           set -euo pipefail
 
           echo "=== INtelliBOX Full Redeploy ==="
