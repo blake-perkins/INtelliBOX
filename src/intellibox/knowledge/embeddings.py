@@ -300,7 +300,7 @@ def _compute_corpus_hash(docs) -> str:
     parts = []
     for doc in docs:
         parts.append(f"{doc.id}:{doc.text_length}")
-    return hashlib.md5("|".join(parts).encode()).hexdigest()
+    return hashlib.md5("|".join(parts).encode(), usedforsecurity=False).hexdigest()
 
 
 def search_by_tfidf(

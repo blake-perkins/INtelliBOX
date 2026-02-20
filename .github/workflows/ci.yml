@@ -38,6 +38,28 @@ jobs:
       - run: playwright install --with-deps chromium
       - run: python run_tests.py
 
+  security-scan:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e ".[dev]"
+      - name: pip-audit (dependency CVEs)
+        run: pip-audit --strict --desc
+      - name: bandit (static security analysis)
+        run: bandit -r src/intellibox/ -c .bandit.yml -f json -o bandit-report.json || true
+      - name: bandit gate (fail on high severity)
+        run: bandit -r src/intellibox/ -c .bandit.yml --severity-level high --confidence-level high
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
   container-build-and-test:
     needs: lint
     runs-on: ubuntu-latest
@@ -129,8 +151,33 @@ jobs:
         if: failure()
         run: docker logs intellibox
 
+  container-security-scan:
+    needs: container-build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to IronBank registry
+        run: echo "${{ secrets.IRONBANK_PASSWORD }}" | docker login registry1.dso.mil -u "${{ secrets.IRONBANK_USER }}" --password-stdin
+      - name: Build production image
+        run: docker build -t intellibox:prod .
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0
+      - name: Generate SBOM
+        run: syft intellibox:prod -o spdx-json=sbom.spdx.json -o cyclonedx-json=sbom.cdx.json
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            sbom.spdx.json
+            sbom.cdx.json
+      - name: Install Grype
+        uses: anchore/scan-action/download-grype@v4
+      - name: Grype vulnerability scan
+        run: grype sbom:sbom.spdx.json --fail-on high --only-fixed -c .grype.yaml
+
   deploy:
-    needs: [test, container-build-and-test, container-integration]
+    needs: [test, container-build-and-test, container-integration, security-scan, container-security-scan]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10

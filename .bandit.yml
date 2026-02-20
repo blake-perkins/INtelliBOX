@@ -1,0 +1,7 @@
+skips:
+  - B101  # assert_used (acceptable in application code)
+  - B104  # hardcoded_bind_all_interfaces (intentional: 0.0.0.0 for container binding)
+exclude_dirs:
+  - tests
+  - features
+  - alembic

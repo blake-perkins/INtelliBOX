@@ -1,0 +1,6 @@
+ignore:
+  # IronBank base image CVEs are managed by Red Hat
+  # Add specific CVE IDs here after first scan if needed
+  # - vulnerability: CVE-XXXX-XXXXX
+
+output: "table"

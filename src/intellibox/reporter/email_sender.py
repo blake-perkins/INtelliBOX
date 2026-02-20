@@ -24,7 +24,7 @@ def render_template(template_name: str, context: Dict) -> str:
         Rendered template string
     """
     template_dir = Path(__file__).parent / "templates"
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    env = Environment(loader=FileSystemLoader(str(template_dir)), autoescape=True)
     template = env.get_template(template_name)
     return template.render(**context)
 
