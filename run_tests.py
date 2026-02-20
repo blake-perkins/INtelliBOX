@@ -41,14 +41,19 @@ TEST_MODULES = [
     "tests/test_chain_stripper.py",
     "tests/test_email_processing.py",
     "tests/test_knowledge_base.py",
+    "tests/test_auth.py",
 ]
 
 
-def _test_env():
-    """Build environment for test subprocesses — auth disabled to avoid login redirects."""
+def _test_env(auth_mode="disabled"):
+    """Build environment for test subprocesses."""
     env = os.environ.copy()
-    env["AUTH_MODE"] = "disabled"
+    env["AUTH_MODE"] = auth_mode
     return env
+
+
+# Modules that manage their own AUTH_MODE (run without override)
+_AUTH_LOCAL_MODULES = {"tests/test_auth.py"}
 
 
 def run_test_module(module_path):
@@ -57,11 +62,12 @@ def run_test_module(module_path):
     print(f"{BOLD}Running: {module_path}{RESET}")
     print(f"{BLUE}{'=' * 70}{RESET}\n")
 
+    auth = "local" if module_path in _AUTH_LOCAL_MODULES else "disabled"
     result = subprocess.run(
         [sys.executable, "-m", "pytest", module_path, "-v", "--tb=short", "-q"],
         capture_output=False,
         text=True,
-        env=_test_env(),
+        env=_test_env(auth),
     )
 
     return result.returncode == 0

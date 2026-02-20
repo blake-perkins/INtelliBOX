@@ -80,7 +80,7 @@ python run_tests.py
 # NOT: pytest tests/  (causes cross-contamination errors)
 ```
 
-**Test suite**: 13 pytest modules + 165 BDD scenarios (Behave) + 46 Playwright E2E tests.
+**Test suite**: 14 pytest modules + 165 BDD scenarios (Behave) + 46 Playwright E2E tests.
 
 E2E tests (Playwright):
 ```bash
