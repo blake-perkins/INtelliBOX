@@ -11,18 +11,27 @@ from intellibox.config import settings
 from intellibox.models import Base
 from intellibox.utils.datetime_utils import utcnow
 
-# Build connect_args for SQLite compatibility
-_connect_args = {}
-if settings.database_url.startswith("sqlite"):
-    _connect_args["check_same_thread"] = False
 
-# Create database engine
-engine = create_engine(
-    settings.database_url,
-    echo=settings.log_level == "DEBUG",  # Log SQL queries in debug mode
-    future=True,
-    connect_args=_connect_args,
-)
+def _build_engine():
+    """Build SQLAlchemy engine with dialect-appropriate configuration."""
+    url = settings.database_url
+    kwargs = {
+        "echo": settings.log_level == "DEBUG",
+        "future": True,
+    }
+
+    if url.startswith("sqlite"):
+        kwargs["connect_args"] = {"check_same_thread": False}
+    elif url.startswith("postgresql"):
+        kwargs["pool_size"] = settings.db_pool_size
+        kwargs["max_overflow"] = settings.db_max_overflow
+        kwargs["pool_recycle"] = settings.db_pool_recycle
+        kwargs["pool_pre_ping"] = settings.db_pool_pre_ping
+
+    return create_engine(url, **kwargs)
+
+
+engine = _build_engine()
 
 
 def configure_sqlite_pragmas(target_engine) -> None:
@@ -38,7 +47,7 @@ def configure_sqlite_pragmas(target_engine) -> None:
         cursor.close()
 
 
-# Enable pragmas for the default engine
+# Enable pragmas for the default engine (SQLite only)
 if settings.database_url.startswith("sqlite"):
     configure_sqlite_pragmas(engine)
 
@@ -169,28 +178,46 @@ def cleanup_processing_logs(session: Session, retention_days: int = 90) -> int:
     return deleted
 
 
-def run_vacuum(target_engine=None) -> None:
-    """Run VACUUM on the SQLite database to reclaim space.
+def _is_sqlite_engine(eng) -> bool:
+    """Check if the given engine is backed by SQLite."""
+    return str(eng.url).startswith("sqlite")
 
-    VACUUM requires running outside a transaction, so we use a raw
-    connection with isolation_level=None (autocommit).
+
+def run_vacuum(target_engine=None) -> None:
+    """Run VACUUM to reclaim disk space.
+
+    SQLite: requires raw connection with isolation_level=None (autocommit).
+    PostgreSQL: requires autocommit mode outside a transaction block.
     """
     eng = target_engine or engine
     raw = eng.raw_connection()
     try:
-        raw.isolation_level = None  # autocommit required for VACUUM
-        raw.execute("VACUUM")
+        if _is_sqlite_engine(eng):
+            raw.isolation_level = None
+            raw.execute("VACUUM")
+        else:
+            # PostgreSQL: set autocommit then run VACUUM ANALYZE
+            raw.set_session(autocommit=True)
+            cursor = raw.cursor()
+            cursor.execute("VACUUM ANALYZE")
+            cursor.close()
     finally:
         raw.close()
 
 
 def run_analyze(target_engine=None) -> None:
-    """Run ANALYZE to update SQLite query planner statistics."""
+    """Run ANALYZE to update query planner statistics."""
     eng = target_engine or engine
     raw = eng.raw_connection()
     try:
-        raw.isolation_level = None
-        raw.execute("ANALYZE")
+        if _is_sqlite_engine(eng):
+            raw.isolation_level = None
+            raw.execute("ANALYZE")
+        else:
+            raw.set_session(autocommit=True)
+            cursor = raw.cursor()
+            cursor.execute("ANALYZE")
+            cursor.close()
     finally:
         raw.close()
 
@@ -201,7 +228,7 @@ def run_maintenance(session: Session, target_engine=None) -> Dict:
     1. Clean cache tables (keep 5 most recent of each)
     2. Clean old processing logs (retain 90 days)
     3. Run ANALYZE
-    4. Run VACUUM (last — locks DB briefly)
+    4. Run VACUUM (last — locks DB briefly on SQLite)
     """
     eng = target_engine or engine
 

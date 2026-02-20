@@ -6,9 +6,10 @@ Create Date: 2026-02-16 12:00:00.000000
 
 """
 from typing import Sequence, Union
-from alembic import op
+
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '001'
@@ -34,7 +35,7 @@ def upgrade() -> None:
         sa.Column('body_text', sa.Text(), nullable=True),
         sa.Column('body_html', sa.Text(), nullable=True),
         sa.Column('raw_eml_path', sa.String(length=500), nullable=True),
-        sa.Column('processed', sa.Boolean(), nullable=False, server_default='0'),
+        sa.Column('processed', sa.Boolean(), nullable=False, server_default=sa.text('false')),
         sa.Column('processed_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint('id'),

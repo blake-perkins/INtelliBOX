@@ -1,12 +1,14 @@
 """Alembic environment configuration."""
 
 from logging.config import fileConfig
+
 from sqlalchemy import engine_from_config, pool
+
 from alembic import context
+from intellibox.config import settings
 
 # Import your models' Base
 from intellibox.models import Base
-from intellibox.config import settings
 
 # Alembic Config object
 config = context.config
@@ -38,10 +40,16 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+    url = config.get_main_option("sqlalchemy.url")
+    connect_args = {}
+    if url and url.startswith("sqlite"):
+        connect_args["check_same_thread"] = False
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connect_args,
     )
 
     with connectable.connect() as connection:

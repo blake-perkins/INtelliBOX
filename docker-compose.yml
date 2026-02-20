@@ -1,5 +1,13 @@
 version: '3.8'
 
+# ── Database backend ─────────────────────────────────────────────────────────
+# SQLite (default):  docker compose up
+# PostgreSQL:        docker compose --profile postgres up
+#
+# Set DATABASE_URL in your .env file to match your choice.
+# See .env.example for both options.
+# ─────────────────────────────────────────────────────────────────────────────
+
 services:
   intellibox:
     build:
@@ -19,6 +27,27 @@ services:
       timeout: 5s
       start_period: 15s
       retries: 3
+
+  # PostgreSQL database (activate with: docker compose --profile postgres up)
+  postgres:
+    image: postgres:16-alpine
+    container_name: intellibox-db
+    environment:
+      - POSTGRES_DB=intellibox
+      - POSTGRES_USER=intellibox
+      - POSTGRES_PASSWORD=changeme
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    profiles:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intellibox -d intellibox"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # Testing profile: run the web app with test config
   intellibox-test:
@@ -54,22 +83,6 @@ services:
       - .env.test
     profiles:
       - ci
-
-  # Optional: PostgreSQL for production-like setup
-  postgres:
-    image: postgres:16-alpine
-    container_name: intellibox-db
-    environment:
-      - POSTGRES_DB=intellibox
-      - POSTGRES_USER=intellibox
-      - POSTGRES_PASSWORD=changeme
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
-    profiles:
-      - production
 
 volumes:
   postgres_data:

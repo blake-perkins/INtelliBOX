@@ -5,9 +5,9 @@ Revises: 004
 Create Date: 2026-02-16
 
 """
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '005'
@@ -24,7 +24,7 @@ def upgrade() -> None:
         sa.Column('first_name', sa.String(100), nullable=False),
         sa.Column('last_name', sa.String(100), nullable=False),
         sa.Column('email', sa.String(255), nullable=False),
-        sa.Column('active', sa.Boolean(), nullable=False, server_default='1'),
+        sa.Column('active', sa.Boolean(), nullable=False, server_default=sa.text('true')),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('email', name='uq_roster_email')

@@ -22,6 +22,7 @@ dependencies = [
     "pypdf>=4.0.0",
     "python-docx>=1.1.0",
     "scikit-learn>=1.4.0",
+    "psycopg[binary]>=3.1.0",
 ]
 
 [project.optional-dependencies]
@@ -76,6 +77,9 @@ addopts = "-v --cov=src/intellibox --cov-report=term-missing"
 markers = [
     "e2e: End-to-end browser tests (Playwright)",
     "smoke: Smoke tests against the live pilot server",
+    "pg: PostgreSQL-specific tests (requires running PG instance)",
+    "sqlite_only: Tests that only apply to SQLite backend",
+    "stress: High-throughput stress tests (slow)",
 ]
 
 [tool.coverage.run]

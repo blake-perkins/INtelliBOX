@@ -14,6 +14,17 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite:///./data/intellibox.db"
 
+    # PostgreSQL connection pool settings (ignored for SQLite)
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_recycle: int = 1800
+    db_pool_pre_ping: bool = True
+
+    @property
+    def is_postgres(self) -> bool:
+        """Check if the database backend is PostgreSQL."""
+        return self.database_url.startswith("postgresql")
+
     # OpenAI API
     openai_api_key: str
     openai_model: str = "gpt-4o-mini"
