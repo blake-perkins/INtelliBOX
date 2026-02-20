@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import case, desc, func, or_
-from sqlalchemy.orm import contains_eager, joinedload, subqueryload
+from sqlalchemy.orm import contains_eager, subqueryload
 
 from intellibox.knowledge import search_knowledge_base
 from intellibox.models import Action, Assignment, Email
