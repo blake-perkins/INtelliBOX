@@ -11,6 +11,22 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
+    # Authentication
+    auth_mode: str = "disabled"  # "disabled", "local", "oidc"
+    secret_key: str = "change-me-in-production"
+    session_ttl_hours: int = 8
+
+    # OIDC settings (provider-agnostic — works with ANY OIDC provider)
+    oidc_issuer_url: str = ""
+    oidc_client_id: str = ""
+    oidc_client_secret: str = ""
+    oidc_roles_claim: str = "realm_access.roles"  # Dot-notation for nested claims
+    oidc_admin_role: str = "intellibox-admin"
+
+    @property
+    def auth_enabled(self) -> bool:
+        return self.auth_mode != "disabled"
+
     # Database
     database_url: str = "sqlite:///./data/intellibox.db"
 

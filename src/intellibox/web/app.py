@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from intellibox import __version__
 from intellibox.database import get_session
+from intellibox.web.auth import AuthMiddleware
 from intellibox.web.deps import static_dir, templates  # noqa: F401 — templates re-exported for backward compat
 
 
@@ -53,6 +54,10 @@ app = FastAPI(
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+# Auth middleware — populates request.state.user on every request.
+# When AUTH_MODE=disabled (default), injects AnonymousAdminUser.
+app.add_middleware(AuthMiddleware)
 
 
 @app.middleware("http")

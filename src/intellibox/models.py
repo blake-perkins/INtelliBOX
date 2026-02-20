@@ -258,6 +258,58 @@ class ReportCache(Base):
         return f"<ReportCache(id={self.id}, generated_at='{self.generated_at}')>"
 
 
+class User(Base):
+    """Application user (local or OIDC-provisioned)."""
+
+    __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("role IN ('admin', 'member')", name="check_user_role"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(150), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # NULL for OIDC-only
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="member")
+    oidc_sub: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True, index=True)
+    roster_member_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("roster.id", ondelete="SET NULL"), nullable=True
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    # Relationships
+    roster_member: Mapped[Optional["RosterMember"]] = relationship("RosterMember")
+    sessions: Mapped[List["UserSession"]] = relationship(
+        "UserSession", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<User(id={self.id}, username='{self.username}', role='{self.role}')>"
+
+
+class UserSession(Base):
+    """Server-side session storage (signed cookie holds only session_id)."""
+
+    __tablename__ = "user_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # UUID
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    session_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+
+    # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="sessions")
+
+    def __repr__(self) -> str:
+        return f"<UserSession(id='{self.id}', user_id={self.user_id})>"
+
+
 class KnowledgeDocument(Base):
     """Program document uploaded to the knowledge base for RAG context."""
 

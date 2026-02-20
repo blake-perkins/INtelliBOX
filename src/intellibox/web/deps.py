@@ -20,6 +20,21 @@ templates.env.globals["get_program_name"] = lambda: SettingsService.get_setting(
 templates.env.globals["app_version"] = __version__
 
 
+# Auto-inject current_user into every template context so routes don't
+# need to pass it explicitly.  Works with any auth mode.
+_original_template_response = templates.TemplateResponse
+
+
+def _auth_template_response(name, context, **kwargs):
+    request = context.get("request")
+    if request and hasattr(request.state, "user"):
+        context.setdefault("current_user", request.state.user)
+    return _original_template_response(name, context, **kwargs)
+
+
+templates.TemplateResponse = _auth_template_response
+
+
 def get_session():
     """Get a database session. Delegates to database.get_session() at call time.
 
