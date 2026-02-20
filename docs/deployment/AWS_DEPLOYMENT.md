@@ -15,10 +15,10 @@ This guide covers deploying INtelliBOX as a containerized application on AWS.
 │  └──────────────┘      └──────────────┘    └────────────┘  │
 │         │                                          │         │
 │         │                                          │         │
-│  ┌──────▼──────┐      ┌──────────────┐    ┌───────▼─────┐  │
-│  │   EFS       │      │   Secrets    │    │ EventBridge │  │
-│  │  Storage    │      │   Manager    │    │   (IMAP)    │  │
-│  └─────────────┘      └──────────────┘    └─────────────┘  │
+│  ┌──────▼──────┐      ┌──────────────┐                    │
+│  │   EFS       │      │   Secrets    │                    │
+│  │  Storage    │      │   Manager    │                    │
+│  └─────────────┘      └──────────────┘                    │
 │                                                              │
 │  ┌──────────────┐      ┌──────────────┐                    │
 │  │   SES        │      │  CloudWatch  │                    │
@@ -260,20 +260,21 @@ aws ecs run-task \
 
 ## Email Ingestion Options
 
-### Option A: S3 + Lambda Trigger
+### Option A: Web Upload (Recommended)
+Upload `.eml` or `.msg` files directly through the INtelliBOX dashboard at `/emails/upload`. This is the primary ingestion method.
+
+### Option B: File Drop (File Watcher)
+Drop `.eml` or `.msg` files into the `data/inbox/` directory. The built-in file watcher picks them up automatically. Works with SCP, OneDrive/SharePoint sync, or any folder-based integration.
+
+### Option C: S3 + Lambda Trigger
 1. Create S3 bucket for email uploads
 2. Configure Lambda to trigger on new .eml/.msg files
 3. Process emails and store in database
 
-### Option B: SES Receipt Rule
+### Option D: SES Receipt Rule
 1. Configure SES to receive emails
 2. Store raw emails in S3
 3. Trigger Lambda/ECS task to process
-
-### Option C: IMAP Polling (EventBridge + Lambda)
-1. Schedule Lambda to poll IMAP inbox every 15 minutes
-2. Download new emails
-3. Process and store
 
 ---
 
@@ -376,12 +377,17 @@ aws cloudwatch get-metric-statistics \
 
 ---
 
+## Current Deployment
+
+The project currently deploys to an EC2 instance using Podman with an IronBank UBI 9 container image. CI/CD is handled by GitHub Actions — pushes to `main` auto-deploy after all tests and security scans pass. See [deploy/README.md](../../deploy/README.md) for the production deployment guide.
+
+The ECS Fargate and Lambda options above are alternative architectures for teams that prefer managed AWS services.
+
 ## Next Steps
 
-1. Set up CI/CD pipeline (GitHub Actions, AWS CodePipeline)
-2. Configure custom domain for SES
-3. Implement backup and disaster recovery
-4. Set up monitoring dashboards
-5. Configure auto-scaling policies
+1. Configure custom domain for SES
+2. Implement backup and disaster recovery
+3. Set up monitoring dashboards
+4. Configure auto-scaling policies
 
 For questions or issues, refer to the main README.md or create an issue on GitHub.

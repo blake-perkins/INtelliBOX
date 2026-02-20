@@ -22,9 +22,10 @@ INtelliBOX/
 │   ├── settings_service.py # Settings CRUD (JSON serialization)
 │   ├── priority_rules.py   # Priority rule engine
 │   └── cli.py              # Click CLI commands
-├── tests/                  # 13 pytest modules + 45 Playwright E2E tests
+├── tests/                  # 13 pytest modules + 46 Playwright E2E tests
 │   ├── test_ai/            # AI-specific tests (priority integration)
-│   ├── e2e/                # Playwright browser E2E tests (10 files)
+│   ├── e2e/                # Playwright browser E2E tests (9 files)
+│   ├── smoke/              # Smoke tests for live pilot server
 │   └── fixtures/           # Sample .eml files
 ├── features/               # 165 BDD scenarios (Behave)
 │   └── steps/              # Step definitions
@@ -35,11 +36,13 @@ INtelliBOX/
 │   └── intellibox.db      # SQLite database
 ├── alembic/               # Database migrations
 ├── deploy/                # Production deployment (pilot.sh, setup.sh, nginx, env templates)
-├── docs/deployment/       # AWS, Azure, Podman guides
-├── Dockerfile             # Production container image
-├── Dockerfile.test        # Test runner container image
+├── docs/                  # Deployment, design, testing, security documentation
+├── Dockerfile             # Production container image (IronBank UBI 9)
+├── Dockerfile.test        # Test runner container image (IronBank UBI 9)
 ├── docker-compose.yml     # Multi-service orchestration
 ├── run_tests.py           # Test runner (isolated per module)
+├── .bandit.yml            # Bandit security analysis configuration
+├── .grype.yaml            # Grype vulnerability scanner configuration
 ├── .dockerignore          # Production build excludes tests
 ├── .dockerignore.test     # Test build includes tests
 └── pyproject.toml         # Dependencies, ruff, pytest config
@@ -57,10 +60,11 @@ INtelliBOX/
   - File watcher with health monitoring and supervised restarts
   - AI client retry logic with exponential backoff
   - Rotating log files
-  - Container support (Dockerfile, Dockerfile.test, docker-compose.yml)
-  - Production deployment (deploy/ — Podman, nginx, Certbot, DuckDNS)
+  - Container support (IronBank UBI 9 base image, Dockerfile, Dockerfile.test, docker-compose.yml)
+  - Production deployment (deploy/ — Podman, nginx, Certbot, DuckDNS on EC2)
   - Zero-touch pilot deployment (`bash deploy/pilot.sh`)
-  - CI/CD pipeline: lint, tests (unit + BDD + E2E), container build/test, auto-deploy
+  - CI/CD pipeline: lint, test + security scans, container build/test/integration/SBOM/Grype, auto-deploy
+  - Security scanning: pip-audit (dependency CVEs), bandit (SAST), Syft (SBOM), Grype (container CVEs)
 - **Primary branch**: `main`
 - **Python**: 3.12+
 - **Database**: SQLite (data/intellibox.db)
@@ -76,7 +80,7 @@ python run_tests.py
 # NOT: pytest tests/  (causes cross-contamination errors)
 ```
 
-**Test suite**: 13 pytest modules + 165 BDD scenarios (Behave) + 45 Playwright E2E tests.
+**Test suite**: 13 pytest modules + 165 BDD scenarios (Behave) + 46 Playwright E2E tests.
 
 E2E tests (Playwright):
 ```bash
@@ -93,13 +97,18 @@ python -m pytest tests/e2e/ -v --headed
 pip install -e ".[dev]" && playwright install chromium
 ```
 
-Container testing:
+Container testing (requires IronBank registry login — `podman login registry1.dso.mil`):
 ```bash
 # Swap .dockerignore, build test image, run tests
 cp .dockerignore .dockerignore.bak && cp .dockerignore.test .dockerignore
 podman build -f Dockerfile.test -t intellibox:test-runner .
 cp .dockerignore.bak .dockerignore
 podman run --rm --env-file .env.test intellibox:test-runner
+```
+
+Smoke tests against the live pilot server:
+```bash
+PILOT_USER=bperkins PILOT_PASSWORD=... pytest tests/smoke/test_pilot.py -v
 ```
 
 ## CLI Commands

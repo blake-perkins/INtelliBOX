@@ -333,14 +333,25 @@ pytest tests/test_web_interface.py -v
 **Current Status:**
 - Manual testing: ✅ Passed
 - Template validation: ⚠️  Script not yet created
-- Integration tests: ✅ 17/17 passing
+- Integration tests: ✅ All passing (13 modules + 165 BDD + 46 E2E)
 - Production errors: ✅ All fixed
+- CI/CD: ✅ Automated on every push
 
 ---
+
+## Current State
+
+CI/CD runs all tests automatically on every push via GitHub Actions. The test suite includes:
+- **13 pytest modules** — unit and integration tests (run in isolation via `run_tests.py`)
+- **165 BDD scenarios** — Behave tests covering all web routes and API endpoints
+- **46 Playwright E2E tests** — browser-based end-to-end tests
+- **Security scans** — pip-audit (dependency CVEs) and bandit (static analysis) run as part of the test job
+
+Container tests build the IronBank UBI 9 image, run unit tests inside it, then run BDD integration tests against a live container.
 
 ## Next Steps
 
 1. Create `validate_templates.py` script
-2. Fix pytest database isolation
+2. Fix pytest database isolation (replace `run_tests.py` with proper fixtures)
 3. Add content validation to integration tests
-4. Set up CI/CD to run tests automatically
+4. Set coverage gate in CI (80% minimum)

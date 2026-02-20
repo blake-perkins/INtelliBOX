@@ -1,228 +1,101 @@
-# INtelliBOX - Container Testing Results
+# INtelliBOX - Container Testing
 
-## ✅ Local Tests (Completed)
+## Base Image
 
-All application components verified working:
+Production and test containers use **IronBank UBI 9** (`registry1.dso.mil/ironbank/redhat/ubi/ubi9`) — a hardened RHEL 9 image from the DoD Iron Bank registry.
 
-- ✅ **Database Models**: Successfully loaded
-- ✅ **AI Client**: OpenAI GPT-4 integration ready
-- ✅ **Report Generator**: Template rendering working
-- ✅ **CLI**: Commands executable
-- ✅ **Email Parser**: .eml and .msg support ready
-- ✅ **Configuration**: Environment variables loading
+### Registry Access
 
-**Status**: Application is production-ready!
+IronBank requires authentication. Get credentials at [https://registry1.dso.mil](https://registry1.dso.mil):
 
----
-
-## 📦 Container Testing (Pending - Install Podman First)
-
-### Install Podman Desktop
-
-1. **Download**: https://github.com/containers/podman-desktop/releases/latest
-2. **File**: `podman-desktop-X.X.X-setup.exe`
-3. **Install**: Run installer, restart terminal
-4. **Initialize**:
-   ```bash
-   podman machine init
-   podman machine start
-   ```
-
-### Alternative: WSL2 + Podman
-
-```powershell
-# In PowerShell (as Administrator)
-wsl --install Ubuntu
-# Restart, then in WSL:
-sudo apt update
-sudo apt install -y podman
+```bash
+podman login registry1.dso.mil
+# Or in CI:
+echo "$IRONBANK_PASSWORD" | docker login registry1.dso.mil -u "$IRONBANK_USER" --password-stdin
 ```
 
 ---
 
-## 🧪 Container Tests (Run After Installing Podman)
+## Container Test Suite
 
-### Quick Test
+All container testing runs in CI automatically. The `container` job in `.github/workflows/ci.yml` performs:
 
-```bash
-# Build image
-podman build -t intellibox:latest .
+1. **Build production image** — `docker build -t intellibox:prod .`
+2. **Build test runner image** — `docker build -f Dockerfile.test -t intellibox:test-runner .`
+3. **Run unit tests in container** — 13 pytest modules + BDD scenarios
+4. **Start production container** — verify health check passes
+5. **Run BDD integration tests** — behave tests against the live container
+6. **Generate SBOM** — Syft produces SPDX and CycloneDX manifests
+7. **Vulnerability scan** — Grype scans the SBOM for high-severity fixable CVEs
 
-# Run container
-podman run -d \
-    --name intellibox \
-    --env-file .env \
-    -v ./data:/app/data:Z \
-    intellibox:latest
-
-# Check logs
-podman logs -f intellibox
-
-# Test CLI inside container
-podman exec intellibox intellibox process
-
-# Stop container
-podman stop intellibox
-podman rm intellibox
-```
-
-### Comprehensive Test Suite
+### Running Locally
 
 ```bash
-# Make test script executable
-chmod +x test_container.sh
+# Prerequisites: podman login registry1.dso.mil
 
-# Run all tests
-./test_container.sh
-```
+# Build production image
+podman build -t intellibox:prod .
 
-This will test:
-1. ✅ Image build
-2. ✅ Container startup
-3. ✅ Python imports
-4. ✅ CLI functionality
-5. ✅ Environment variables
-6. ✅ Volume mounts
-7. ✅ Full application workflow
+# Build test runner image
+cp .dockerignore .dockerignore.bak && cp .dockerignore.test .dockerignore
+podman build -f Dockerfile.test -t intellibox:test-runner .
+cp .dockerignore.bak .dockerignore
 
----
+# Run tests inside container
+podman run --rm --env-file .env.test intellibox:test-runner
 
-## 🚀 Deploy to AWS (After Container Tests Pass)
+# Run production container
+podman run -d --name intellibox --env-file .env \
+    -v ./data:/app/data:Z -p 8000:8000 intellibox:prod
 
-### Prerequisites
-
-- Podman installed and tested
-- AWS CLI configured
-- AWS account with permissions
-
-### Deploy
-
-```bash
-# Set AWS region
-export AWS_REGION=us-east-1
-
-# Run deployment script
-chmod +x aws/deploy-podman.sh
-./aws/deploy-podman.sh
-```
-
-This will:
-1. Build multi-arch image (amd64/arm64)
-2. Push to AWS ECR
-3. Update ECS task definition
-4. Deploy to Fargate
-
-### Monitor Deployment
-
-```bash
-# Check ECS service
-aws ecs describe-services \
-    --cluster intellibox-cluster \
-    --services intellibox-scheduler
-
-# View logs
-aws logs tail /ecs/intellibox --follow
+# Verify health
+curl http://localhost:8000/health
 ```
 
 ---
 
-## 📊 Verification Checklist
+## Verification Checklist
 
-### Local Application
-- [x] Database models load
-- [x] AI client initializes
-- [x] Report generator works
-- [x] CLI executes
-- [x] GPT-4 integration functioning (30 actions extracted)
+### Container Build
+- [x] Production image builds from IronBank UBI 9
+- [x] Test runner image builds with Chromium dependencies for Playwright
+- [x] Python 3.12 installed via `dnf` (RHEL packages)
+- [x] `curl-minimal` pre-installed (used by HEALTHCHECK)
 
-### Container (After Podman Install)
-- [ ] Image builds successfully
-- [ ] Container starts without errors
-- [ ] Health check passes
-- [ ] Volume mounts work
-- [ ] Environment variables load
-- [ ] CLI commands work inside container
-- [ ] Email processing functional
-- [ ] Report generation works
+### Container Tests (CI)
+- [x] 13 pytest modules pass inside container
+- [x] 165 BDD scenarios pass inside container
+- [x] Production container starts and health check passes
+- [x] BDD integration tests pass against live container
+- [x] Syft SBOM generation succeeds (SPDX + CycloneDX artifacts uploaded)
+- [x] Grype vulnerability scan passes (no high-severity fixable CVEs)
 
-### AWS Deployment (Optional)
-- [ ] ECR repository created
-- [ ] Image pushed to ECR
-- [ ] ECS task runs successfully
-- [ ] RDS connection works
-- [ ] EFS storage accessible
-- [ ] Secrets Manager integration
-- [ ] CloudWatch logging active
-- [ ] Reports sent via SES
+### Production Deployment
+- [x] Container runs on EC2 via Podman with systemd auto-restart
+- [x] nginx reverse proxy with TLS (Let's Encrypt)
+- [x] HTTP basic auth via nginx `.htpasswd`
+- [x] Data volume mounted at `/opt/intellibox/data`
+- [x] CI/CD auto-deploys on push to `main`
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Podman Machine Won't Start
-
+### IronBank Registry Auth Fails
 ```bash
-podman machine stop
-podman machine rm
-podman machine init
-podman machine start
+# Verify credentials at https://registry1.dso.mil — use the CLI secret, not web password
+podman login registry1.dso.mil
+```
+
+### Playwright Fails in Test Container
+The test Dockerfile manually installs RHEL Chromium dependencies (nss, atk, cups-libs, etc.) because `playwright install --with-deps` uses `apt-get` internally which doesn't exist on RHEL:
+```bash
+# In Dockerfile.test, Chromium deps are installed via dnf, then:
+RUN playwright install chromium  # without --with-deps
 ```
 
 ### Volume Permission Issues
-
-Use the `:Z` flag for SELinux systems:
+Use the `:Z` flag for SELinux relabeling:
 ```bash
-podman run -v ./data:/app/data:Z intellibox:latest
+podman run -v ./data:/app/data:Z intellibox:prod
 ```
-
-### Container Build Fails
-
-Check Dockerfile syntax:
-```bash
-podman build --no-cache -t intellibox:latest .
-```
-
-### AWS Deployment Issues
-
-Check logs:
-```bash
-aws ecs describe-tasks \
-    --cluster intellibox-cluster \
-    --tasks TASK_ARN
-```
-
----
-
-## 📝 Next Steps
-
-1. **Install Podman Desktop** (5 minutes)
-   - Download from https://podman-desktop.io/
-   - Run installer
-   - Initialize machine
-
-2. **Run Container Tests** (10 minutes)
-   ```bash
-   ./test_container.sh
-   ```
-
-3. **Test Locally with Podman** (5 minutes)
-   ```bash
-   podman-compose up -d
-   ```
-
-4. **Deploy to AWS** (30 minutes)
-   - Set up AWS infrastructure (RDS, EFS, Secrets)
-   - Run deployment script
-   - Monitor and verify
-
----
-
-## 📞 Support
-
-- **Documentation**: See [PODMAN.md](PODMAN.md) and [AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md)
-- **Quick Start**: See [QUICKSTART.md](QUICKSTART.md)
-- **Issues**: Create GitHub issue with logs
-
----
-
-**Status**: Ready for containerization after Podman installation ✓

@@ -23,7 +23,9 @@ INtelliBOX helps teams manage incoming Requests for Information (RFIs), data cal
 - **Analytics** - Activity trends and workload distribution charts
 - **Database Maintenance** - Automated cache cleanup, log retention, VACUUM/ANALYZE
 - **File Watcher** - Supervised inbox monitoring with health reporting and auto-restart
-- **Container Support** - Production Dockerfile with health checks, plus test runner image
+- **Container Support** - Production Dockerfile (IronBank UBI 9) with health checks, plus test runner image
+- **Security Scanning** - pip-audit, bandit, Syft SBOM generation, and Grype vulnerability scanning in CI
+- **CI/CD Pipeline** - Automated lint, test, container build/test/integration, security scans, and deploy on push to main
 
 ## Web Pages
 
@@ -72,16 +74,21 @@ intellibox web
 
 ### Container Setup (Podman/Docker)
 
+The production container uses IronBank UBI 9 (`registry1.dso.mil/ironbank/redhat/ubi/ubi9`) as the base image. You must log in to the IronBank registry before building:
+
 ```bash
+# Log in to IronBank (one-time setup — get credentials at https://registry1.dso.mil)
+podman login registry1.dso.mil
+
 # Build production image
-podman build -t intellibox:latest .
+podman build -t intellibox:prod .
 
 # Run with docker-compose
 podman-compose up -d
 
 # Or run directly
 podman run -d --name intellibox --env-file .env \
-    -v ./data:/app/data:Z -p 8000:8000 intellibox:latest
+    -v ./data:/app/data:Z -p 8000:8000 intellibox:prod
 ```
 
 See [Deployment Guides](docs/deployment/) for detailed container and cloud setup.
@@ -117,11 +124,14 @@ python -m pytest tests/test_web_interface.py -v
 behave features/
 ```
 
-**Test suite**: 13 pytest modules + 165 BDD scenarios covering email processing, AI client retry logic, file watcher resilience, database maintenance, priority rules, web interface, knowledge base, and more.
+**Test suite**: 13 pytest modules + 165 BDD scenarios + 46 Playwright E2E tests covering email processing, AI client retry logic, file watcher resilience, database maintenance, priority rules, web interface, knowledge base, and more.
 
 ### Container Testing
 
 ```bash
+# Log in to IronBank registry first
+podman login registry1.dso.mil
+
 # Build test runner image (includes tests and dev dependencies)
 # First swap .dockerignore for the test version:
 cp .dockerignore .dockerignore.bak && cp .dockerignore.test .dockerignore
@@ -146,9 +156,9 @@ INtelliBOX/
 ├── tests/                  # 13 pytest test modules
 ├── features/               # 165 BDD scenarios (Behave)
 ├── alembic/                # Database migrations
-├── docs/deployment/        # AWS, Azure, Podman deployment guides
-├── Dockerfile              # Production container image
-├── Dockerfile.test         # Test runner container image
+├── docs/                   # Deployment, design, testing, security docs
+├── Dockerfile              # Production container image (IronBank UBI 9)
+├── Dockerfile.test         # Test runner container image (IronBank UBI 9)
 ├── docker-compose.yml      # Multi-service container orchestration
 ├── run_tests.py            # Test suite runner (isolation per module)
 └── data/                   # Local data (gitignored)
@@ -157,6 +167,19 @@ INtelliBOX/
     ├── logs/              # Rotating log files
     └── intellibox.db      # SQLite database
 ```
+
+## CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration and deployment. All jobs run in parallel and must pass before deploy:
+
+| Job | What it does |
+|-----|-------------|
+| **lint** | `ruff check` on all source and test files |
+| **test** | Full test suite + pip-audit dependency CVE scan + bandit static security analysis |
+| **container** | Build IronBank UBI 9 image, run unit tests in container, BDD integration tests against live container, Syft SBOM generation, Grype vulnerability scan |
+| **deploy** | Auto-deploy to production on push to `main` (needs all 3 jobs above) |
+
+Security scan findings are logged in [docs/security/SECURITY_FIXES.md](docs/security/SECURITY_FIXES.md).
 
 ## Configuration
 

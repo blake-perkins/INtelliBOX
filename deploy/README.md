@@ -1,6 +1,6 @@
 # INtelliBOX Production Deployment
 
-Deploy INtelliBOX to an AWS EC2 instance with Podman, nginx, and HTTPS.
+Deploy INtelliBOX to an AWS EC2 instance with Podman, nginx, and HTTPS. The container image uses IronBank UBI 9 (`registry1.dso.mil/ironbank/redhat/ubi/ubi9`) as the base image.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ SCP / folder sync     ─┤
                        ↓
          File Watcher → AI Processing → Database
                        ↓
-Internet → HTTPS (443) → nginx → HTTP (8000) → INtelliBOX container (Podman)
+Internet → HTTPS (443) → nginx (basic auth + TLS) → HTTP (8000) → INtelliBOX container (Podman, IronBank UBI 9)
 ```
 
 ## Quick Start — Zero-Touch Deployment
@@ -24,6 +24,7 @@ Deploy a fresh pilot instance with a single command. No SSH, no manual steps.
 1. [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed and configured (`aws configure`)
 2. An EC2 key pair created in your AWS region
 3. A DuckDNS subdomain — go to [duckdns.org](https://www.duckdns.org/), sign in, create a subdomain, copy your token
+4. IronBank registry credentials — sign up at [registry1.dso.mil](https://registry1.dso.mil) and get your CLI secret
 
 ### Configure
 
@@ -58,7 +59,7 @@ This will automatically:
 
 ### CI/CD Auto-Deploy
 
-Pushes to `main` that pass all tests automatically deploy to the pilot instance. To enable this, add two GitHub secrets:
+Pushes to `main` that pass all tests and security scans automatically deploy to the pilot instance. To enable this, add these GitHub secrets:
 
 ```bash
 # Store the SSH private key
@@ -66,6 +67,10 @@ gh secret set PILOT_SSH_KEY < path/to/intellibox-key.pem
 
 # Store the pilot hostname
 gh secret set PILOT_HOST -b "intellibox-pilot.duckdns.org"
+
+# IronBank registry credentials (required for container builds in CI)
+gh secret set IRONBANK_USER -b "your-ironbank-username"
+gh secret set IRONBANK_PASSWORD -b "your-ironbank-cli-secret"
 ```
 
 The deploy job will skip gracefully if these secrets are not configured.
