@@ -234,8 +234,8 @@ class TestConstraints:
         session = _session()
         _make_email(session, message_id="unique@test.com")
         session.commit()
-        _make_email(session, message_id="unique@test.com")
         with pytest.raises(IntegrityError):
+            _make_email(session, message_id="unique@test.com")
             session.commit()
         session.rollback()
         session.close()

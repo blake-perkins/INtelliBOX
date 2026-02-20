@@ -37,6 +37,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Remove knowledge_chunks table."""
-    op.drop_index(op.f('ix_knowledge_chunks_document_id'), table_name='knowledge_chunks')
+    """Remove knowledge_chunks table (indexes are dropped automatically with the table)."""
     op.drop_table('knowledge_chunks')

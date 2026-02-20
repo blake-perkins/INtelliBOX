@@ -279,6 +279,13 @@ class KnowledgeDocument(Base):
         index=True
     )
 
+    # Relationships
+    chunks: Mapped[List["KnowledgeChunk"]] = relationship(
+        "KnowledgeChunk",
+        back_populates="document",
+        cascade="all, delete-orphan"
+    )
+
     @property
     def file_size_display(self) -> str:
         """Human-readable file size."""
@@ -310,7 +317,7 @@ class KnowledgeChunk(Base):
     chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list of floats
 
-    document: Mapped["KnowledgeDocument"] = relationship("KnowledgeDocument", backref="chunks")
+    document: Mapped["KnowledgeDocument"] = relationship("KnowledgeDocument", back_populates="chunks")
 
     def __repr__(self) -> str:
         return f"<KnowledgeChunk(id={self.id}, doc_id={self.document_id}, idx={self.chunk_index})>"

@@ -12,7 +12,6 @@ RUN dnf install -y \
     gcc \
     gcc-c++ \
     libpq-devel \
-    postgresql \
     && dnf clean all
 # Note: curl-minimal is pre-installed in UBI 9 (used by HEALTHCHECK)
 

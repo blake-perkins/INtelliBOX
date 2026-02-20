@@ -197,7 +197,7 @@ def run_vacuum(target_engine=None) -> None:
             raw.execute("VACUUM")
         else:
             # PostgreSQL: set autocommit then run VACUUM ANALYZE
-            raw.set_session(autocommit=True)
+            raw.autocommit = True
             cursor = raw.cursor()
             cursor.execute("VACUUM ANALYZE")
             cursor.close()
@@ -214,7 +214,7 @@ def run_analyze(target_engine=None) -> None:
             raw.isolation_level = None
             raw.execute("ANALYZE")
         else:
-            raw.set_session(autocommit=True)
+            raw.autocommit = True
             cursor = raw.cursor()
             cursor.execute("ANALYZE")
             cursor.close()
