@@ -5,6 +5,7 @@ Feature: Assign and manage action assignments
 
   # --- Assign ---
 
+  @smoke
   Scenario: Assign an unassigned action to a team member
     Given an unassigned "high" priority action exists with title "Assign this action"
     And a roster member "Carol" "White" with email "carol@example.com" exists

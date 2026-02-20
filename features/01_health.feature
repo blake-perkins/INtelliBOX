@@ -3,6 +3,7 @@ Feature: Health and API stats endpoints
   I want to verify the system is running
   So that I know the application is healthy
 
+  @smoke
   Scenario: Health check on running system
     Given the database is empty
     When I navigate to "/health"

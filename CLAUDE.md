@@ -74,8 +74,14 @@ INtelliBOX/
 Tests are run in isolation to avoid SQLite cross-contamination between modules:
 
 ```bash
-# ALWAYS use this command to run all tests:
+# Fast local dev feedback (~15s):
 python run_tests.py
+
+# Fast + slow tests + BDD (~1-2min):
+python run_tests.py --slow
+
+# Everything including E2E (~4-5min, same as CI):
+python run_tests.py --full
 
 # NOT: pytest tests/  (causes cross-contamination errors)
 ```

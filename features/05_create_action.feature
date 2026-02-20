@@ -5,6 +5,7 @@ Feature: Create new action manually
 
   # --- Form Display ---
 
+  @smoke
   Scenario: Create action form shows a category select dropdown
     Given an email exists with subject "Budget request email"
     When I navigate to the create action form for that email

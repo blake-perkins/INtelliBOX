@@ -5,6 +5,7 @@ Feature: Action detail page
 
   # --- View Action Detail ---
 
+  @smoke
   Scenario: View action detail page
     Given an unassigned "high" priority action exists with title "Review contract terms"
     When I navigate to the action detail page

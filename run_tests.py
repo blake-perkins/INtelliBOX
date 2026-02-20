@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-Run all test modules individually to avoid cross-contamination.
+Run test modules individually to avoid cross-contamination.
 
-This script runs each test module separately and provides a summary of results.
-Running tests individually avoids database patching conflicts between modules.
+Usage:
+  python run_tests.py           # Fast tests only (~15s)
+  python run_tests.py --slow    # Fast + slow + BDD (~1-2min)
+  python run_tests.py --full    # Everything incl. E2E (~4-5min)
+  python run_tests.py --e2e     # Fast + E2E (~75s)
+  python run_tests.py --help    # Show this help
 """
 
 import os
@@ -27,33 +31,40 @@ else:
     BOLD = '\033[1m'
     RESET = '\033[0m'
 
-# Test modules to run
-TEST_MODULES = [
+# ── Test tiers ──────────────────────────────────────────────────────────────
+
+# Tier 1: Fast unit/integration tests (~15s)
+FAST_MODULES = [
     "tests/test_datetime_utils.py",
-    "tests/test_database_maintenance.py",
-    "tests/test_logging_rotation.py",
-    "tests/test_file_watcher.py",
-    "tests/test_ai_client.py",
-    "tests/test_web_interface.py",
-    "tests/test_settings_service.py",
-    "tests/test_priority_rules.py",
-    "tests/test_ai/test_priority_integration.py",
     "tests/test_chain_stripper.py",
+    "tests/test_logging_rotation.py",
+    "tests/test_priority_rules.py",
+    "tests/test_settings_service.py",
+    "tests/test_database_maintenance.py",
+    "tests/test_file_watcher.py",
+    "tests/test_ai/test_priority_integration.py",
+    "tests/test_ai_client.py",
     "tests/test_email_processing.py",
     "tests/test_knowledge_base.py",
+]
+
+# Tier 2: Slower integration tests (web routes, auth with bcrypt)
+SLOW_MODULES = [
+    "tests/test_web_interface.py",
     "tests/test_auth.py",
 ]
 
+# Modules that manage their own AUTH_MODE
+_AUTH_LOCAL_MODULES = {"tests/test_auth.py"}
+
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
 
 def _test_env(auth_mode="disabled"):
     """Build environment for test subprocesses."""
     env = os.environ.copy()
     env["AUTH_MODE"] = auth_mode
     return env
-
-
-# Modules that manage their own AUTH_MODE (run without override)
-_AUTH_LOCAL_MODULES = {"tests/test_auth.py"}
 
 
 def run_test_module(module_path):
@@ -73,10 +84,14 @@ def run_test_module(module_path):
     return result.returncode == 0
 
 
-def run_behave():
+def run_behave(tags=None):
     """Run the Behave BDD test suite and return pass/fail."""
+    label = "features/ (BDD)"
+    if tags:
+        label += f" [{tags}]"
+
     print(f"\n{BLUE}{'=' * 70}{RESET}")
-    print(f"{BOLD}Running: features/ (Behave BDD){RESET}")
+    print(f"{BOLD}Running: {label}{RESET}")
     print(f"{BLUE}{'=' * 70}{RESET}\n")
 
     # Use python -m behave for reliable exit codes on all platforms
@@ -86,6 +101,9 @@ def run_behave():
         import shutil
         behave_cmd = shutil.which("behave") or "behave"
         cmd = [behave_cmd, "features/", "--no-capture"]
+
+    if tags:
+        cmd.extend(["--tags", tags])
 
     result = subprocess.run(
         cmd,
@@ -97,26 +115,8 @@ def run_behave():
     return result.returncode == 0
 
 
-def main():
-    """Run all test modules and report results."""
-    print(f"\n{BOLD}{BLUE}INtelliBOX Test Suite Runner{RESET}")
-    print(f"{BLUE}Running each module individually to avoid cross-contamination{RESET}\n")
-
-    results = {}
-
-    for module in TEST_MODULES:
-        success = run_test_module(module)
-        results[module] = success
-
-    # Run Behave BDD suite
-    bdd_success = run_behave()
-    results["features/ (BDD)"] = bdd_success
-
-    # Run Playwright E2E suite
-    e2e_success = run_test_module("tests/e2e/")
-    results["tests/e2e/ (E2E)"] = e2e_success
-
-    # Print summary
+def print_summary(results):
+    """Print the test summary and return exit code."""
     print(f"\n{BOLD}{BLUE}{'=' * 70}{RESET}")
     print(f"{BOLD}TEST SUMMARY{RESET}")
     print(f"{BLUE}{'=' * 70}{RESET}\n")
@@ -143,6 +143,54 @@ def main():
                 else:
                     print(f"  {RED}./venv/Scripts/python.exe -m pytest {module} -v{RESET}")
         return 1
+
+
+# ── Main ────────────────────────────────────────────────────────────────────
+
+def main():
+    """Run test modules based on the selected tier."""
+    flags = set(sys.argv[1:])
+    valid = {"--fast", "--slow", "--full", "--e2e", "--help"}
+    unknown = flags - valid
+
+    if unknown or "--help" in flags:
+        print(f"\n{BOLD}INtelliBOX Test Suite Runner{RESET}\n")
+        print("Usage: python run_tests.py [--slow | --full | --e2e | --help]\n")
+        print(f"  {BOLD}(no flags){RESET}   Fast tests only (~15s)")
+        print(f"  {BOLD}--slow{RESET}       Fast + slow tests + BDD (~1-2min)")
+        print(f"  {BOLD}--full{RESET}       Everything including E2E (~4-5min)")
+        print(f"  {BOLD}--e2e{RESET}        Fast + E2E browser tests (~75s)")
+        print(f"  {BOLD}--help{RESET}       Show this help")
+        return 1 if unknown else 0
+
+    include_slow = "--slow" in flags or "--full" in flags
+    include_bdd = "--slow" in flags or "--full" in flags
+    include_e2e = "--e2e" in flags or "--full" in flags
+
+    tier = "full" if "--full" in flags else "slow" if "--slow" in flags else "e2e" if "--e2e" in flags else "fast"
+    print(f"\n{BOLD}{BLUE}INtelliBOX Test Suite Runner{RESET} [{tier}]")
+    print(f"{BLUE}Running each module individually to avoid cross-contamination{RESET}\n")
+
+    results = {}
+
+    # Tier 1: Always run fast modules
+    for module in FAST_MODULES:
+        results[module] = run_test_module(module)
+
+    # Tier 2: Slow modules (--slow or --full)
+    if include_slow:
+        for module in SLOW_MODULES:
+            results[module] = run_test_module(module)
+
+    # BDD (--slow or --full)
+    if include_bdd:
+        results["features/ (BDD)"] = run_behave()
+
+    # E2E (--e2e or --full)
+    if include_e2e:
+        results["tests/e2e/ (E2E)"] = run_test_module("tests/e2e/")
+
+    return print_summary(results)
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ Feature: Dashboard
 
   # --- Page Load Variations ---
 
+  @smoke
   Scenario: Empty dashboard loads without errors
     Given the database is empty
     When I navigate to "/"

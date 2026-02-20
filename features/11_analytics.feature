@@ -3,6 +3,7 @@ Feature: System analytics dashboard
   I want to see all-time system stats and activity trends
   So that I can understand overall system usage and team throughput
 
+  @smoke
   Scenario: View analytics page with empty database
     Given the database is empty
     When I navigate to "/analytics"

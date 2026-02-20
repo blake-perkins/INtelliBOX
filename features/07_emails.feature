@@ -5,6 +5,7 @@ Feature: Email list and email detail
 
   # --- Email List ---
 
+  @smoke
   Scenario: View email list page with no emails
     Given the database is empty
     When I navigate to "/emails"

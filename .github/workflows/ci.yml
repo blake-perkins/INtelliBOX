@@ -35,7 +35,7 @@ jobs:
           python-version: '3.12'
       - run: pip install -e ".[dev]"
       - run: playwright install --with-deps chromium
-      - run: python run_tests.py
+      - run: python run_tests.py --full
       - name: pip-audit (dependency CVEs)
         run: pip-audit --desc --skip-editable
       - name: bandit (static security analysis)

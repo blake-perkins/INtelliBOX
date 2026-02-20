@@ -3,6 +3,7 @@ Feature: Insights / Report page
   I want to view a summary report of email activity and unassigned actions
   So that I can stay on top of team workload
 
+  @smoke
   Scenario: View report page with no data
     Given the database is empty
     When I navigate to "/insights"

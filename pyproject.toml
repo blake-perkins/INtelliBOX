@@ -83,6 +83,7 @@ markers = [
     "pg: PostgreSQL-specific tests (requires running PG instance)",
     "sqlite_only: Tests that only apply to SQLite backend",
     "stress: High-throughput stress tests (slow)",
+    "slow: Tests that take >10s per module (web interface, auth)",
 ]
 
 [tool.coverage.run]

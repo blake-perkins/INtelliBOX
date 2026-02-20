@@ -59,6 +59,11 @@ from intellibox.web.app import app
 
 client = TestClient(app, follow_redirects=False)
 
+# Pre-compute password hashes once at module load (bcrypt rounds=12 is slow)
+_ADMIN_HASH = hash_password("adminpass")
+_MEMBER_HASH = hash_password("memberpass")
+_INACTIVE_HASH = hash_password("inactivepass")
+
 
 @pytest.fixture(autouse=True)
 def setup_database():
@@ -72,7 +77,7 @@ def setup_database():
             username="admin",
             email="admin@example.com",
             display_name="Admin User",
-            password_hash=hash_password("adminpass"),
+            password_hash=_ADMIN_HASH,
             role="admin",
             is_active=True,
         )
@@ -80,7 +85,7 @@ def setup_database():
             username="member",
             email="member@example.com",
             display_name="Member User",
-            password_hash=hash_password("memberpass"),
+            password_hash=_MEMBER_HASH,
             role="member",
             is_active=True,
         )
@@ -88,7 +93,7 @@ def setup_database():
             username="inactive",
             email="inactive@example.com",
             display_name="Inactive User",
-            password_hash=hash_password("inactivepass"),
+            password_hash=_INACTIVE_HASH,
             role="member",
             is_active=False,
         )

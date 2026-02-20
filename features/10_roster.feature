@@ -5,6 +5,7 @@ Feature: Program roster management
 
   # --- View Roster ---
 
+  @smoke
   Scenario: View roster page with no members
     Given the database is empty
     When I navigate to "/roster"

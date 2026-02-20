@@ -5,6 +5,7 @@ Feature: Settings page
 
   # --- Page Display ---
 
+  @smoke
   Scenario: View settings page
     Given the database is empty
     When I navigate to "/settings"

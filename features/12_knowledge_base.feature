@@ -3,6 +3,7 @@ Feature: Knowledge base document management
   I want to upload and manage program documents
   So that AI can use them as context for better insights
 
+  @smoke
   Scenario: View empty knowledge base
     Given the database is empty
     When I navigate to "/knowledge-base"

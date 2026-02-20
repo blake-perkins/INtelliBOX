@@ -5,6 +5,7 @@ Feature: Actions list page
 
   # --- Basic Page Load ---
 
+  @smoke
   Scenario: View actions list page with no data
     Given the database is empty
     When I navigate to "/actions"
