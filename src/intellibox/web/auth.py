@@ -45,16 +45,16 @@ SESSION_COOKIE = "intellibox_session"
 
 def hash_password(password: str) -> str:
     """Hash a plaintext password using bcrypt."""
-    from passlib.hash import bcrypt
+    import bcrypt
 
-    return bcrypt.using(rounds=12).hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
     """Verify a plaintext password against a bcrypt hash."""
-    from passlib.hash import bcrypt
+    import bcrypt
 
-    return bcrypt.verify(password, password_hash)
+    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
 # ── Session management ──────────────────────────────────────────────────────

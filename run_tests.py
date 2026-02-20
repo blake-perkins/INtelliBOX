@@ -6,9 +6,9 @@ This script runs each test module separately and provides a summary of results.
 Running tests individually avoids database patching conflicts between modules.
 """
 
+import os
 import subprocess
 import sys
-from pathlib import Path
 
 # Set UTF-8 encoding for Windows console
 if sys.platform == 'win32':
@@ -44,6 +44,13 @@ TEST_MODULES = [
 ]
 
 
+def _test_env():
+    """Build environment for test subprocesses — auth disabled to avoid login redirects."""
+    env = os.environ.copy()
+    env["AUTH_MODE"] = "disabled"
+    return env
+
+
 def run_test_module(module_path):
     """Run a single pytest module and return results."""
     print(f"\n{BLUE}{'=' * 70}{RESET}")
@@ -53,7 +60,8 @@ def run_test_module(module_path):
     result = subprocess.run(
         [sys.executable, "-m", "pytest", module_path, "-v", "--tb=short", "-q"],
         capture_output=False,
-        text=True
+        text=True,
+        env=_test_env(),
     )
 
     return result.returncode == 0
@@ -76,7 +84,8 @@ def run_behave():
     result = subprocess.run(
         cmd,
         capture_output=False,
-        text=True
+        text=True,
+        env=_test_env(),
     )
 
     return result.returncode == 0

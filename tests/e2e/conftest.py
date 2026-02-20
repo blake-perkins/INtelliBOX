@@ -26,6 +26,7 @@ def test_server():
 
     env = os.environ.copy()
     env["TESTING"] = "true"
+    env["AUTH_MODE"] = "disabled"
     env["DATABASE_PATH"] = tmp_db.name
 
     proc = subprocess.Popen(
