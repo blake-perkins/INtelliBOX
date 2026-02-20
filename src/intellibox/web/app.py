@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
 from intellibox import __version__
+from intellibox.config import settings as _settings
 from intellibox.database import get_session
 from intellibox.web.auth import AuthMiddleware
 from intellibox.web.deps import static_dir, templates  # noqa: F401 — templates re-exported for backward compat
@@ -41,6 +42,13 @@ def _start_background_watcher():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _start_background_watcher()
+
+    # Initialize OIDC client if auth_mode=oidc
+    if _settings.auth_mode == "oidc":
+        from intellibox.web.oidc import init_oidc
+
+        await init_oidc(app)
+
     yield
 
 

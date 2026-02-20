@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,23 @@ class Settings(BaseSettings):
     oidc_client_secret: str = ""
     oidc_roles_claim: str = "realm_access.roles"  # Dot-notation for nested claims
     oidc_admin_role: str = "intellibox-admin"
+
+    @model_validator(mode="after")
+    def validate_oidc_config(self) -> "Settings":
+        """Ensure OIDC settings are complete when auth_mode is 'oidc'."""
+        if self.auth_mode == "oidc":
+            missing = []
+            if not self.oidc_issuer_url:
+                missing.append("OIDC_ISSUER_URL")
+            if not self.oidc_client_id:
+                missing.append("OIDC_CLIENT_ID")
+            if not self.oidc_client_secret:
+                missing.append("OIDC_CLIENT_SECRET")
+            if missing:
+                raise ValueError(
+                    f"AUTH_MODE=oidc requires: {', '.join(missing)}"
+                )
+        return self
 
     @property
     def auth_enabled(self) -> bool:

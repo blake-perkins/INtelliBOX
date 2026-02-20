@@ -59,7 +59,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 # ── Session management ──────────────────────────────────────────────────────
 
-def create_session(user_id: int, db_session) -> str:
+def create_session(user_id: int, db_session, session_data: str | None = None) -> str:
     """Create a new server-side session and return the session ID."""
     from intellibox.models import UserSession
 
@@ -70,6 +70,7 @@ def create_session(user_id: int, db_session) -> str:
     db_session.add(UserSession(
         id=session_id,
         user_id=user_id,
+        session_data=session_data,
         created_at=now,
         expires_at=expires,
     ))

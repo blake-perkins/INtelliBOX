@@ -52,18 +52,30 @@ FAST_MODULES = [
 SLOW_MODULES = [
     "tests/test_web_interface.py",
     "tests/test_auth.py",
+    "tests/test_oidc.py",
 ]
 
-# Modules that manage their own AUTH_MODE
-_AUTH_LOCAL_MODULES = {"tests/test_auth.py"}
+# Per-module environment overrides (conftest.py loads before test modules,
+# so env vars must be set in the subprocess env, not just os.environ).
+_MODULE_ENV = {
+    "tests/test_auth.py": {"AUTH_MODE": "local"},
+    "tests/test_oidc.py": {
+        "AUTH_MODE": "oidc",
+        "OIDC_ISSUER_URL": "https://idp.example.com/realms/test",
+        "OIDC_CLIENT_ID": "intellibox-test",
+        "OIDC_CLIENT_SECRET": "test-client-secret",
+    },
+}
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
-def _test_env(auth_mode="disabled"):
+def _test_env(module_path):
     """Build environment for test subprocesses."""
     env = os.environ.copy()
-    env["AUTH_MODE"] = auth_mode
+    overrides = _MODULE_ENV.get(module_path, {})
+    env["AUTH_MODE"] = overrides.get("AUTH_MODE", "disabled")
+    env.update(overrides)
     return env
 
 
@@ -73,12 +85,11 @@ def run_test_module(module_path):
     print(f"{BOLD}Running: {module_path}{RESET}")
     print(f"{BLUE}{'=' * 70}{RESET}\n")
 
-    auth = "local" if module_path in _AUTH_LOCAL_MODULES else "disabled"
     result = subprocess.run(
         [sys.executable, "-m", "pytest", module_path, "-v", "--tb=short", "-q"],
         capture_output=False,
         text=True,
-        env=_test_env(auth),
+        env=_test_env(module_path),
     )
 
     return result.returncode == 0
@@ -109,7 +120,7 @@ def run_behave(tags=None):
         cmd,
         capture_output=False,
         text=True,
-        env=_test_env(),
+        env=_test_env("behave"),
     )
 
     return result.returncode == 0
