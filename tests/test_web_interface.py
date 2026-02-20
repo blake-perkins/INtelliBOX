@@ -35,11 +35,11 @@ def override_get_session():
 
 
 # Import app AFTER defining override function
-# Then patch get_session in the app module where it's used
+# Patch get_session at the database module level — deps.get_session() delegates there
+import intellibox.database as database_module
 import intellibox.settings_service as settings_service_module
-import intellibox.web.app as app_module
 
-app_module.get_session = override_get_session
+database_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session
 
 from intellibox.web.app import app

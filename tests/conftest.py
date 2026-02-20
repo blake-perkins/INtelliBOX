@@ -27,14 +27,12 @@ def override_get_session():
         session.close()
 
 
-# Patch database modules ONCE for all tests
+# Patch get_session at the database module level — deps.get_session() delegates there
 import intellibox.database as database_module
 import intellibox.settings_service as settings_service_module
-import intellibox.web.app as app_module
 
 database_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session
-app_module.get_session = override_get_session
 
 
 @pytest.fixture(scope="session", autouse=True)
