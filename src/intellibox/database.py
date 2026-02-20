@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import timedelta
 from typing import Dict, Generator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from intellibox.config import settings
@@ -186,40 +186,22 @@ def _is_sqlite_engine(eng) -> bool:
 def run_vacuum(target_engine=None) -> None:
     """Run VACUUM to reclaim disk space.
 
-    SQLite: requires raw connection with isolation_level=None (autocommit).
-    PostgreSQL: requires autocommit mode outside a transaction block.
+    Uses SQLAlchemy's AUTOCOMMIT isolation level so VACUUM runs outside
+    a transaction block (required by both SQLite and PostgreSQL).
     """
     eng = target_engine or engine
-    raw = eng.raw_connection()
-    try:
+    with eng.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
         if _is_sqlite_engine(eng):
-            raw.isolation_level = None
-            raw.execute("VACUUM")
+            conn.execute(text("VACUUM"))
         else:
-            # PostgreSQL: set autocommit then run VACUUM ANALYZE
-            raw.autocommit = True
-            cursor = raw.cursor()
-            cursor.execute("VACUUM ANALYZE")
-            cursor.close()
-    finally:
-        raw.close()
+            conn.execute(text("VACUUM ANALYZE"))
 
 
 def run_analyze(target_engine=None) -> None:
     """Run ANALYZE to update query planner statistics."""
     eng = target_engine or engine
-    raw = eng.raw_connection()
-    try:
-        if _is_sqlite_engine(eng):
-            raw.isolation_level = None
-            raw.execute("ANALYZE")
-        else:
-            raw.autocommit = True
-            cursor = raw.cursor()
-            cursor.execute("ANALYZE")
-            cursor.close()
-    finally:
-        raw.close()
+    with eng.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        conn.execute(text("ANALYZE"))
 
 
 def run_maintenance(session: Session, target_engine=None) -> Dict:
