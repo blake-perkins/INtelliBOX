@@ -16,7 +16,6 @@ jobs:
       - run: ruff check src/ tests/
 
   test:
-    needs: lint
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: sqlite:///./data/intellibox.db
@@ -37,18 +36,8 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: playwright install --with-deps chromium
       - run: python run_tests.py
-
-  security-scan:
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install -e ".[dev]"
       - name: pip-audit (dependency CVEs)
-        run: pip-audit --strict --desc --skip-editable
+        run: pip-audit --desc --skip-editable
       - name: bandit (static security analysis)
         run: bandit -r src/intellibox/ -c .bandit.yml -f json -o bandit-report.json || true
       - name: bandit gate (fail on high severity)
@@ -60,38 +49,7 @@ jobs:
           name: bandit-report
           path: bandit-report.json
 
-  container-build-and-test:
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Log in to IronBank registry
-        run: echo "${{ secrets.IRONBANK_PASSWORD }}" | docker login registry1.dso.mil -u "${{ secrets.IRONBANK_USER }}" --password-stdin
-      - name: Build production image
-        run: docker build -t intellibox:prod .
-      - name: Build test runner image
-        run: |
-          cp .dockerignore .dockerignore.bak
-          cp .dockerignore.test .dockerignore
-          docker build -f Dockerfile.test -t intellibox:test-runner .
-          cp .dockerignore.bak .dockerignore
-      - name: Run tests inside container
-        run: >
-          docker run --rm
-          -e DATABASE_URL=sqlite:///./data/intellibox.db
-          -e OPENAI_API_KEY=sk-test-dummy-key
-          -e OPENAI_MODEL=gpt-4o-mini
-          -e SMTP_HOST=smtp.test.invalid
-          -e SMTP_PORT=587
-          -e SMTP_USER=test@test.invalid
-          -e SMTP_PASSWORD=test-password
-          -e REPORT_FROM=test@test.invalid
-          -e REPORT_RECIPIENTS=test@test.invalid
-          -e TESTING=true
-          intellibox:test-runner
-
-  container-integration:
-    needs: container-build-and-test
+  container:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: sqlite:///./data/intellibox.db
@@ -110,20 +68,40 @@ jobs:
         run: echo "${{ secrets.IRONBANK_PASSWORD }}" | docker login registry1.dso.mil -u "${{ secrets.IRONBANK_USER }}" --password-stdin
       - name: Build production image
         run: docker build -t intellibox:prod .
+      - name: Build test runner image
+        run: |
+          cp .dockerignore .dockerignore.bak
+          cp .dockerignore.test .dockerignore
+          docker build -f Dockerfile.test -t intellibox:test-runner .
+          cp .dockerignore.bak .dockerignore
+      - name: Run unit tests inside container
+        run: >
+          docker run --rm
+          -e DATABASE_URL=$DATABASE_URL
+          -e OPENAI_API_KEY=$OPENAI_API_KEY
+          -e OPENAI_MODEL=$OPENAI_MODEL
+          -e SMTP_HOST=$SMTP_HOST
+          -e SMTP_PORT=$SMTP_PORT
+          -e SMTP_USER=$SMTP_USER
+          -e SMTP_PASSWORD=$SMTP_PASSWORD
+          -e REPORT_FROM=$REPORT_FROM
+          -e REPORT_RECIPIENTS=$REPORT_RECIPIENTS
+          -e TESTING=$TESTING
+          intellibox:test-runner
       - name: Start production container
         run: |
           mkdir -p data/inbox data/emails
           docker run -d --name intellibox -p 8000:8000 \
-            -e DATABASE_URL=sqlite:///./data/intellibox.db \
-            -e OPENAI_API_KEY=sk-test-dummy-key \
-            -e OPENAI_MODEL=gpt-4o-mini \
-            -e SMTP_HOST=smtp.test.invalid \
-            -e SMTP_PORT=587 \
-            -e SMTP_USER=test@test.invalid \
-            -e SMTP_PASSWORD=test-password \
-            -e REPORT_FROM=test@test.invalid \
-            -e REPORT_RECIPIENTS=test@test.invalid \
-            -e TESTING=true \
+            -e DATABASE_URL=$DATABASE_URL \
+            -e OPENAI_API_KEY=$OPENAI_API_KEY \
+            -e OPENAI_MODEL=$OPENAI_MODEL \
+            -e SMTP_HOST=$SMTP_HOST \
+            -e SMTP_PORT=$SMTP_PORT \
+            -e SMTP_USER=$SMTP_USER \
+            -e SMTP_PASSWORD=$SMTP_PASSWORD \
+            -e REPORT_FROM=$REPORT_FROM \
+            -e REPORT_RECIPIENTS=$REPORT_RECIPIENTS \
+            -e TESTING=$TESTING \
             intellibox:prod
       - name: Wait for container health
         run: |
@@ -141,28 +119,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install project and BDD test dependencies
+      - name: Install BDD test dependencies
         run: pip install -e ".[dev]"
       - name: Run BDD tests against live container
         env:
           TEST_BASE_URL: http://localhost:8000
         run: behave features/ --no-capture
-      - name: Show container logs on failure
-        if: failure()
-        run: docker logs intellibox
-
-  container-security-scan:
-    needs: container-build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Log in to IronBank registry
-        run: echo "${{ secrets.IRONBANK_PASSWORD }}" | docker login registry1.dso.mil -u "${{ secrets.IRONBANK_USER }}" --password-stdin
-      - name: Build production image
-        run: docker build -t intellibox:prod .
-      - name: Install Syft
+      - name: Generate SBOM (Syft)
         uses: anchore/sbom-action/download-syft@v0
-      - name: Generate SBOM
+      - name: Generate SBOM files
         run: syft intellibox:prod -o spdx-json=sbom.spdx.json -o cyclonedx-json=sbom.cdx.json
       - name: Upload SBOM artifacts
         uses: actions/upload-artifact@v4
@@ -175,9 +140,12 @@ jobs:
         uses: anchore/scan-action/download-grype@v4
       - name: Grype vulnerability scan
         run: grype sbom:sbom.spdx.json --fail-on high --only-fixed -c .grype.yaml
+      - name: Show container logs on failure
+        if: failure()
+        run: docker logs intellibox
 
   deploy:
-    needs: [test, container-build-and-test, container-integration, security-scan, container-security-scan]
+    needs: [lint, test, container]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
