@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import case, desc, func, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager, joinedload, subqueryload
 
 from intellibox.knowledge import search_knowledge_base
 from intellibox.models import Action, Assignment, Email
@@ -50,11 +50,13 @@ async def list_actions(
         low_priority = action_stats.low
         overdue_count = action_stats.overdue
 
-        # Base query with eager loading to prevent N+1 in templates
+        # Base query: subqueryload assignments (avoids double-join with the
+        # explicit outerjoin used for filtering) and contains_eager for email
+        # (reuses the explicit join instead of creating a second one).
         query = session.query(Action).options(
-            joinedload(Action.assignments),
-            joinedload(Action.email),
-        ).outerjoin(Assignment).join(Email)
+            subqueryload(Action.assignments),
+            contains_eager(Action.email),
+        ).outerjoin(Assignment).join(Action.email)
 
         # Apply filters
         if priority:
