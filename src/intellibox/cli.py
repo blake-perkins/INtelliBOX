@@ -403,6 +403,41 @@ def report_schedule():
     start_scheduler()
 
 
+@cli.group()
+def user():
+    """User management commands."""
+    pass
+
+
+@user.command(name="create")
+@click.option("--username", required=True, help="Login username")
+@click.option("--email", required=True, help="Email address")
+@click.option("--role", type=click.Choice(["admin", "member"]), default="admin", help="User role")
+@click.option("--display-name", default="", help="Display name (defaults to username)")
+def user_create(username: str, email: str, role: str, display_name: str):
+    """Create a new local user with a password."""
+    from intellibox.models import User
+    from intellibox.web.auth import hash_password
+
+    password = click.prompt("Password", hide_input=True, confirmation_prompt=True)
+
+    with get_session() as session:
+        if session.query(User).filter((User.username == username) | (User.email == email)).first():
+            click.echo(f"[ERROR] User with username '{username}' or email '{email}' already exists", err=True)
+            raise click.Abort()
+
+        user_obj = User(
+            username=username,
+            email=email,
+            display_name=display_name or username,
+            password_hash=hash_password(password),
+            role=role,
+        )
+        session.add(user_obj)
+        session.commit()
+        click.echo(f"[OK] User '{username}' created (role={role})")
+
+
 @cli.command(name="web")
 @click.option(
     "--host",
@@ -453,6 +488,7 @@ def maintenance(retention_days: int, keep_caches: int):
     click.echo(f"  Program news cache pruned: {results['program_news_deleted']} removed")
     click.echo(f"  Report cache pruned:       {results['report_deleted']} removed")
     click.echo(f"  Processing logs pruned:    {results['logs_deleted']} removed")
+    click.echo(f"  Expired sessions pruned:   {results['sessions_deleted']} removed")
     click.echo(f"  ANALYZE: {results['analyze']}")
     click.echo(f"  VACUUM:  {results['vacuum']}")
     click.echo("Maintenance complete.")

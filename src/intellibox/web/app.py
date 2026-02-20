@@ -75,6 +75,7 @@ from intellibox.web.routers import (  # noqa: E402
     actions,
     analytics,
     api,
+    auth,
     dashboard,
     emails,
     insights,
@@ -83,6 +84,7 @@ from intellibox.web.routers import (  # noqa: E402
     settings,
 )
 
+app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(actions.router)
 app.include_router(emails.router)

@@ -1,14 +1,15 @@
 """Roster management routes."""
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from intellibox.models import RosterMember
 from intellibox.utils.datetime_utils import utcnow
+from intellibox.web.auth import require_admin
 from intellibox.web.deps import get_session, templates
 from intellibox.web.queries import get_banner_stats
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 @router.get("/roster", response_class=HTMLResponse)

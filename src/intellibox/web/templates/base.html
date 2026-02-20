@@ -279,12 +279,20 @@
                 <li><a href="/insights">AI Insights</a></li>
                 <li><a href="/analytics">Analytics</a></li>
                 <li><a href="/about">About</a></li>
+                {% if not current_user or current_user.role == 'admin' %}
                 <li><a href="/settings"><span style="opacity: 0.5;">&#9881;</span> Settings</a></li>
+                {% endif %}
                 <li style="border-left: 1px solid rgba(255,255,255,0.2); padding-left: 1.5rem; margin-left: 0.25rem; font-size: 0.7rem; opacity: 0.55; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
                     📡 last sync: <span id="nav-last-sync">—</span>
                     <span style="opacity: 0.6; margin-left: 0.5rem;">|</span>
                     <span style="opacity: 0.6; margin-left: 0.5rem;">v{{ app_version }}</span>
                 </li>
+                {% if current_user and not current_user.is_anonymous|default(false) %}
+                <li style="border-left: 1px solid rgba(255,255,255,0.2); padding-left: 1rem; margin-left: 0.25rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                    <span style="opacity: 0.7;">{{ current_user.display_name or current_user.username }}</span>
+                    <a href="/auth/logout" style="color: rgba(255,255,255,0.6); font-size: 0.8rem;">Logout</a>
+                </li>
+                {% endif %}
             </ul>
         </div>
     </nav>

@@ -161,6 +161,23 @@ def cleanup_cache_tables(
     return {"program_news_deleted": pn_deleted, "report_deleted": rpt_deleted}
 
 
+def cleanup_expired_sessions(session: Session) -> int:
+    """Delete expired user sessions.
+
+    Returns:
+        Number of rows deleted.
+    """
+    from intellibox.models import UserSession
+
+    now = utcnow()
+    deleted = (
+        session.query(UserSession)
+        .filter(UserSession.expires_at < now)
+        .delete(synchronize_session="fetch")
+    )
+    return deleted
+
+
 def cleanup_processing_logs(session: Session, retention_days: int = 90) -> int:
     """Delete ProcessingLog entries older than *retention_days*.
 
@@ -216,6 +233,7 @@ def run_maintenance(session: Session, target_engine=None) -> Dict:
 
     cache_result = cleanup_cache_tables(session)
     logs_deleted = cleanup_processing_logs(session)
+    sessions_deleted = cleanup_expired_sessions(session)
     session.commit()
 
     analyze_status = "ok"
@@ -233,6 +251,7 @@ def run_maintenance(session: Session, target_engine=None) -> Dict:
     return {
         **cache_result,
         "logs_deleted": logs_deleted,
+        "sessions_deleted": sessions_deleted,
         "analyze": analyze_status,
         "vacuum": vacuum_status,
     }

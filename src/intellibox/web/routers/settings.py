@@ -1,14 +1,15 @@
 """Settings and category management routes."""
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import desc
 
 from intellibox.models import KnowledgeDocument, RosterMember
 from intellibox.settings_service import SettingsService
+from intellibox.web.auth import require_admin
 from intellibox.web.deps import get_session, templates
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 @router.get("/settings", response_class=HTMLResponse)
