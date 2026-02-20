@@ -48,7 +48,7 @@ jobs:
           python-version: '3.12'
       - run: pip install -e ".[dev]"
       - name: pip-audit (dependency CVEs)
-        run: pip-audit --strict --desc
+        run: pip-audit --strict --desc --skip-editable
       - name: bandit (static security analysis)
         run: bandit -r src/intellibox/ -c .bandit.yml -f json -o bandit-report.json || true
       - name: bandit gate (fail on high severity)
