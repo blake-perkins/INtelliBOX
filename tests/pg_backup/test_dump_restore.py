@@ -14,16 +14,19 @@ from sqlalchemy import text
 
 from intellibox.models import Action, Base, Email, RosterMember, Settings
 from intellibox.utils.datetime_utils import utcnow
-from tests.pg_conftest import PgSessionLocal, pg_engine
+from tests.pg_conftest import PG_TEST_URL, PgSessionLocal, pg_engine
 
 pytestmark = [pytest.mark.pg, pytest.mark.stress]
 
-# Parse connection details for pg_dump/pg_restore
-PG_HOST = "localhost"
-PG_PORT = "5433"
-PG_USER = "intellibox_test"
-PG_DB = "intellibox_test"
-PG_PASSWORD = "test_password"
+# Parse connection details from the same URL used by pg_conftest
+from urllib.parse import urlparse as _urlparse
+
+_parsed = _urlparse(PG_TEST_URL)
+PG_HOST = _parsed.hostname or "localhost"
+PG_PORT = str(_parsed.port or 5433)
+PG_USER = _parsed.username or "intellibox_test"
+PG_DB = _parsed.path.lstrip("/") or "intellibox_test"
+PG_PASSWORD = _parsed.password or "test_password"
 
 
 def _pg_env():
