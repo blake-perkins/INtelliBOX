@@ -153,7 +153,7 @@ def test_dashboard_change_priority_ajax(page: Page, api):
     page.goto("/")
 
     # Find the priority select in the high-priority section for this action
-    row = page.locator(f"tr[onclick*='/actions/{aid}']")
+    row = page.locator(f"div[onclick*='/actions/{aid}']")
     priority_sel = row.locator("select").first
     priority_sel.select_option("low")
 
