@@ -1,11 +1,13 @@
 """Action CRUD and management routes."""
 
+import csv
+import io
 from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import case, desc, func, or_
-from sqlalchemy.orm import contains_eager, subqueryload
+from sqlalchemy.orm import Session, contains_eager, subqueryload
 
 from intellibox.knowledge import search_knowledge_base
 from intellibox.models import Action, Assignment, Email
@@ -15,6 +17,65 @@ from intellibox.web.deps import get_session, templates
 from intellibox.web.queries import get_active_roster, paginate
 
 router = APIRouter()
+
+
+def _build_actions_query(
+    session: Session,
+    *,
+    priority: Optional[str] = None,
+    assigned: Optional[str] = None,
+    completed: Optional[str] = None,
+    assignee: Optional[str] = None,
+    search: Optional[str] = None,
+    overdue: Optional[str] = None,
+):
+    """Build a filtered and sorted actions query.
+
+    Shared by the actions list page and CSV export endpoint.
+    Returns the query (caller handles pagination or .all()).
+    """
+    today = utcnow().date()
+
+    query = session.query(Action).options(
+        subqueryload(Action.assignments),
+        contains_eager(Action.email),
+    ).outerjoin(Assignment).join(Action.email)
+
+    if priority:
+        query = query.filter(Action.priority == priority)
+
+    if completed == "true" or assigned == "completed":
+        query = query.filter(Assignment.status == "completed")
+    elif assigned == "true":
+        query = query.filter(Assignment.id.isnot(None))
+    elif assigned == "false":
+        query = query.filter(Assignment.id.is_(None))
+
+    if assignee:
+        query = query.filter(Assignment.assigned_to == assignee)
+
+    if overdue == "true":
+        query = query.filter(Action.due_date < today)
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                Action.title.ilike(search_term),
+                Action.description.ilike(search_term),
+                Email.subject.ilike(search_term)
+            )
+        )
+
+    priority_order = case(
+        (Action.priority == "high", 1),
+        (Action.priority == "medium", 2),
+        (Action.priority == "low", 3),
+        else_=4
+    )
+    query = query.order_by(priority_order, Action.due_date.asc().nullslast())
+
+    return query
 
 
 @router.get("/actions", response_class=HTMLResponse)
@@ -50,49 +111,15 @@ async def list_actions(
         low_priority = action_stats.low
         overdue_count = action_stats.overdue
 
-        # Base query: subqueryload assignments (avoids double-join with the
-        # explicit outerjoin used for filtering) and contains_eager for email
-        # (reuses the explicit join instead of creating a second one).
-        query = session.query(Action).options(
-            subqueryload(Action.assignments),
-            contains_eager(Action.email),
-        ).outerjoin(Assignment).join(Action.email)
-
-        # Apply filters
-        if priority:
-            query = query.filter(Action.priority == priority)
-
-        if completed == "true" or assigned == "completed":
-            query = query.filter(Assignment.status == "completed")
-        elif assigned == "true":
-            query = query.filter(Assignment.id.isnot(None))
-        elif assigned == "false":
-            query = query.filter(Assignment.id.is_(None))
-
-        if assignee:
-            query = query.filter(Assignment.assigned_to == assignee)
-
-        if overdue == "true":
-            query = query.filter(Action.due_date < today)
-
-        if search:
-            search_term = f"%{search}%"
-            query = query.filter(
-                or_(
-                    Action.title.ilike(search_term),
-                    Action.description.ilike(search_term),
-                    Email.subject.ilike(search_term)
-                )
-            )
-
-        # Order by priority and due date
-        priority_order = case(
-            (Action.priority == "high", 1),
-            (Action.priority == "medium", 2),
-            (Action.priority == "low", 3),
-            else_=4
+        query = _build_actions_query(
+            session,
+            priority=priority,
+            assigned=assigned,
+            completed=completed,
+            assignee=assignee,
+            search=search,
+            overdue=overdue,
         )
-        query = query.order_by(priority_order, Action.due_date.asc().nullslast())
 
         # Pagination
         actions, total_count, total_pages = paginate(query, page)
@@ -126,6 +153,60 @@ async def list_actions(
             "roster": roster,
             "current_time": utcnow()
         })
+
+
+@router.get("/actions/export.csv")
+async def export_actions_csv(
+    priority: Optional[str] = None,
+    assigned: Optional[str] = None,
+    completed: Optional[str] = None,
+    assignee: Optional[str] = None,
+    search: Optional[str] = None,
+    overdue: Optional[str] = None,
+):
+    """Export actions to CSV with the same filters as the actions list."""
+    with get_session() as session:
+        query = _build_actions_query(
+            session,
+            priority=priority,
+            assigned=assigned,
+            completed=completed,
+            assignee=assignee,
+            search=search,
+            overdue=overdue,
+        )
+        actions = query.all()
+
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow([
+            "ID", "Title", "Description", "Priority", "Due Date",
+            "Category", "Assignee", "Status", "Email Subject",
+            "Email From", "Email Received", "Created At",
+        ])
+        for action in actions:
+            assignment = action.assignments[0] if action.assignments else None
+            writer.writerow([
+                action.id,
+                action.title,
+                action.description or "",
+                action.priority or "",
+                action.due_date.strftime("%Y-%m-%d") if action.due_date else "",
+                action.category or "",
+                assignment.assigned_to if assignment else "",
+                assignment.status if assignment else "unassigned",
+                action.email.subject,
+                action.email.from_address,
+                action.email.received_date.strftime("%Y-%m-%d") if action.email.received_date else "",
+                action.created_at.strftime("%Y-%m-%d %H:%M") if action.created_at else "",
+            ])
+
+    filename = f"actions_{utcnow().strftime('%Y-%m-%d')}.csv"
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/actions/{action_id}", response_class=HTMLResponse)

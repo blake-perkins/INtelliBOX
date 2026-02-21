@@ -84,6 +84,18 @@
                 No actions found
             {% endif %}
         </span>
+        {% if total_count > 0 %}
+        {% set qs = [] %}
+        {% if priority %}{% set _ = qs.append('priority=' ~ priority) %}{% endif %}
+        {% if assigned %}{% set _ = qs.append('assigned=' ~ assigned) %}{% endif %}
+        {% if assignee %}{% set _ = qs.append('assignee=' ~ assignee) %}{% endif %}
+        {% if search %}{% set _ = qs.append('search=' ~ search) %}{% endif %}
+        {% if overdue %}{% set _ = qs.append('overdue=' ~ overdue) %}{% endif %}
+        <a href="/actions/export.csv{% if qs %}?{{ qs | join('&') }}{% endif %}"
+           style="background: #27ae60; color: white; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.82rem; text-decoration: none; font-weight: 500; white-space: nowrap;">
+            ⬇ Export CSV
+        </a>
+        {% endif %}
     </div>
 
     {% macro action_row(action) %}

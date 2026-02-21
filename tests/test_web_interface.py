@@ -328,6 +328,34 @@ class TestWebInterface:
         response = client.get("/emails?page=100")
         assert response.status_code == 200
 
+    def test_actions_export_csv(self, setup_database):
+        """Test CSV export returns correct content-type and all rows."""
+        response = client.get("/actions/export.csv")
+        assert response.status_code == 200
+        assert "text/csv" in response.headers["content-type"]
+        assert "attachment" in response.headers.get("content-disposition", "")
+        assert "actions_" in response.headers["content-disposition"]
+        content = response.content.decode("utf-8")
+        lines = content.strip().splitlines()
+        assert lines[0].startswith("ID,")  # header row
+        assert len(lines) == 5  # 1 header + 4 actions from setup_database
+
+    def test_actions_export_csv_priority_filter(self, setup_database):
+        """Test CSV export respects priority filter."""
+        response = client.get("/actions/export.csv?priority=high")
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        lines = content.strip().splitlines()
+        assert len(lines) == 3  # 1 header + 2 high-priority actions
+
+    def test_actions_export_csv_search_filter(self, setup_database):
+        """Test CSV export respects search filter."""
+        response = client.get("/actions/export.csv?search=nonexistent_xyz")
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        lines = content.strip().splitlines()
+        assert len(lines) == 1  # header only, no matches
+
 
 class TestEmptyDatabase:
     """Test web interface with empty database."""
@@ -374,6 +402,15 @@ class TestEmptyDatabase:
         assert data["total_actions"] == 0
         assert data["unassigned_actions"] == 0
         assert data["unassigned_high"] == 0
+
+    def test_actions_export_csv_empty(self, empty_db):
+        """Test CSV export with no data returns header only."""
+        response = client.get("/actions/export.csv")
+        assert response.status_code == 200
+        assert "text/csv" in response.headers["content-type"]
+        content = response.content.decode("utf-8")
+        lines = content.strip().splitlines()
+        assert len(lines) == 1  # header row only
 
 
 class TestDataIntegrity:
