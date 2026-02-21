@@ -29,20 +29,28 @@ def test_email_upload_eml_file(page: Page, api):
 
 
 def test_email_upload_invalid_extension(page: Page, api):
-    """Uploading a non-.eml/.msg file should show an error."""
-    # Create a temporary .txt file
+    """Uploading a non-.eml/.msg file should show a JS alert and hide the upload button."""
     import tempfile
+
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w") as f:
         f.write("not an email")
         tmp_path = f.name
 
     page.goto("/emails")
-    page.set_input_files("input[type='file']", tmp_path)
-    page.click("button:has-text('Upload')")
-    page.wait_for_url("**/emails**")
 
-    # Should show error about unsupported file type
-    expect(page.locator("body")).to_contain_text("Unsupported")
+    # Listen for the JS alert triggered by invalid file type
+    alert_messages = []
+    page.on("dialog", lambda dialog: (alert_messages.append(dialog.message), dialog.dismiss()))
+
+    page.set_input_files("input[type='file']", tmp_path)
+
+    # The JS handler should reject .txt and show an alert
+    page.wait_for_timeout(500)
+    assert len(alert_messages) > 0, "Expected a JS alert for invalid file type"
+    assert "valid" in alert_messages[0].lower() or ".eml" in alert_messages[0].lower()
+
+    # Upload button should NOT be visible (no valid files selected)
+    expect(page.locator("#email-upload-btn")).not_to_be_visible()
 
     import os
     os.unlink(tmp_path)

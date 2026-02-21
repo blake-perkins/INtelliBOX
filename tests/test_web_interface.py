@@ -42,6 +42,12 @@ import intellibox.settings_service as settings_service_module
 database_module.get_session = override_get_session
 settings_service_module.get_session = override_get_session
 
+# Force mock AI client so reprocess tests don't hit real OpenAI API
+import intellibox.ai.processor as ai_processor_module
+from intellibox.ai.mock_client import mock_ai_client
+
+ai_processor_module.get_ai_client = lambda: mock_ai_client
+
 from intellibox.web.app import app
 
 client = TestClient(app)
@@ -823,7 +829,6 @@ class TestReprocessEmail:
 
         # Verify: action1 (assigned) should still exist, action4 (unassigned) should be gone
         with override_get_session() as session:
-            from intellibox.models import AuditLog
             remaining = session.query(Action).filter_by(email_id=1).all()
             # action1 was assigned so it's preserved; new AI actions added
             assigned_remaining = [a for a in remaining if a.assignments]
@@ -848,7 +853,8 @@ class TestReprocessEmail:
             "/emails/1/reprocess",
             data={"context_notes": ""},
         )
-        import re, html as html_mod
+        import html as html_mod
+        import re
         html = preview_response.text
         action_dicts_val = html_mod.unescape(
             re.search(r'name="action_dicts_json"\s+value="([^"]*)"', html).group(1)
@@ -889,7 +895,8 @@ class TestReprocessEmail:
             "/emails/1/reprocess",
             data={"context_notes": ""},
         )
-        import re, html as html_mod
+        import html as html_mod
+        import re
         html = preview_response.text
         action_dicts_val = html_mod.unescape(
             re.search(r'name="action_dicts_json"\s+value="([^"]*)"', html).group(1)
@@ -998,7 +1005,8 @@ class TestReprocessEmail:
             "/emails/1/reprocess",
             data={"context_notes": ""},
         )
-        import re, html as html_mod
+        import html as html_mod
+        import re
         html = preview_response.text
         action_dicts_val = html_mod.unescape(
             re.search(r'name="action_dicts_json"\s+value="([^"]*)"', html).group(1)
