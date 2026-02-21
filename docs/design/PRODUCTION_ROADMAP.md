@@ -84,8 +84,8 @@ Minimum bar before any deployment:
 
 The code is clean but has accumulated structural debts worth addressing before further feature work.
 
-### 2.1 — Split app.py into Route Modules
-`app.py` is 1,097 lines with 40+ routes. Target structure:
+### 2.1 — Split app.py into Route Modules *(Completed 2026-02-18)*
+`app.py` refactored into route modules:
 ```
 src/intellibox/web/
 ├── app.py              # App factory, startup/shutdown only
@@ -95,17 +95,15 @@ src/intellibox/web/
 │   ├── emails.py       # GET /emails/*
 │   ├── settings.py     # GET/POST /settings, /categories/*
 │   ├── roster.py       # GET/POST /roster/*
-│   ├── report.py       # GET /report
-│   └── api.py          # GET /api/*, GET /health
+│   ├── insights.py     # GET /insights
+│   ├── knowledge_base.py # GET/POST /knowledge-base/*
+│   ├── analytics.py    # GET /analytics
+│   ├── auth.py         # GET/POST /login, /logout, /auth/*
+│   ├── api.py          # GET /api/*, GET /health
+│   └── test_routes.py  # Test data setup routes
 ```
-- [ ] Extract dashboard router
-- [ ] Extract actions router
-- [ ] Extract emails router
-- [ ] Extract settings router
-- [ ] Extract roster router
-- [ ] Extract report router
-- [ ] Extract API router
-- [ ] All tests still pass after extraction
+- [x] All routers extracted
+- [x] All tests still pass after extraction
 
 ### 2.2 — Service Layer Extraction
 Routes currently contain inline queries and business logic. Extract:
@@ -128,12 +126,11 @@ The `create_action()` bug (accessing `.id` after session close) is a pattern ris
 - [ ] Remove `run_tests.py` once standard pytest works
 - [ ] Update CI to use standard `pytest` invocation
 
-### 2.5 — Fix `in_progress` Status Bug
+### 2.5 — Fix `in_progress` Status Bug *(Completed 2026-02-20)*
 `Assignment.status` CHECK constraint only allows `'assigned'`/`'completed'` but the route accepts `in_progress`, causing a DB-level 500 error.
-- [ ] Decision: add `in_progress` to the model (migration needed) OR remove from route
-- [ ] Write Alembic migration if adding the new status
-- [ ] Add BDD test covering the status transition
-- [ ] Update UI to reflect available statuses
+- [x] Decision: added `in_progress` to the model CHECK constraint
+- [x] Write Alembic migration (008)
+- [x] Update UI to reflect available statuses (dashboard + action detail)
 
 ### 2.6 — Validate Settings on Write
 `SettingsService.set_setting()` stores arbitrary JSON with no validation. Bad values surface later as confusing runtime errors.
@@ -439,10 +436,11 @@ FastAPI auto-generates OpenAPI docs at `/docs`. Decide:
   - Disable: `FastAPI(docs_url=None, redoc_url=None)` in production config
 - [ ] Write `API.md` documenting all endpoints regardless of UI decision
 
-### 7.9 — Data Export
-- [ ] `GET /actions/export?format=csv` → download all actions as CSV
+### 7.9 — Data Export *(Partially Complete 2026-02-20)*
+- [x] `GET /actions/export.csv` → download filtered actions as CSV *(completed 2026-02-20)*
+- [x] Export button on actions page respects active filters
+- [x] Tests: content-type, attachment header, filter accuracy, empty DB
 - [ ] "Download Report" button on report page → PDF or CSV
-- [ ] BDD test: export returns correct Content-Type and non-empty body
 
 ### 7.10 — Multi-Program Support *(Future / Optional)*
 If the tool is used across multiple programs/contracts:
@@ -506,13 +504,13 @@ Create `docs/RUNBOOK.md` covering:
 | 4 | Migrate SQLite → PostgreSQL | 1 day | Not started |
 | 6 | Sentry error tracking | 2 hrs | Not started |
 | 6 | Structured JSON logging | 2 hrs | Not started |
-| 2 | Split app.py into routers | 2 days | Not started |
+| 2 | Split app.py into routers | 2 days | **Done** |
 | 2 | Service layer extraction | 2 days | Not started |
-| 2 | Fix `in_progress` status bug | 4 hrs | Not started |
+| 2 | Fix `in_progress` status bug | 4 hrs | **Done** |
 | 3 | Coverage analysis + gap filling | 1 day | Not started |
 | 7 | Audit log | 1 day | Not started |
 | 7 | Email notifications on assign | 4 hrs | Not started |
-| 7 | Data export (CSV) | 1 day | Not started |
+| 7 | Data export (CSV) | 1 day | **Done** (actions) |
 | 8 | ADRs + Runbook | 1 day | Not started |
 
 ---
@@ -523,12 +521,12 @@ Create `docs/RUNBOOK.md` covering:
 |-------|--------|-----------|-------|
 | Phase 0 | Mostly complete | 2026-02-18 | Deployment target decided (EC2), secrets rotated |
 | Phase 1 | Mostly complete | 2026-02-19 | Auth (nginx basic), TLS (Certbot), security scanning (pip-audit, bandit, Syft, Grype) |
-| Phase 2 | Not started | — | Refactoring (app.py split, service layer) |
+| Phase 2 | Mostly complete | 2026-02-20 | Router split done, in_progress bug fixed, service layer TBD |
 | Phase 3 | In progress | — | 13 modules + 165 BDD + 46 E2E, coverage % TBD |
 | Phase 4 | Not started | — | Database & scalability |
 | Phase 5 | **Complete** | 2026-02-19 | CI/CD pipeline: lint, test, container, security, auto-deploy |
 | Phase 6 | Not started | — | Observability & monitoring |
-| Phase 7 | Not started | — | Feature improvements |
+| Phase 7 | In progress | — | CSV export done, other features TBD |
 | Phase 8 | In progress | — | Documentation updates ongoing |
 
 ---

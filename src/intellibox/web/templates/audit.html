@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Log - INtelliBOX{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 700px) {
+        .audit-filters { grid-template-columns: 1fr !important; }
+        .audit-table .col-ip,
+        .audit-table .col-resource { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="font-weight: 600;">Audit Log</div>
+    <form method="get" action="/audit" autocomplete="off" style="display: grid; gap: 1rem; padding: 1rem;">
+        <div class="audit-filters" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem;">
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Action</label>
+                <select name="action" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">All Actions</option>
+                    {% for a in actions_list %}
+                    <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Resource</label>
+                <select name="resource_type" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">All Resources</option>
+                    {% for rt in resource_types_list %}
+                    <option value="{{ rt }}" {% if resource_type_filter == rt %}selected{% endif %}>{{ rt }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">User</label>
+                <select name="user" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">All Users</option>
+                    {% for u in users_list %}
+                    <option value="{{ u }}" {% if user_filter == u %}selected{% endif %}>{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Date Range</label>
+                <select name="days" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">All Time</option>
+                    <option value="1" {% if days == '1' %}selected{% endif %}>Last 24 Hours</option>
+                    <option value="7" {% if days == '7' %}selected{% endif %}>Last 7 Days</option>
+                    <option value="30" {% if days == '30' %}selected{% endif %}>Last 30 Days</option>
+                    <option value="90" {% if days == '90' %}selected{% endif %}>Last 90 Days</option>
+                </select>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            {% if action_filter or resource_type_filter or user_filter or days %}
+            <a href="/audit" class="btn" style="background: #95a5a6; color: white;">Clear All</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Results -->
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>
+            {% if total_count > 0 %}
+                Showing {{ ((page - 1) * 50) + 1 }}-{{ [page * 50, total_count]|min }} of {{ total_count }} entries
+            {% else %}
+                No audit entries found
+            {% endif %}
+        </span>
+    </div>
+
+    {% if entries %}
+    <div class="table-responsive">
+    <table class="audit-table" style="width: 100%;">
+        <thead>
+            <tr>
+                <th style="width: 140px;">When</th>
+                <th style="width: 100px;">User</th>
+                <th style="width: 120px;">Action</th>
+                <th class="col-resource" style="width: 140px;">Resource</th>
+                <th>Details</th>
+                <th class="col-ip" style="width: 120px;">IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            {% set time_diff = (current_time - entry.created_at).total_seconds() %}
+            <tr>
+                <td style="font-size: 0.85rem; color: #666;">
+                    {% if time_diff < 3600 %}
+                        {{ (time_diff / 60)|int }}m ago
+                    {% elif time_diff < 86400 %}
+                        {{ (time_diff / 3600)|int }}h ago
+                    {% else %}
+                        {{ entry.created_at.strftime('%b %d %H:%M') }}
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.9rem; font-weight: 500;">{{ entry.user }}</td>
+                <td>
+                    {% set badge_colors = {
+                        'create': '#27ae60',
+                        'delete': '#e74c3c',
+                        'assign': '#3498db',
+                        'unassign': '#95a5a6',
+                        'complete': '#2ecc71',
+                        'change_priority': '#f39c12',
+                        'update': '#8e44ad'
+                    } %}
+                    <span style="background: {{ badge_colors.get(entry.action, '#555') }}; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
+                        {{ entry.action }}
+                    </span>
+                </td>
+                <td class="col-resource" style="font-size: 0.9rem;">
+                    {{ entry.resource_type }}{% if entry.resource_id %} #{{ entry.resource_id }}{% endif %}
+                </td>
+                <td style="font-size: 0.85rem;">
+                    {% if entry._parsed_details %}
+                        {% if entry._parsed_details is mapping %}
+                            {% for key, val in entry._parsed_details.items() %}
+                            <span style="background: #f0f0f0; color: #555; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.8rem; margin: 0.1rem; display: inline-block;">
+                                {{ key }}: {{ val }}
+                            </span>
+                            {% endfor %}
+                        {% else %}
+                            {{ entry._parsed_details }}
+                        {% endif %}
+                    {% else %}
+                        <span style="color: #ccc;">--</span>
+                    {% endif %}
+                </td>
+                <td class="col-ip" style="font-size: 0.85rem; color: #999;">{{ entry.ip_address or '--' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #999;">
+        <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No audit entries found</p>
+        <p style="font-size: 0.9rem;">Activity will appear here as changes are made</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+        <a href="?page={{ page - 1 }}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if resource_type_filter %}&resource_type={{ resource_type_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}{% if days %}&days={{ days }}{% endif %}">&laquo; Previous</a>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}
+            <a href="#" class="active">{{ p }}</a>
+        {% else %}
+            <a href="?page={{ p }}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if resource_type_filter %}&resource_type={{ resource_type_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}{% if days %}&days={{ days }}{% endif %}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+        <a href="?page={{ page + 1 }}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if resource_type_filter %}&resource_type={{ resource_type_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}{% if days %}&days={{ days }}{% endif %}">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

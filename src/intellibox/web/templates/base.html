@@ -342,6 +342,7 @@
                 <li><a href="/about">About</a></li>
                 {% if not current_user or current_user.role == 'admin' %}
                 <li><a href="/settings"><span style="opacity: 0.5;">&#9881;</span> Settings</a></li>
+                <li><a href="/audit"><span style="opacity: 0.5;">&#128269;</span> Audit</a></li>
                 {% endif %}
                 <li class="nav-meta" style="border-left: 1px solid rgba(255,255,255,0.2); padding-left: 1.5rem; margin-left: 0.25rem; font-size: 0.7rem; opacity: 0.55; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
                     last sync: <span id="nav-last-sync">—</span>

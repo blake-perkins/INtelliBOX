@@ -175,6 +175,32 @@ class ProcessingLog(Base):
         return f"<ProcessingLog(id={self.id}, event='{self.event_type}', status='{self.status}')>"
 
 
+class AuditLog(Base):
+    """Audit trail for user write operations."""
+
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user: Mapped[str] = mapped_column(String(150), nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    resource_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    resource_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=utcnow,
+        nullable=False,
+        index=True,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<AuditLog(id={self.id}, user='{self.user}', "
+            f"action='{self.action}', resource='{self.resource_type}:{self.resource_id}')>"
+        )
+
+
 class ProgramNewsCache(Base):
     """Cached program news summary to avoid excessive AI API calls."""
 

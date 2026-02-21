@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import case, desc, func, or_
 from sqlalchemy.orm import Session, contains_eager, subqueryload
 
+from intellibox.audit import log_audit
 from intellibox.knowledge import search_knowledge_base
 from intellibox.models import Action, Assignment, Email
 from intellibox.settings_service import SettingsService
@@ -262,6 +263,7 @@ async def view_action(request: Request, action_id: int):
 
 @router.post("/actions/{action_id}/assign")
 async def assign_action(
+    request: Request,
     action_id: int,
     assigned_to: str = Form(...),
     notes: str = Form(""),
@@ -290,13 +292,15 @@ async def assign_action(
             )
             session.add(assignment)
 
+        log_audit(session, request, "assign", "action", action_id,
+                  {"assigned_to": assigned_to})
         session.commit()
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
 @router.post("/actions/{action_id}/complete")
-async def complete_action(action_id: int):
+async def complete_action(request: Request, action_id: int):
     """Mark an action as completed."""
     with get_session() as session:
         assignment = session.query(Assignment).filter_by(action_id=action_id).first()
@@ -314,30 +318,36 @@ async def complete_action(action_id: int):
             assignment.status = "completed"
             assignment.completed_at = utcnow()
 
+        log_audit(session, request, "complete", "action", action_id)
         session.commit()
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
 @router.post("/actions/{action_id}/priority")
-async def change_priority(action_id: int, priority: str = Form(...)):
+async def change_priority(request: Request, action_id: int, priority: str = Form(...)):
     """Quick-change priority (used by dashboard AJAX)."""
     with get_session() as session:
         action = session.query(Action).filter_by(id=action_id).first()
         if not action:
             raise HTTPException(status_code=404, detail="Action not found")
         if priority in ["high", "medium", "low"]:
+            old_priority = action.priority
             action.priority = priority
+            log_audit(session, request, "change_priority", "action", action_id,
+                      {"old": old_priority, "new": priority})
             session.commit()
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
 @router.post("/actions/{action_id}/unassign")
-async def unassign_action(action_id: int):
+async def unassign_action(request: Request, action_id: int):
     """Remove assignment from an action (used by dashboard AJAX)."""
     with get_session() as session:
         assignment = session.query(Assignment).filter_by(action_id=action_id).first()
         if assignment:
+            log_audit(session, request, "unassign", "action", action_id,
+                      {"was_assigned_to": assignment.assigned_to})
             session.delete(assignment)
             session.commit()
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
@@ -345,6 +355,7 @@ async def unassign_action(action_id: int):
 
 @router.post("/actions/{action_id}/status")
 async def update_assignment_status(
+    request: Request,
     action_id: int,
     status: str = Form(...)
 ):
@@ -358,11 +369,14 @@ async def update_assignment_status(
         if status not in ["assigned", "in_progress", "completed"]:
             raise HTTPException(status_code=400, detail="Invalid status")
 
+        old_status = assignment.status
         assignment.status = status
         if status == "completed":
             assignment.completed_at = utcnow()
         else:
             assignment.completed_at = None
+        log_audit(session, request, "update", "assignment", action_id,
+                  {"old_status": old_status, "new_status": status})
         session.commit()
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
@@ -370,6 +384,7 @@ async def update_assignment_status(
 
 @router.post("/actions/{action_id}/edit")
 async def edit_action(
+    request: Request,
     action_id: int,
     title: str = Form(...),
     description: str = Form(""),
@@ -425,13 +440,14 @@ async def edit_action(
             # User selected "Unassigned" — remove the assignment
             session.delete(existing)
 
+        log_audit(session, request, "update", "action", action_id)
         session.commit()
 
     return RedirectResponse(url=f"/actions/{action_id}", status_code=303)
 
 
 @router.post("/actions/{action_id}/delete")
-async def delete_action(action_id: int):
+async def delete_action(request: Request, action_id: int):
     """Delete an action."""
     with get_session() as session:
         action = session.query(Action).filter_by(id=action_id).first()
@@ -439,6 +455,8 @@ async def delete_action(action_id: int):
             raise HTTPException(status_code=404, detail="Action not found")
 
         email_id = action.email_id
+        log_audit(session, request, "delete", "action", action_id,
+                  {"title": action.title})
         session.delete(action)
         session.commit()
 
@@ -464,6 +482,7 @@ async def new_action_form(request: Request, email_id: int):
 
 @router.post("/emails/{email_id}/actions/new")
 async def create_action(
+    request: Request,
     email_id: int,
     title: str = Form(...),
     description: str = Form(""),
@@ -498,6 +517,9 @@ async def create_action(
         )
 
         session.add(action)
+        session.flush()
+        log_audit(session, request, "create", "action", action.id,
+                  {"title": title, "priority": priority, "email_id": email_id})
         session.commit()
         session.refresh(action)
         action_id = action.id  # capture before session closes

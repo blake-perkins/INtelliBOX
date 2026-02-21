@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from intellibox.audit import log_audit
 from intellibox.models import RosterMember
 from intellibox.utils.datetime_utils import utcnow
 from intellibox.web.auth import require_admin
@@ -33,6 +34,7 @@ async def view_roster(request: Request):
 
 @router.post("/roster/add")
 async def add_roster_member(
+    request: Request,
     first_name: str = Form(...),
     last_name: str = Form(...),
     email: str = Form(...),
@@ -77,6 +79,8 @@ async def add_roster_member(
                     )
 
         session.add(RosterMember(first_name=first_name, last_name=last_name, email=email))
+        log_audit(session, request, "create", "roster_member", None,
+                  {"name": f"{first_name} {last_name}", "email": email})
         session.commit()
 
     return RedirectResponse("/settings?roster_added=1&roster_skipped=0", status_code=303)
@@ -134,18 +138,23 @@ async def upload_roster(request: Request, file: UploadFile = File(...)):
             else:
                 session.add(RosterMember(first_name=first, last_name=last, email=email))
                 added += 1
+        if added > 0:
+            log_audit(session, request, "create", "roster_member", None,
+                      {"bulk_upload": True, "added": added, "skipped": skipped})
         session.commit()
 
     return RedirectResponse(f"/settings?roster_added={added}&roster_skipped={skipped}", status_code=303)
 
 
 @router.post("/roster/{member_id}/delete")
-async def delete_roster_member(member_id: int):
+async def delete_roster_member(request: Request, member_id: int):
     """Remove a member from the roster."""
     with get_session() as session:
         member = session.query(RosterMember).filter_by(id=member_id).first()
         if member:
             name = member.full_name
+            log_audit(session, request, "delete", "roster_member", member_id,
+                      {"name": name, "email": member.email})
             session.delete(member)
             session.commit()
             return RedirectResponse(f"/settings?roster_deleted={name}#roster", status_code=303)
