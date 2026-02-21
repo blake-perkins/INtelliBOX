@@ -190,6 +190,8 @@
                     {% if assignment %}
                         {% if assignment.status == 'completed' %}
                             <span style="color: #27ae60; font-weight: 600; font-size: 0.9rem;">✓ Done</span>
+                        {% elif assignment.status == 'in_progress' %}
+                            <span style="color: #8e44ad; font-weight: 600; font-size: 0.9rem;">▶ In Progress</span>
                         {% else %}
                             <span style="color: #27ae60; font-weight: 600; font-size: 0.9rem;">Assigned</span>
                         {% endif %}

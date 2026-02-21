@@ -106,7 +106,7 @@ class Assignment(Base):
     __tablename__ = "assignments"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('assigned', 'completed')",
+            "status IN ('assigned', 'in_progress', 'completed')",
             name="check_status"
         ),
     )

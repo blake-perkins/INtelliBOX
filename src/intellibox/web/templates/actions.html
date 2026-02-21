@@ -119,6 +119,8 @@
                 <div style="margin-top: 0.15rem;">
                     {% if assignment.status == 'completed' %}
                         <span style="font-size: 0.75rem; background: #d4edda; color: #155724; padding: 0.1rem 0.4rem; border-radius: 10px;">✓ completed</span>
+                    {% elif assignment.status == 'in_progress' %}
+                        <span style="font-size: 0.75rem; background: #f3e8ff; color: #8e44ad; padding: 0.1rem 0.4rem; border-radius: 10px;">▶ in progress</span>
                     {% else %}
                         <span style="font-size: 0.75rem; background: #e2e8f0; color: #555; padding: 0.1rem 0.4rem; border-radius: 10px;">assigned</span>
                     {% endif %}

@@ -24,6 +24,10 @@
         <span style="background: #d4edda; color: #155724; padding: 0.35rem 0.85rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
             ✓ COMPLETED
         </span>
+        {% elif assignment and assignment.status == 'in_progress' %}
+        <span style="background: #f3e8ff; color: #8e44ad; padding: 0.35rem 0.85rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
+            IN PROGRESS
+        </span>
         {% elif assignment %}
         <span style="background: #e8f4fd; color: #1a6fa8; padding: 0.35rem 0.85rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
             ASSIGNED
@@ -167,7 +171,23 @@
 
             {% if assignment %}
             <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ecf0f1;">
-                {% if assignment.status != 'completed' %}
+                {% if assignment.status == 'assigned' %}
+                <form method="POST" action="/actions/{{ action.id }}/status" style="display: inline;">
+                    <input type="hidden" name="status" value="in_progress">
+                    <button type="submit" class="btn"
+                            style="background: #8e44ad; color: white; padding: 0.65rem 1.4rem; font-size: 0.9rem;">
+                        ▶ Start Progress
+                    </button>
+                </form>
+                <form method="POST" action="/actions/{{ action.id }}/status" style="display: inline;">
+                    <input type="hidden" name="status" value="completed">
+                    <button type="submit" class="btn"
+                            style="background: #27ae60; color: white; padding: 0.65rem 1.4rem; font-size: 0.9rem;"
+                            onclick="return confirm('Mark this action as completed?')">
+                        ✓ Mark Complete
+                    </button>
+                </form>
+                {% elif assignment.status == 'in_progress' %}
                 <form method="POST" action="/actions/{{ action.id }}/status" style="display: inline;">
                     <input type="hidden" name="status" value="completed">
                     <button type="submit" class="btn"

@@ -5,11 +5,6 @@
 {% block extra_css %}
 <style>
     @media (max-width: 700px) {
-        .dash-table { table-layout: auto !important; }
-        .dash-table .col-due { width: auto !important; }
-        .dash-table .col-assign { width: auto !important; }
-        .dash-table .col-action { width: auto !important; }
-        .dash-table td, .dash-table th { padding: 0.5rem; font-size: 0.85rem; }
         .dash-activity { grid-template-columns: 1fr !important; }
         .dash-activity > div:first-child { border-right: none !important; border-bottom: 1px solid #e1e8ed; }
     }
@@ -23,63 +18,52 @@
     <div class="card-header" style="background: #a93226; color: white; font-weight: 700; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 2px solid rgba(0,0,0,0.15);">
         ⚠️ Overdue — Needs Immediate Attention ({{ overdue_actions|length }})
     </div>
-    <div class="table-responsive">
-    <table class="dash-table" style="margin: 0 -1.5rem 0 -1.5rem; width: calc(100% + 3rem); table-layout: fixed;">
-        <thead>
-            <tr>
-                <th class="col-action" style="padding-left: 1.5rem; width: 50%;">Action</th>
-                <th class="col-due" style="width: 15%;">Due Date</th>
-                <th class="col-assign" style="width: 35%;">Assigned To</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for action in overdue_actions %}
-            <tr class="overdue-row{% if loop.index > 5 %} overdue-extra{% endif %}" style="cursor: pointer; background-color: #fde8e8;{% if loop.index > 5 %} display: none;{% endif %}" onclick="window.location='/actions/{{ action.id }}'">
-                <td style="padding-left: 1.5rem;">
-                    <div style="font-weight: 600;" title="{{ action.title }}">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
-                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
-                        {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
+    <div style="margin: 0 -1.5rem -1.5rem -1.5rem;">
+        {% for action in overdue_actions %}
+        <div class="overdue-row{% if loop.index > 5 %} overdue-extra{% endif %}"
+             style="padding: 0.65rem 1.5rem; border-bottom: 1px solid #f5e0e0; cursor: pointer; background-color: #fde8e8;{% if loop.index > 5 %} display: none;{% endif %}"
+             onclick="window.location='/actions/{{ action.id }}'">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.5rem;">
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-weight: 600; font-size: 0.9rem;" title="{{ action.title }}">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</span>
+                        <span style="color: white; font-weight: 700; background: #a93226; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.75rem; white-space: nowrap;">
+                            ⚠️ {{ action.due_date.strftime('%b %d') }}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.78rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
+                        {{ action.email.from_address }}
                         <span style="color: #ccc;">|</span>
                         <select onclick="event.stopPropagation()" onchange="changePriority({{ action.id }}, this, false)"
-                                autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.78rem; background: white; cursor: pointer; color: #555;">
+                                autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.75rem; background: white; cursor: pointer; color: #555;">
                             <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
                             <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
                             <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
                         </select>
                     </div>
-                </td>
-                <td style="white-space: nowrap;">
-                    <span style="color: white; font-weight: 700; background: #a93226; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.82rem;">
-                        ⚠️ {{ action.due_date.strftime('%b %d') }}
-                    </span>
-                </td>
-                <td onclick="event.stopPropagation()" style="white-space: nowrap;">
+                </div>
+                <div onclick="event.stopPropagation()" style="flex-shrink: 0; display: flex; gap: 0.35rem; align-items: center;">
                     {% if roster %}
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
-                                style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
-                                onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
-                            <option value="" {% if not action.assignments %}selected{% endif %}>Unassigned</option>
-                            {% for member in roster %}
-                            <option value="{{ member.full_name }}"
-                                {% if action.assignments and action.assignments[0].assigned_to == member.full_name %}selected{% endif %}>
-                                {{ member.last_name }}, {{ member.first_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this)"
-                                style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">
-                            Assign
-                        </button>
-                    </div>
+                    <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
+                            style="padding: 0.35rem 0.5rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.8rem; background: white; cursor: pointer; max-width: 150px;"
+                            onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
+                        <option value="" {% if not action.assignments %}selected{% endif %}>Unassigned</option>
+                        {% for member in roster %}
+                        <option value="{{ member.full_name }}"
+                            {% if action.assignments and action.assignments[0].assigned_to == member.full_name %}selected{% endif %}>
+                            {{ member.last_name }}, {{ member.first_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this)"
+                            style="padding: 0.35rem 0.7rem; font-size: 0.8rem; white-space: nowrap;">Assign</button>
                     {% else %}
-                    <a href="/settings#roster" style="font-size: 0.85rem; color: #667eea;">Add roster</a>
+                    <a href="/settings#roster" onclick="event.stopPropagation()" style="font-size: 0.8rem; color: #667eea;">Add roster</a>
                     {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% if overdue_actions|length > 5 %}
     <div style="padding: 0.5rem 1.5rem; border-top: 1px solid rgba(0,0,0,0.08); text-align: center;">
@@ -96,75 +80,62 @@
 {% if high_priority_actions %}
 <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #e74c3c;">
     <div class="card-header" style="background-color: #fef5f5; color: #c0392b; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 2px solid rgba(0,0,0,0.08);">
-        🔥 High Priority - Needs Assignment ({{ high_priority }})
+        🔥 High Priority — Needs Assignment ({{ high_priority }})
     </div>
-    <div class="table-responsive">
-    <table class="dash-table" style="margin: 0 -1.5rem 0 -1.5rem; width: calc(100% + 3rem); table-layout: fixed;">
-        <thead>
-            <tr>
-                <th class="col-action" style="padding-left: 1.5rem; width: 50%;">Action</th>
-                <th class="col-due" style="width: 15%;">Due Date</th>
-                <th class="col-assign" style="width: 35%;">Assigned To</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for action in high_priority_actions %}
-            {% set hp_assignment = action.assignments[0] if action.assignments else None %}
-            {% set is_overdue = action.due_date and action.due_date < current_time %}
-            <tr class="hp-row{% if loop.index > 5 %} hp-extra{% endif %}" style="cursor: pointer; background-color: #fef8f6;{% if loop.index > 5 %} display: none;{% endif %}" onclick="window.location='/actions/{{ action.id }}'">
-                <td style="padding-left: 1.5rem;">
-                    <div style="font-weight: 600;" title="{{ action.title }}">{{ action.title[:60] }}{% if action.title|length > 60 %}...{% endif %}</div>
-                    <div style="font-size: 0.82rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
-                        {{ action.email.from_address }} &middot; received {{ action.email.received_date.strftime('%b %d, %Y') }}
+    <div style="margin: 0 -1.5rem -1.5rem -1.5rem;">
+        {% for action in high_priority_actions %}
+        {% set hp_assignment = action.assignments[0] if action.assignments else None %}
+        {% set is_overdue = action.due_date and action.due_date < current_time %}
+        <div class="hp-row{% if loop.index > 5 %} hp-extra{% endif %}"
+             style="padding: 0.65rem 1.5rem; border-bottom: 1px solid #f5f5f5; cursor: pointer; background-color: #fef8f6;{% if loop.index > 5 %} display: none;{% endif %}"
+             onclick="window.location='/actions/{{ action.id }}'">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.5rem;">
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-weight: 600; font-size: 0.9rem;" title="{{ action.title }}">{{ action.title[:50] }}{% if action.title|length > 50 %}...{% endif %}</span>
+                        {% if action.due_date %}
+                            {% if is_overdue %}
+                            <span style="color: white; font-weight: 700; background: #a93226; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.75rem; white-space: nowrap;">
+                                ⚠️ {{ action.due_date.strftime('%b %d') }}
+                            </span>
+                            {% else %}
+                            <span style="color: #888; font-size: 0.75rem; white-space: nowrap;">{{ action.due_date.strftime('%b %d') }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 0.78rem; color: #888; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.5rem;">
+                        {{ action.email.from_address }}
                         <span style="color: #ccc;">|</span>
                         <select onclick="event.stopPropagation()" onchange="changePriority({{ action.id }}, this, true)"
-                                autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.78rem; background: white; cursor: pointer; color: #555;">
+                                autocomplete="off" style="padding: 0.1rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.75rem; background: white; cursor: pointer; color: #555;">
                             <option value="high" {% if action.priority == 'high' %}selected{% endif %}>High</option>
                             <option value="medium" {% if action.priority == 'medium' %}selected{% endif %}>Medium</option>
                             <option value="low" {% if action.priority == 'low' %}selected{% endif %}>Low</option>
                         </select>
                     </div>
-                </td>
-                <td style="white-space: nowrap;">
-                    {% if action.due_date %}
-                        {% if is_overdue %}
-                        <span style="color: white; font-weight: 700; background: #a93226; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.82rem;">
-                            ⚠️ {{ action.due_date.strftime('%b %d') }}
-                        </span>
-                        {% else %}
-                            {{ action.due_date.strftime('%b %d, %Y') }}
-                        {% endif %}
-                    {% else %}
-                        <span style="color: #999;">No date</span>
-                    {% endif %}
-                </td>
-                <td onclick="event.stopPropagation()" style="white-space: nowrap;">
+                </div>
+                <div onclick="event.stopPropagation()" style="flex-shrink: 0; display: flex; gap: 0.35rem; align-items: center;">
                     {% if roster %}
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
-                                style="padding: 0.5rem 0.7rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; max-width: 180px;"
-                                onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
-                            <option value="" {% if not hp_assignment %}selected{% endif %}>Unassigned</option>
-                            {% for member in roster %}
-                            <option value="{{ member.full_name }}"
-                                {% if hp_assignment and hp_assignment.assigned_to == member.full_name %}selected{% endif %}>
-                                {{ member.last_name }}, {{ member.first_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this)"
-                                style="padding: 0.5rem 1rem; font-size: 0.875rem; white-space: nowrap;">
-                            Assign
-                        </button>
-                    </div>
+                    <select id="sel-{{ action.id }}" onclick="event.stopPropagation()"
+                            style="padding: 0.35rem 0.5rem; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.8rem; background: white; cursor: pointer; max-width: 150px;"
+                            onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
+                        <option value="" {% if not hp_assignment %}selected{% endif %}>Unassigned</option>
+                        {% for member in roster %}
+                        <option value="{{ member.full_name }}"
+                            {% if hp_assignment and hp_assignment.assigned_to == member.full_name %}selected{% endif %}>
+                            {{ member.last_name }}, {{ member.first_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary" onclick="event.stopPropagation(); quickAssign({{ action.id }}, this)"
+                            style="padding: 0.35rem 0.7rem; font-size: 0.8rem; white-space: nowrap;">Assign</button>
                     {% else %}
-                    <a href="/settings#roster" style="font-size: 0.85rem; color: #667eea;">Add roster</a>
+                    <a href="/settings#roster" onclick="event.stopPropagation()" style="font-size: 0.8rem; color: #667eea;">Add roster</a>
                     {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% if high_priority_actions|length > 5 %}
     <div style="padding: 0.5rem 1.5rem; border-top: 1px solid rgba(0,0,0,0.08); text-align: center;">
@@ -195,7 +166,7 @@
         <div class="card-header" style="background-color: #fffbf0; color: #b7770d; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.06);">
             📋 Medium Priority — Unassigned ({{ medium_priority_actions|length }})
         </div>
-        <div style="margin: 0 -1.5rem 0 -1.5rem;">
+        <div style="margin: 0 -1.5rem -1.5rem -1.5rem;">
             {% for action in medium_priority_actions %}
             <div class="med-row{% if loop.index > 3 %} med-extra{% endif %}"
                  style="padding: 0.65rem 1.5rem; border-bottom: 1px solid #f5f5f5; cursor: pointer;{% if loop.index > 3 %} display: none;{% endif %}"
@@ -250,7 +221,7 @@
         <div class="card-header" style="background-color: #f9f9f9; color: #666; font-weight: 600; margin: -1.5rem -1.5rem 0 -1.5rem; padding: 0.55rem 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.06);">
             📌 Low Priority — Unassigned ({{ low_priority_actions|length }})
         </div>
-        <div style="margin: 0 -1.5rem 0 -1.5rem;">
+        <div style="margin: 0 -1.5rem -1.5rem -1.5rem;">
             {% for action in low_priority_actions %}
             <div class="low-row{% if loop.index > 3 %} low-extra{% endif %}"
                  style="padding: 0.65rem 1.5rem; border-bottom: 1px solid #f5f5f5; cursor: pointer;{% if loop.index > 3 %} display: none;{% endif %}"

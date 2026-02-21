@@ -644,5 +644,81 @@ class TestInsightsPage:
         assert b"API" in response.content
 
 
+class TestAssignmentStatusTransitions:
+    """Test all assignment status transitions including in_progress."""
+
+    def test_set_status_in_progress(self, setup_database):
+        """Setting assignment status to in_progress should succeed (not 500)."""
+        # Action 2 (from setup_database) is assigned to "Test User"
+        with override_get_session() as session:
+            assignment = session.query(Assignment).first()
+            action_id = assignment.action_id
+            assert assignment.status == "assigned"
+
+        response = client.post(
+            f"/actions/{action_id}/status",
+            data={"status": "in_progress"},
+            follow_redirects=False,
+        )
+        # Should redirect back to action detail, NOT 500
+        assert response.status_code == 303
+
+        # Verify the status was actually persisted
+        with override_get_session() as session:
+            assignment = session.query(Assignment).filter_by(action_id=action_id).first()
+            assert assignment.status == "in_progress"
+
+    def test_set_status_completed(self, setup_database):
+        """Setting assignment status to completed should succeed."""
+        with override_get_session() as session:
+            assignment = session.query(Assignment).first()
+            action_id = assignment.action_id
+
+        response = client.post(
+            f"/actions/{action_id}/status",
+            data={"status": "completed"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        with override_get_session() as session:
+            assignment = session.query(Assignment).filter_by(action_id=action_id).first()
+            assert assignment.status == "completed"
+            assert assignment.completed_at is not None
+
+    def test_set_status_assigned_from_completed(self, setup_database):
+        """Reopening a completed action should set status back to assigned."""
+        with override_get_session() as session:
+            assignment = session.query(Assignment).first()
+            action_id = assignment.action_id
+            assignment.status = "completed"
+            session.commit()
+
+        response = client.post(
+            f"/actions/{action_id}/status",
+            data={"status": "assigned"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        with override_get_session() as session:
+            assignment = session.query(Assignment).filter_by(action_id=action_id).first()
+            assert assignment.status == "assigned"
+            assert assignment.completed_at is None
+
+    def test_set_invalid_status_rejected(self, setup_database):
+        """An invalid status value should return 400."""
+        with override_get_session() as session:
+            assignment = session.query(Assignment).first()
+            action_id = assignment.action_id
+
+        response = client.post(
+            f"/actions/{action_id}/status",
+            data={"status": "bogus"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 400
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
