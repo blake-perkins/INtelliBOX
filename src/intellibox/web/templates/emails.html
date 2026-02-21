@@ -2,6 +2,16 @@
 
 {% block title %}Emails - INtelliBOX{% endblock %}
 
+{% block extra_css %}
+<style>
+    @media (max-width: 700px) {
+        .email-filters { grid-template-columns: 1fr !important; }
+        .email-table .col-from,
+        .email-table .col-actions { display: none !important; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <!-- Upload Success/Error Banner -->
@@ -29,7 +39,7 @@
 <!-- Search and Filters -->
 <div class="card" style="margin-bottom: 1.5rem;">
     <form method="get" action="/emails" autocomplete="off" style="display: grid; gap: 1rem;">
-        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
+        <div class="email-filters" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
             <!-- Search -->
             <div>
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">🔍 Search</label>
@@ -86,13 +96,14 @@
     </div>
 
     {% if emails %}
-    <table>
+    <div class="table-responsive">
+    <table class="email-table">
         <thead>
             <tr>
                 <th>Subject</th>
-                <th style="width: 200px;">From</th>
+                <th class="col-from" style="width: 200px;">From</th>
                 <th style="width: 150px;">Received</th>
-                <th style="width: 120px;">Actions</th>
+                <th class="col-actions" style="width: 120px;">Actions</th>
                 <th style="width: 100px;">Status</th>
             </tr>
         </thead>
@@ -120,7 +131,7 @@
                     </div>
                     {% endif %}
                 </td>
-                <td style="font-size: 0.9rem;" title="{{ email.from_address }}">
+                <td class="col-from" style="font-size: 0.9rem;" title="{{ email.from_address }}">
                     {{ email.from_address.split('@')[0] if '@' in email.from_address else email.from_address }}
                 </td>
                 <td style="font-size: 0.9rem; color: #666;">
@@ -134,7 +145,7 @@
                         {{ email.received_date.strftime('%b %d') }}
                     {% endif %}
                 </td>
-                <td style="text-align: center;">
+                <td class="col-actions" style="text-align: center;">
                     {% if action_count > 0 %}
                         <a href="/emails/{{ email.id }}"
                            onclick="event.stopPropagation();"
@@ -156,6 +167,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
     <div style="text-align: center; padding: 3rem; color: #999;">
         <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No emails found</p>

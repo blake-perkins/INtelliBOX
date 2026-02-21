@@ -85,6 +85,7 @@
             color: white;
             text-decoration: none;
             transition: opacity 0.2s;
+            white-space: nowrap;
         }
 
         .nav-links a:hover {
@@ -256,6 +257,65 @@
             border-radius: 6px;
             border: 1px solid #ddd;
         }
+
+        /* Hamburger toggle — hidden on desktop */
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        /* Horizontal-scroll wrapper for tables on small screens */
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+        /* ── Responsive: collapse nav (<=1000px) ───────────────── */
+        @media (max-width: 1000px) {
+            .nav-toggle { display: block; }
+
+            .navbar { padding: 0.75rem 1rem; }
+
+            .navbar-content { flex-wrap: wrap; }
+
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                width: 100%;
+                gap: 0;
+                margin-top: 0.75rem;
+                border-top: 1px solid rgba(255,255,255,0.15);
+                padding-top: 0.5rem;
+            }
+            .nav-links.open { display: flex; }
+            .nav-links li { padding: 0.5rem 0; }
+            .nav-links li a { display: block; }
+            .nav-meta {
+                border-left: none !important;
+                padding-left: 0 !important;
+                margin-left: 0 !important;
+            }
+            .nav-user {
+                border-left: none !important;
+                padding-left: 0 !important;
+                margin-left: 0 !important;
+            }
+        }
+
+        /* ── Responsive: mobile (<=700px) ────────────────────────── */
+        @media (max-width: 700px) {
+            .container { padding: 0 0.75rem; margin: 1rem auto; }
+
+            .stats-bar { padding: 0.5rem 1rem !important; }
+            .stats-bar-inner {
+                flex-direction: column !important;
+                gap: 0.25rem !important;
+            }
+            .stats-bar-divider { display: none !important; }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -272,6 +332,7 @@
                 </span>
                 {% endif %}
             </a>
+            <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menu">&#9776;</button>
             <ul class="nav-links">
                 <li><a href="/">Dashboard</a></li>
                 <li><a href="/actions">Actions</a></li>
@@ -282,13 +343,13 @@
                 {% if not current_user or current_user.role == 'admin' %}
                 <li><a href="/settings"><span style="opacity: 0.5;">&#9881;</span> Settings</a></li>
                 {% endif %}
-                <li style="border-left: 1px solid rgba(255,255,255,0.2); padding-left: 1.5rem; margin-left: 0.25rem; font-size: 0.7rem; opacity: 0.55; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
-                    📡 last sync: <span id="nav-last-sync">—</span>
+                <li class="nav-meta" style="border-left: 1px solid rgba(255,255,255,0.2); padding-left: 1.5rem; margin-left: 0.25rem; font-size: 0.7rem; opacity: 0.55; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
+                    last sync: <span id="nav-last-sync">—</span>
                     <span style="opacity: 0.6; margin-left: 0.5rem;">|</span>
                     <span style="opacity: 0.6; margin-left: 0.5rem;">v{{ app_version }}</span>
                 </li>
                 {% if current_user and not current_user.is_anonymous|default(false) %}
-                <li style="border-left: 1px solid rgba(255,255,255,0.2); padding-left: 1rem; margin-left: 0.25rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                <li class="nav-user" style="border-left: 1px solid rgba(255,255,255,0.2); padding-left: 1rem; margin-left: 0.25rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
                     <span style="opacity: 0.7;">{{ current_user.display_name or current_user.username }}</span>
                     <a href="/auth/logout" style="color: rgba(255,255,255,0.6); font-size: 0.8rem;">Logout</a>
                 </li>
@@ -298,8 +359,8 @@
     </nav>
 
     <!-- Global Stats Bar -->
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.5rem 2rem; box-shadow: 0 2px 8px rgba(102,126,234,0.3);">
-        <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: stretch; font-size: 0.875rem;">
+    <div class="stats-bar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.5rem 2rem; box-shadow: 0 2px 8px rgba(102,126,234,0.3);">
+        <div class="stats-bar-inner" style="max-width: 1400px; margin: 0 auto; display: flex; align-items: stretch; font-size: 0.875rem;">
 
             <!-- TO DO -->
             <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; padding: 0.1rem 1rem;">
@@ -316,7 +377,7 @@
                 </div>
             </div>
 
-            <div style="width: 1px; background: rgba(255,255,255,0.2); flex-shrink: 0; margin: 0.1rem 0;"></div>
+            <div class="stats-bar-divider" style="width: 1px; background: rgba(255,255,255,0.2); flex-shrink: 0; margin: 0.1rem 0;"></div>
 
             <!-- IN PROGRESS -->
             <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; padding: 0.1rem 1rem;">
@@ -332,7 +393,7 @@
                 </div>
             </div>
 
-            <div style="width: 1px; background: rgba(255,255,255,0.2); flex-shrink: 0; margin: 0.1rem 0;"></div>
+            <div class="stats-bar-divider" style="width: 1px; background: rgba(255,255,255,0.2); flex-shrink: 0; margin: 0.1rem 0;"></div>
 
             <!-- DONE -->
             <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; padding: 0.1rem 1rem;">

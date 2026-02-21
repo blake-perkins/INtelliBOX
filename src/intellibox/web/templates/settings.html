@@ -2,13 +2,26 @@
 
 {% block title %}Settings - INtelliBOX{% endblock %}
 
+{% block extra_css %}
+<style>
+    @media (max-width: 700px) {
+        .settings-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+        .settings-tabs button { flex-shrink: 0; font-size: 0.8rem !important; padding: 0.5rem 0.75rem !important; }
+        .settings-row { grid-template-columns: 1fr !important; gap: 0.75rem !important; }
+        .kb-stats-grid { grid-template-columns: 1fr !important; }
+        .kb-stats-grid > div { border-left: none !important; border-right: none !important; }
+        .cat-form-grid { grid-template-columns: 1fr !important; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="card" style="padding: 0; overflow: hidden;">
 
     <!-- Page Header + Tabs -->
     <div style="padding: 1.25rem 1.5rem 0; border-bottom: 2px solid #ecf0f1;">
-        <div style="font-size: 1.1rem; font-weight: 600; color: #2c3e50; margin-bottom: 1rem;">⚙️ Settings</div>
-        <div style="display: flex; gap: 0; margin-bottom: -2px;">
+        <div style="font-size: 1.1rem; font-weight: 600; color: #2c3e50; margin-bottom: 1rem;">Settings</div>
+        <div class="settings-tabs" style="display: flex; gap: 0; margin-bottom: -2px;">
             <button onclick="switchTab('priority')" id="tab-priority"
                     style="padding: 0.55rem 1.25rem; border: none; background: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid #3498db; color: #3498db;">
                 Priority Rules
@@ -41,7 +54,7 @@
             <div style="padding: 0 1.5rem;">
 
                 <!-- Program Name -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                <div class="settings-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
                     <div>
                         <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Program / Project Name</div>
                         <div style="font-size: 0.85rem; color: #888;">Shown in the navigation banner alongside INtelliBOX. Leave blank to hide.</div>
@@ -55,7 +68,7 @@
                 </div>
 
                 <!-- Default Priority -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                <div class="settings-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
                     <div>
                         <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Default Priority</div>
                         <div style="font-size: 0.85rem; color: #888;">Fallback for actions that don't match any rule below.</div>
@@ -70,7 +83,7 @@
                 </div>
 
                 <!-- Due Date Threshold -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                <div class="settings-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
                     <div>
                         <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Due Date Threshold</div>
                         <div style="font-size: 0.85rem; color: #888;">Escalate to <strong style="color: #e74c3c;">HIGH</strong> when due date is within this many days.</div>
@@ -84,7 +97,7 @@
                 </div>
 
                 <!-- High Priority Senders -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: start;">
+                <div class="settings-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: start;">
                     <div>
                         <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">High Priority Senders</div>
                         <div style="font-size: 0.85rem; color: #888; line-height: 1.6;">
@@ -98,7 +111,7 @@
                 </div>
 
                 <!-- High Priority Keywords -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: start;">
+                <div class="settings-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: start;">
                     <div>
                         <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">High Priority Keywords</div>
                         <div style="font-size: 0.85rem; color: #888; line-height: 1.6;">
@@ -112,7 +125,7 @@
                 </div>
 
                 <!-- Confidence Threshold -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                <div class="settings-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
                     <div>
                         <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Confidence Threshold</div>
                         <div style="font-size: 0.85rem; color: #888; line-height: 1.6;">
@@ -133,7 +146,7 @@
             </div>
 
                 <!-- Timezone -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                <div class="settings-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
                     <div>
                         <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.2rem;">Timezone</div>
                         <div style="font-size: 0.85rem; color: #888;">Used for timestamps in email reports.</div>
@@ -343,7 +356,7 @@
         <!-- Add Category Form (hidden by default) -->
         <div id="add-cat-form-panel" style="display: none; padding: 1rem 1.5rem; background: #f8f9fa; border-bottom: 1px solid #e1e8ed;">
             <form method="POST" action="/categories/add">
-                <div style="display: grid; grid-template-columns: 180px 1fr auto; gap: 0.75rem; align-items: end;">
+                <div class="cat-form-grid" style="display: grid; grid-template-columns: 180px 1fr auto; gap: 0.75rem; align-items: end;">
                     <div>
                         <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 0.3rem;">Name</label>
                         <input type="text" name="name" placeholder="e.g. RFI" required
@@ -484,7 +497,7 @@
         {% endif %}
 
         <!-- Summary Stats -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f0f0f0;">
+        <div class="kb-stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f0f0f0;">
             <div>
                 <div style="font-size: 1.75rem; font-weight: 700; color: #3498db;">{{ kb_documents|length }}</div>
                 <div style="font-size: 0.8rem; color: #888; margin-top: 0.2rem;">Documents</div>

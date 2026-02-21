@@ -2,6 +2,17 @@
 
 {% block title %}Actions - INtelliBOX{% endblock %}
 
+{% block extra_css %}
+<style>
+    @media (max-width: 700px) {
+        .actions-table .col-from,
+        .actions-table .col-received,
+        .actions-table .col-quick-assign { display: none !important; }
+        .actions-table th, .actions-table td { padding: 0.5rem; font-size: 0.85rem; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Search and Filters -->
 <div class="card" style="margin-bottom: 1.5rem;">
@@ -94,10 +105,10 @@
                 {{ action.email.subject[:60] }}{% if action.email.subject|length > 60 %}...{% endif %}
             </div>
         </td>
-        <td style="font-size: 0.9rem; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'" title="{{ action.email.from_address }}">
+        <td class="col-from" style="font-size: 0.9rem; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'" title="{{ action.email.from_address }}">
             {{ action.email.from_address.split('@')[0] if '@' in action.email.from_address else action.email.from_address }}
         </td>
-        <td style="font-size: 0.85rem; color: #666; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
+        <td class="col-received" style="font-size: 0.85rem; color: #666; cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
             {{ action.email.received_date.strftime('%b %d, %Y') if action.email.received_date else '—' }}
         </td>
         <td style="cursor: pointer;" onclick="window.location='/actions/{{ action.id }}'">
@@ -133,7 +144,7 @@
                 <span style="color: #999;">No date</span>
             {% endif %}
         </td>
-        <td onclick="event.stopPropagation();">
+        <td class="col-quick-assign" onclick="event.stopPropagation();">
             <form onsubmit="quickAssign(event, {{ action.id }})" style="display: flex; gap: 0.25rem;">
                 {% if roster %}
                 <select name="assigned_to"
@@ -159,11 +170,11 @@
         <tr>
             <th style="width: 90px;">Priority</th>
             <th>Title</th>
-            <th style="width: 150px;">From</th>
-            <th style="width: 110px;">Received</th>
+            <th class="col-from" style="width: 150px;">From</th>
+            <th class="col-received" style="width: 110px;">Received</th>
             <th style="width: 130px;">Assignee</th>
             <th style="width: 110px;">Due Date</th>
-            <th style="width: 180px;">Quick Assign</th>
+            <th class="col-quick-assign" style="width: 180px;">Quick Assign</th>
         </tr>
     </thead>
     {% endset %}
@@ -183,7 +194,8 @@
     <h3 style="font-size: 1rem; font-weight: 600; color: #333; margin: 1.5rem 0 0.5rem;">
         Open Actions <span style="font-weight: 400; color: #888;">({{ ns.active }})</span>
     </h3>
-    <table>
+    <div class="table-responsive">
+    <table class="actions-table">
         {{ thead }}
         <tbody>
             {% for action in actions %}
@@ -194,13 +206,15 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% endif %}
 
     {% if ns.done > 0 %}
     <h3 style="font-size: 1rem; font-weight: 600; color: #888; margin: 2rem 0 0.5rem;">
         Completed <span style="font-weight: 400;">({{ ns.done }})</span>
     </h3>
-    <table style="opacity: 0.75;">
+    <div class="table-responsive">
+    <table class="actions-table" style="opacity: 0.75;">
         {{ thead }}
         <tbody>
             {% for action in actions %}
@@ -211,6 +225,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% endif %}
 
     {% if not actions %}

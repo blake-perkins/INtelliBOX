@@ -2,6 +2,16 @@
 
 {% block title %}Analytics - INtelliBOX{% endblock %}
 
+{% block extra_css %}
+<style>
+    @media (max-width: 700px) {
+        .analytics-stats { grid-template-columns: 1fr !important; }
+        .analytics-stats > div { border-left: none !important; border-right: none !important; }
+        .analytics-two-col { grid-template-columns: 1fr !important; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="card-header" style="font-size: 1.75rem; margin-bottom: 1.5rem;">
     System Analytics
@@ -14,7 +24,7 @@
         <span style="font-weight: 400; color: #999; font-size: 0.8rem;">all time</span>
     </div>
     <div style="padding: 0 1.5rem 1.25rem;">
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+        <div class="analytics-stats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
             <div style="padding: 0.75rem 0;">
                 <div style="font-size: 2rem; font-weight: 700; color: #3498db; line-height: 1;">{{ total_emails }}</div>
                 <div style="font-size: 0.8rem; color: #888; margin-top: 0.3rem;">Emails Ingested</div>
@@ -108,7 +118,7 @@
 </div>
 
 <!-- Two-column: Categories + Team -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+<div class="analytics-two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
     <!-- Top Categories -->
     <div class="card">
         <div class="card-header">Top Categories <span style="font-weight: 400; color: #999; font-size: 0.8rem; margin-left: 0.5rem;">all time</span></div>
