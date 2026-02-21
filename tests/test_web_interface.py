@@ -757,5 +757,275 @@ class TestAssignmentStatusTransitions:
         assert response.status_code == 400
 
 
+class TestReprocessEmail:
+    """Test the re-process email feature."""
+
+    def test_reprocess_form_loads(self, setup_database):
+        """GET /emails/{id}/reprocess should render the form."""
+        response = client.get("/emails/1/reprocess")
+        assert response.status_code == 200
+        assert b"Re-process with AI" in response.content
+        assert b"Analyze" in response.content
+
+    def test_reprocess_form_404(self, setup_database):
+        """GET /emails/999/reprocess should return 404."""
+        response = client.get("/emails/999/reprocess")
+        assert response.status_code == 404
+
+    def test_reprocess_preview_renders(self, setup_database):
+        """POST /emails/{id}/reprocess should show preview with action sections."""
+        response = client.post(
+            "/emails/1/reprocess",
+            data={"context_notes": ""},
+            follow_redirects=False,
+        )
+        assert response.status_code == 200
+        assert b"Re-process Preview" in response.content
+        assert b"Accept" in response.content
+
+    def test_reprocess_confirm_replaces_unassigned(self, setup_database):
+        """POST confirm should delete unassigned actions and create new ones."""
+        # Email 1 has action1 (assigned) and action4 (unassigned)
+        # First get a preview to obtain action_dicts
+        preview_response = client.post(
+            "/emails/1/reprocess",
+            data={"context_notes": ""},
+        )
+        assert preview_response.status_code == 200
+
+        # Extract hidden form values from the preview page
+        import re
+        html = preview_response.text
+        action_dicts_match = re.search(
+            r'name="action_dicts_json"\s+value="([^"]*)"', html
+        )
+        raw_response_match = re.search(
+            r'name="raw_response"\s+value="([^"]*)"', html
+        )
+        assert action_dicts_match is not None
+        assert raw_response_match is not None
+
+        import html as html_mod
+        action_dicts_val = html_mod.unescape(action_dicts_match.group(1))
+        raw_response_val = html_mod.unescape(raw_response_match.group(1))
+
+        # Submit the confirm
+        confirm_response = client.post(
+            "/emails/1/reprocess/confirm",
+            data={
+                "action_dicts_json": action_dicts_val,
+                "raw_response": raw_response_val,
+                "kb_data_json": "",
+            },
+            follow_redirects=False,
+        )
+        assert confirm_response.status_code == 303
+
+        # Verify: action1 (assigned) should still exist, action4 (unassigned) should be gone
+        with override_get_session() as session:
+            from intellibox.models import AuditLog
+            remaining = session.query(Action).filter_by(email_id=1).all()
+            # action1 was assigned so it's preserved; new AI actions added
+            assigned_remaining = [a for a in remaining if a.assignments]
+            assert len(assigned_remaining) >= 1
+            assert assigned_remaining[0].title == "Provide budget data"
+
+    def test_reprocess_preserves_assigned_actions(self, setup_database):
+        """Assigned actions must survive reprocessing."""
+        # action1 is assigned to john@example.com
+        preview_response = client.post(
+            "/emails/1/reprocess",
+            data={"context_notes": ""},
+        )
+        assert preview_response.status_code == 200
+        # The preview should show preserved actions
+        assert b"Preserved Actions" in preview_response.content
+        assert b"john@example.com" in preview_response.content
+
+    def test_reprocess_confirm_audit_logged(self, setup_database):
+        """Reprocessing should create an audit log entry."""
+        preview_response = client.post(
+            "/emails/1/reprocess",
+            data={"context_notes": ""},
+        )
+        import re, html as html_mod
+        html = preview_response.text
+        action_dicts_val = html_mod.unescape(
+            re.search(r'name="action_dicts_json"\s+value="([^"]*)"', html).group(1)
+        )
+        raw_response_val = html_mod.unescape(
+            re.search(r'name="raw_response"\s+value="([^"]*)"', html).group(1)
+        )
+
+        client.post(
+            "/emails/1/reprocess/confirm",
+            data={
+                "action_dicts_json": action_dicts_val,
+                "raw_response": raw_response_val,
+                "kb_data_json": "",
+            },
+            follow_redirects=False,
+        )
+
+        with override_get_session() as session:
+            from intellibox.models import AuditLog
+            entry = session.query(AuditLog).filter_by(action="reprocess").first()
+            assert entry is not None
+            assert entry.resource_type == "email"
+            assert entry.resource_id == 1
+
+    def test_reprocess_add_to_kb(self, setup_database):
+        """Reprocessing with KB data should create a KnowledgeDocument."""
+        import json
+        kb_data = json.dumps({
+            "filename": "context.txt",
+            "file_type": "txt",
+            "file_size": 42,
+            "extracted_text": "Some context text",
+            "extraction_status": "success",
+        })
+
+        preview_response = client.post(
+            "/emails/1/reprocess",
+            data={"context_notes": ""},
+        )
+        import re, html as html_mod
+        html = preview_response.text
+        action_dicts_val = html_mod.unescape(
+            re.search(r'name="action_dicts_json"\s+value="([^"]*)"', html).group(1)
+        )
+        raw_response_val = html_mod.unescape(
+            re.search(r'name="raw_response"\s+value="([^"]*)"', html).group(1)
+        )
+
+        client.post(
+            "/emails/1/reprocess/confirm",
+            data={
+                "action_dicts_json": action_dicts_val,
+                "raw_response": raw_response_val,
+                "kb_data_json": kb_data,
+            },
+            follow_redirects=False,
+        )
+
+        with override_get_session() as session:
+            from intellibox.models import KnowledgeDocument
+            doc = session.query(KnowledgeDocument).filter_by(filename="context.txt").first()
+            assert doc is not None
+            assert doc.extracted_text == "Some context text"
+            assert doc.extraction_status == "success"
+
+
+    def test_reprocess_form_shows_kb_docs(self, setup_database):
+        """Reprocess form should list KB documents with checkboxes."""
+        from intellibox.models import KnowledgeDocument
+
+        with override_get_session() as session:
+            doc = KnowledgeDocument(
+                filename="requirements.pdf",
+                file_type="pdf",
+                file_size=1024,
+                description="Project requirements",
+                extracted_text="Requirements text",
+                extraction_status="success",
+            )
+            session.add(doc)
+            session.commit()
+            doc_id = doc.id
+
+        response = client.get("/emails/1/reprocess")
+        assert response.status_code == 200
+        assert b"requirements.pdf" in response.content
+        assert b"kb_doc_ids" in response.content
+        assert b"Select documents" in response.content
+
+    def test_reprocess_form_shows_email_body(self, setup_database):
+        """Reprocess form should include a collapsible email content section."""
+        response = client.get("/emails/1/reprocess")
+        assert response.status_code == 200
+        assert b"Email Content" in response.content
+        assert b"click to expand" in response.content
+        # Email body text should be in the hidden section
+        assert b"budget data" in response.content
+
+    def test_reprocess_preview_with_kb_doc_ids(self, setup_database):
+        """POST reprocess with kb_doc_ids should include KB text in AI context."""
+        from intellibox.models import KnowledgeDocument
+
+        with override_get_session() as session:
+            doc = KnowledgeDocument(
+                filename="release_notes.txt",
+                file_type="txt",
+                file_size=512,
+                description="Release notes",
+                extracted_text="Version 2.0 release notes content",
+                extraction_status="success",
+            )
+            session.add(doc)
+            session.commit()
+            doc_id = doc.id
+
+        response = client.post(
+            "/emails/1/reprocess",
+            data={"context_notes": "", "kb_doc_ids": [doc_id]},
+            follow_redirects=False,
+        )
+        assert response.status_code == 200
+        assert b"Re-process Preview" in response.content
+
+    def test_reprocess_add_to_kb_list_format(self, setup_database):
+        """Confirm with a list of KB data items should create multiple docs."""
+        import json
+
+        kb_data = json.dumps([
+            {
+                "filename": "doc1.txt",
+                "file_type": "txt",
+                "file_size": 100,
+                "extracted_text": "First document",
+                "extraction_status": "success",
+            },
+            {
+                "filename": "doc2.txt",
+                "file_type": "txt",
+                "file_size": 200,
+                "extracted_text": "Second document",
+                "extraction_status": "success",
+            },
+        ])
+
+        preview_response = client.post(
+            "/emails/1/reprocess",
+            data={"context_notes": ""},
+        )
+        import re, html as html_mod
+        html = preview_response.text
+        action_dicts_val = html_mod.unescape(
+            re.search(r'name="action_dicts_json"\s+value="([^"]*)"', html).group(1)
+        )
+        raw_response_val = html_mod.unescape(
+            re.search(r'name="raw_response"\s+value="([^"]*)"', html).group(1)
+        )
+
+        client.post(
+            "/emails/1/reprocess/confirm",
+            data={
+                "action_dicts_json": action_dicts_val,
+                "raw_response": raw_response_val,
+                "kb_data_json": kb_data,
+            },
+            follow_redirects=False,
+        )
+
+        with override_get_session() as session:
+            from intellibox.models import KnowledgeDocument
+            doc1 = session.query(KnowledgeDocument).filter_by(filename="doc1.txt").first()
+            doc2 = session.query(KnowledgeDocument).filter_by(filename="doc2.txt").first()
+            assert doc1 is not None
+            assert doc2 is not None
+            assert doc1.extracted_text == "First document"
+            assert doc2.extracted_text == "Second document"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

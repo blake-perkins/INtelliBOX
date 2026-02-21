@@ -143,8 +143,6 @@
                     </div>
                 </div>
 
-            </div>
-
                 <!-- Timezone -->
                 <div class="settings-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
                     <div>
@@ -170,6 +168,8 @@
                         </select>
                     </div>
                 </div>
+
+            </div>
 
             <!-- Save Bar -->
             <div style="padding: 1rem 1.5rem; background: #f8f9fa; border-top: 1px solid #ecf0f1; display: flex; align-items: center; gap: 1rem;">
@@ -514,21 +514,29 @@
 
         <!-- Upload Form -->
         <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #f0f0f0; background: #f8f9fa;">
-            <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.6rem; font-size: 0.9rem;">Upload Document
-                <span style="font-weight: 400; color: #999; font-size: 0.8rem; margin-left: 0.5rem;">PDF, DOCX, or TXT &middot; max 10 MB</span>
+            <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.6rem; font-size: 0.9rem;">Upload Documents
+                <span style="font-weight: 400; color: #999; font-size: 0.8rem; margin-left: 0.5rem;">PDF, DOCX, TXT, MD, CSV, and more &middot; max 10 MB each</span>
             </div>
-            <form method="POST" action="/knowledge-base/upload" enctype="multipart/form-data">
-                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                    <div style="flex: 0 0 auto;">
-                        <input type="file" name="file" accept=".pdf,.docx,.txt" required style="font-size: 0.875rem;">
-                    </div>
-                    <div style="flex: 1; min-width: 200px;">
-                        <input type="text" name="description" placeholder="e.g. SOW v2.1, CDR slides, test plan"
-                               style="width: 100%; padding: 0.45rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem;">
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">Upload</button>
+            <div id="kb-drop-zone"
+                 style="border: 2px dashed #ccc; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 0.75rem;"
+                 onclick="document.getElementById('kb-file-input').click()">
+                <div style="font-size: 1.25rem; margin-bottom: 0.3rem; color: #999;">📄</div>
+                <div style="font-weight: 600; color: #555; font-size: 0.9rem;">Drag &amp; drop files here</div>
+                <div style="font-size: 0.8rem; color: #999;">or click to browse &middot; multiple files OK</div>
+            </div>
+            <input type="file" id="kb-file-input" accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.xml,.rtf,.log" multiple style="display: none;" onchange="handleKbFiles(this.files)">
+            <div id="kb-file-list" style="display: none; margin-bottom: 0.75rem;">
+                <div style="font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 0.5rem;">Selected files:</div>
+                <ul id="kb-file-names" style="margin: 0; padding-left: 1.5rem; font-size: 0.85rem; color: #666;"></ul>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <input type="text" id="kb-description" placeholder="e.g. SOW v2.1, CDR slides, test plan"
+                           style="width: 100%; padding: 0.45rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem;">
                 </div>
-            </form>
+                <button onclick="uploadKbFiles()" id="kb-upload-btn" class="btn btn-primary" style="padding: 0.5rem 1.25rem;" disabled>Upload</button>
+                <button onclick="clearKbFiles()" class="btn" style="background: #95a5a6; color: white; padding: 0.5rem 1rem; display: none;" id="kb-clear-btn">Clear</button>
+            </div>
         </div>
 
         <!-- Document List -->
@@ -589,7 +597,7 @@
         <div style="text-align: center; padding: 3rem; color: #bbb;">
             <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">&#x1F4DA;</div>
             <div style="font-size: 0.95rem; color: #999; margin-bottom: 0.25rem;">No documents uploaded yet.</div>
-            <div style="font-size: 0.85rem;">Upload PDF, DOCX, or TXT files to build context for AI insights.</div>
+            <div style="font-size: 0.85rem;">Upload documents (PDF, DOCX, TXT, MD, CSV, and more) to build context for AI insights.</div>
         </div>
         {% endif %}
 
@@ -691,6 +699,106 @@
         }, 3000);
         {% endif %}
     })();
+
+    // ── KB drag-and-drop + multi-file upload ──
+    var kbFiles = [];
+    var kbDrop = document.getElementById('kb-drop-zone');
+    if (kbDrop) {
+        ['dragenter', 'dragover'].forEach(function(evt) {
+            kbDrop.addEventListener(evt, function(e) {
+                e.preventDefault();
+                kbDrop.style.borderColor = '#3498db';
+                kbDrop.style.background = '#f0f7ff';
+            });
+        });
+        ['dragleave', 'drop'].forEach(function(evt) {
+            kbDrop.addEventListener(evt, function(e) {
+                e.preventDefault();
+                kbDrop.style.borderColor = '#ccc';
+                kbDrop.style.background = '';
+            });
+        });
+        kbDrop.addEventListener('drop', function(e) {
+            handleKbFiles(e.dataTransfer.files);
+        });
+    }
+
+    function handleKbFiles(fileList) {
+        kbFiles = [];
+        var list = document.getElementById('kb-file-names');
+        list.innerHTML = '';
+        var validExts = ['.pdf', '.docx', '.txt', '.md', '.csv', '.json', '.html', '.xml', '.rtf', '.log'];
+        for (var i = 0; i < fileList.length; i++) {
+            var f = fileList[i];
+            var ext = '.' + f.name.split('.').pop().toLowerCase();
+            if (validExts.indexOf(ext) === -1) continue;
+            kbFiles.push(f);
+            var li = document.createElement('li');
+            li.textContent = f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)';
+            list.appendChild(li);
+        }
+        var hasFiles = kbFiles.length > 0;
+        document.getElementById('kb-file-list').style.display = hasFiles ? 'block' : 'none';
+        document.getElementById('kb-upload-btn').disabled = !hasFiles;
+        document.getElementById('kb-clear-btn').style.display = hasFiles ? 'inline-block' : 'none';
+        if (!hasFiles && fileList.length > 0) {
+            alert('No valid files selected. Supported: PDF, DOCX, TXT, MD, CSV, JSON, HTML, XML, RTF, LOG.');
+        }
+    }
+
+    function clearKbFiles() {
+        kbFiles = [];
+        document.getElementById('kb-file-names').innerHTML = '';
+        document.getElementById('kb-file-list').style.display = 'none';
+        document.getElementById('kb-upload-btn').disabled = true;
+        document.getElementById('kb-clear-btn').style.display = 'none';
+        document.getElementById('kb-file-input').value = '';
+    }
+
+    function uploadKbFiles() {
+        if (kbFiles.length === 0) return;
+        var btn = document.getElementById('kb-upload-btn');
+        btn.disabled = true;
+        btn.textContent = 'Uploading...';
+        var desc = document.getElementById('kb-description').value;
+        var uploaded = 0;
+        var errors = [];
+
+        function next(i) {
+            if (i >= kbFiles.length) {
+                if (errors.length > 0) {
+                    window.location = '/settings?tab=kb&kb_error=' + encodeURIComponent(errors.join('; '));
+                } else {
+                    window.location = '/settings?tab=kb&kb_success=' + uploaded;
+                }
+                return;
+            }
+            var form = new FormData();
+            form.append('file', kbFiles[i]);
+            form.append('description', desc);
+            fetch('/knowledge-base/upload', { method: 'POST', body: form, redirect: 'follow' })
+                .then(function(resp) {
+                    if (resp.redirected) {
+                        var url = new URL(resp.url);
+                        if (url.searchParams.get('kb_error')) {
+                            errors.push(kbFiles[i].name + ': ' + url.searchParams.get('kb_error'));
+                        } else if (url.searchParams.get('kb_warning')) {
+                            errors.push(kbFiles[i].name + ': ' + url.searchParams.get('kb_warning'));
+                        } else {
+                            uploaded++;
+                        }
+                    } else {
+                        uploaded++;
+                    }
+                    next(i + 1);
+                })
+                .catch(function() {
+                    errors.push(kbFiles[i].name + ': upload failed');
+                    next(i + 1);
+                });
+        }
+        next(0);
+    }
 </script>
 
 {% endblock %}

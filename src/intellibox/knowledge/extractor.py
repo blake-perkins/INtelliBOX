@@ -9,14 +9,15 @@ def extract_text(content: bytes, file_type: str) -> Tuple[str, str]:
 
     Args:
         content: Raw file bytes
-        file_type: One of 'pdf', 'docx', 'txt'
+        file_type: One of 'pdf', 'docx', 'txt', 'md', 'csv', 'json',
+                   'html', 'xml', 'rtf', 'log'
 
     Returns:
         Tuple of (extracted_text, status) where status is
         'success', 'partial', or 'failed'
     """
     try:
-        if file_type == "txt":
+        if file_type in ("txt", "md", "csv", "json", "html", "xml", "rtf", "log"):
             return _extract_txt(content)
         elif file_type == "pdf":
             return _extract_pdf(content)

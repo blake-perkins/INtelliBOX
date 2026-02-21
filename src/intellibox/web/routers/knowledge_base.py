@@ -10,7 +10,11 @@ from intellibox.web.deps import get_session, templates
 
 router = APIRouter()
 
-ALLOWED_KB_EXTENSIONS = {".pdf": "pdf", ".docx": "docx", ".txt": "txt"}
+ALLOWED_KB_EXTENSIONS = {
+    ".pdf": "pdf", ".docx": "docx", ".txt": "txt",
+    ".md": "md", ".csv": "csv", ".json": "json",
+    ".html": "html", ".xml": "xml", ".rtf": "rtf", ".log": "log",
+}
 MAX_KB_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
@@ -32,7 +36,7 @@ async def upload_knowledge_doc(
     ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext not in ALLOWED_KB_EXTENSIONS:
         return RedirectResponse(
-            "/settings?tab=kb&kb_error=Unsupported+file+type.+Please+upload+PDF,+DOCX,+or+TXT",
+            "/settings?tab=kb&kb_error=Unsupported+file+type.+Please+upload+a+supported+format+(PDF,+DOCX,+TXT,+MD,+CSV,+JSON,+HTML,+XML,+RTF,+LOG)",
             status_code=303,
         )
 

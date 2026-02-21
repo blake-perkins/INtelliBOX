@@ -126,7 +126,8 @@ class AIClient:
     def extract_actions(
         self,
         email: Email,
-        current_date: Optional[datetime] = None
+        current_date: Optional[datetime] = None,
+        additional_context: Optional[str] = None,
     ) -> tuple[List[Dict], str]:
         """
         Extract action items from an email using GPT-4.
@@ -134,6 +135,7 @@ class AIClient:
         Args:
             email: Email object to analyze
             current_date: Current date for deadline extraction (defaults to now)
+            additional_context: Optional extra context to append to the email body
 
         Returns:
             Tuple of (list of action dicts, raw AI response)
@@ -148,6 +150,8 @@ class AIClient:
         from intellibox.ingestion.chain_stripper import strip_quoted_text
         body = email.body_text or email.body_html or "(No body content)"
         body = strip_quoted_text(body)
+        if additional_context:
+            body = body + "\n\n--- Additional Context Provided ---\n" + additional_context
 
         # Format the prompt with dynamic categories
         ai_config = SettingsService.get_ai_config()

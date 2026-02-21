@@ -58,13 +58,13 @@
 <div class="card" style="margin-bottom: 1.5rem;">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
         Upload Document
-        <span style="font-weight: 400; color: #999; font-size: 0.8rem;">PDF, DOCX, or TXT &middot; max 10 MB</span>
+        <span style="font-weight: 400; color: #999; font-size: 0.8rem;">PDF, DOCX, TXT, MD, CSV, and more &middot; max 10 MB</span>
     </div>
     <form method="POST" action="/knowledge-base/upload" enctype="multipart/form-data" style="padding: 1.25rem 1.5rem;">
         <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
             <div style="flex: 0 0 auto;">
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 0.3rem;">File</label>
-                <input type="file" name="file" accept=".pdf,.docx,.txt" required
+                <input type="file" name="file" accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.xml,.rtf,.log" required
                        style="font-size: 0.875rem;">
             </div>
             <div style="flex: 1; min-width: 200px;">
@@ -142,7 +142,7 @@
     <div style="text-align: center; padding: 3rem; color: #bbb;">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">&#x1F4DA;</div>
         <div style="font-size: 0.95rem; color: #999; margin-bottom: 0.25rem;">No documents uploaded yet.</div>
-        <div style="font-size: 0.85rem;">Upload PDF, DOCX, or TXT files to build context for AI insights.</div>
+        <div style="font-size: 0.85rem;">Upload documents (PDF, DOCX, TXT, MD, CSV, and more) to build context for AI insights.</div>
     </div>
     {% endif %}
 </div>

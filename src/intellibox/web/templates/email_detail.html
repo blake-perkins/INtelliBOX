@@ -7,6 +7,18 @@
     <a href="/emails" style="color: #3498db; text-decoration: none; font-weight: 600;">&larr; Back to Emails</a>
 </div>
 
+<!-- Reprocess Flash Banners -->
+{% if request.query_params.get('reprocessed') %}
+<div style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem;">
+    Re-processed successfully. {{ request.query_params.get('reprocessed') }} action(s) extracted.
+</div>
+{% endif %}
+{% if request.query_params.get('reprocess_warning') == 'no_actions' %}
+<div style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem;">
+    Re-processed but no actions were extracted by the AI.
+</div>
+{% endif %}
+
 <!-- Email Header -->
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap;">
@@ -39,6 +51,16 @@
                 </span>
                 {% endif %}
             </div>
+
+            {% if request.state.user and request.state.user.role == 'admin' %}
+            <div style="margin-top: 0.75rem;">
+                <a href="/emails/{{ email.id }}/reprocess" style="display: inline-flex; align-items: center; gap: 0.4rem; border: 2px solid #8e44ad; color: #8e44ad; padding: 0.45rem 1rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none; transition: all 0.15s;"
+                   onmouseover="this.style.background='#8e44ad';this.style.color='white'"
+                   onmouseout="this.style.background='';this.style.color='#8e44ad'">
+                    &#x2728; {% if email.processed %}Re-process with AI{% else %}Process with AI{% endif %}
+                </a>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Actions Summary Card -->
@@ -62,6 +84,9 @@
     <!-- Email Metadata -->
     <div style="margin-top: 1.5rem; padding: 1.25rem; background: #f8f9fa; border-radius: 8px;">
         <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.75rem 1.5rem;">
+            <div style="color: #666; font-weight: 600; font-size: 0.9rem;">Subject:</div>
+            <div style="font-size: 0.95rem; font-weight: 600;">{{ email.subject }}</div>
+
             <div style="color: #666; font-weight: 600; font-size: 0.9rem;">From:</div>
             <div style="font-size: 0.95rem;">
                 {{ email.from_address }}

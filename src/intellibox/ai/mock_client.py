@@ -23,7 +23,8 @@ class MockAIClient:
     def extract_actions(
         self,
         email: Email,
-        current_date: datetime = None
+        current_date: datetime = None,
+        additional_context: str = None,
     ) -> Tuple[List[Dict], str]:
         """
         Simulate GPT-4 action extraction with rule-based logic.
@@ -31,6 +32,8 @@ class MockAIClient:
         Args:
             email: Email object to analyze
             current_date: Current date for deadline extraction
+            additional_context: Optional extra context (accepted for interface
+                parity with the real client, but not used by the mock)
 
         Returns:
             Tuple of (list of action dicts, simulated raw response)

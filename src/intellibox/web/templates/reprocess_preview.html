@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Re-process Preview - INtelliBOX{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="/emails/{{ email.id }}" style="color: #3498db; text-decoration: none; font-weight: 600;">&larr; Back to Email</a>
+</div>
+
+<h2 style="font-size: 1.3rem; color: #2c3e50; margin-bottom: 0.5rem;">Re-process Preview</h2>
+<p style="font-size: 0.9rem; color: #666; margin-bottom: 1.5rem;">{{ email.subject }}</p>
+
+<!-- Email Content (collapsible) -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #f0f4f8; transition: background 0.15s;"
+         onmouseover="this.style.background='#e3eaf2'" onmouseout="this.style.background='#f0f4f8'"
+         onclick="var el=document.getElementById('email-body-section');var arr=this.querySelector('.toggle-arrow');var hint=this.querySelector('.expand-hint');if(el.style.display==='none'){el.style.display='block';arr.textContent='▾';if(hint)hint.style.display='none'}else{el.style.display='none';arr.textContent='▸';if(hint)hint.style.display=''}">
+        <span>Email Content <span class="expand-hint" style="font-weight: 400; font-size: 0.8rem; color: #999;">(click to expand)</span></span>
+        <span class="toggle-arrow" style="font-size: 1rem; color: #3498db; font-weight: 700;">▸</span>
+    </div>
+    <div id="email-body-section" style="display: none;">
+        <div style="padding: 1rem; background: #f8f9fa; white-space: pre-wrap; font-family: 'Courier New', monospace; line-height: 1.6; font-size: 0.85rem; max-height: 400px; overflow-y: auto; border-top: 1px solid #eee;">{{ email.body_text or 'No text body available' }}</div>
+    </div>
+</div>
+
+<!-- Knowledge Base Documents -->
+{% if kb_docs %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #f0f4f8; transition: background 0.15s;"
+         onmouseover="this.style.background='#e3eaf2'" onmouseout="this.style.background='#f0f4f8'"
+         onclick="var el=document.getElementById('kb-docs-section');var arr=this.querySelector('.toggle-arrow');var hint=this.querySelector('.expand-hint');if(el.style.display==='none'){el.style.display='block';arr.textContent='▾';if(hint)hint.style.display='none'}else{el.style.display='none';arr.textContent='▸';if(hint)hint.style.display=''}">
+        <span>Knowledge Base ({{ kb_docs|length }} document{{ 's' if kb_docs|length != 1 else '' }}) <span class="expand-hint" style="font-weight: 400; font-size: 0.8rem; color: #999;">(click to expand)</span></span>
+        <span class="toggle-arrow" style="font-size: 1rem; color: #3498db; font-weight: 700;">▸</span>
+    </div>
+    <div id="kb-docs-section" style="display: none; border-top: 1px solid #eee;">
+        <div style="padding: 0.75rem 1rem; font-size: 0.8rem; color: #888; background: #f8f9fa;">
+            These documents are already available as context for all AI processing.
+        </div>
+        {% for doc in kb_docs %}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem;">
+            <div>
+                <a href="/knowledge-base/{{ doc.id }}" style="color: #3498db; text-decoration: none; font-weight: 600;">{{ doc.filename }}</a>
+                {% if doc.description %}
+                <span style="color: #999; margin-left: 0.5rem;">— {{ doc.description }}</span>
+                {% endif %}
+            </div>
+            <div style="color: #999; font-size: 0.8rem; white-space: nowrap;">
+                {{ doc.file_type|upper }} &middot; {{ (doc.file_size / 1024)|int }} KB
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Preserved Actions -->
+{% if preserved_actions %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #27ae60;">
+    <div class="card-header" style="font-weight: 600; color: #27ae60;">
+        Preserved Actions ({{ preserved_actions|length }})
+        <span style="font-weight: 400; font-size: 0.85rem; color: #666; margin-left: 0.5rem;">These have assignments and will not be changed</span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 90px;">Priority</th>
+                <th>Title</th>
+                <th style="width: 150px;">Assignee</th>
+                <th style="width: 100px;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for action in preserved_actions %}
+            {% set assignment = action.assignments[0] if action.assignments else None %}
+            <tr style="opacity: 0.7;">
+                <td><span class="badge badge-{{ action.priority }}">{{ action.priority }}</span></td>
+                <td>{{ action.title }}</td>
+                <td>{{ assignment.assigned_to if assignment else '' }}</td>
+                <td>
+                    {% if assignment %}
+                        {% if assignment.status == 'completed' %}
+                            <span style="color: #27ae60; font-weight: 600;">Done</span>
+                        {% elif assignment.status == 'in_progress' %}
+                            <span style="color: #8e44ad; font-weight: 600;">In Progress</span>
+                        {% else %}
+                            <span style="color: #3498db; font-weight: 600;">Assigned</span>
+                        {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Actions Being Replaced -->
+{% if replaceable_actions %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #e74c3c;">
+    <div class="card-header" style="font-weight: 600; color: #e74c3c;">
+        Actions Being Replaced ({{ replaceable_actions|length }})
+        <span style="font-weight: 400; font-size: 0.85rem; color: #666; margin-left: 0.5rem;">These unassigned actions will be removed</span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 90px;">Priority</th>
+                <th>Title</th>
+                <th style="width: 120px;">Category</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for action in replaceable_actions %}
+            <tr style="text-decoration: line-through; opacity: 0.6;">
+                <td><span class="badge badge-{{ action.priority }}">{{ action.priority }}</span></td>
+                <td>{{ action.title }}</td>
+                <td style="font-size: 0.85rem; color: #666;">{{ action.category or '--' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- New AI Suggestions -->
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #3498db;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <span style="font-weight: 600; color: #3498db;">New AI Suggestions ({{ new_actions|length }})</span>
+            <span style="font-weight: 400; font-size: 0.85rem; color: #666; margin-left: 0.5rem;">Check the ones you want to keep</span>
+        </div>
+        {% if new_actions %}
+        <label style="font-size: 0.85rem; color: #555; cursor: pointer; display: flex; align-items: center; gap: 0.4rem;">
+            <input type="checkbox" id="select-all" checked onchange="toggleAll(this.checked)">
+            Select All
+        </label>
+        {% endif %}
+    </div>
+    {% if new_actions %}
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 40px;"></th>
+                <th style="width: 90px;">Priority</th>
+                <th>Title</th>
+                <th style="width: 120px;">Category</th>
+                <th style="width: 100px;">Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for action in new_actions %}
+            <tr>
+                <td style="text-align: center;">
+                    <input type="checkbox" class="action-check" data-index="{{ loop.index0 }}" checked
+                           onchange="updateSelected()">
+                </td>
+                <td><span class="badge badge-{{ action.priority }}">{{ action.priority }}</span></td>
+                <td>
+                    <div style="font-weight: 600;">{{ action.title }}</div>
+                    {% if action.description %}
+                    <div style="font-size: 0.85rem; color: #666;">{{ action.description[:100] }}{% if action.description|length > 100 %}...{% endif %}</div>
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.85rem; color: #666;">{{ action.category or '--' }}</td>
+                <td>
+                    {% if action.confidence_score %}
+                    <span style="font-size: 0.85rem; color: {% if action.confidence_score >= 0.8 %}#27ae60{% elif action.confidence_score >= 0.6 %}#f39c12{% else %}#e74c3c{% endif %}; font-weight: 600;">
+                        {{ (action.confidence_score * 100)|int }}%
+                    </span>
+                    {% else %}
+                    <span style="color: #999;">--</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 2rem; color: #999;">
+        <p>No actions were extracted by the AI.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Confirm / Cancel -->
+<div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 2rem;">
+    <form id="confirm-form" method="post" action="/emails/{{ email.id }}/reprocess/confirm" onsubmit="return prepareSubmit()">
+        <input type="hidden" id="action-dicts-field" name="action_dicts_json" value="{{ action_dicts_json|e }}">
+        <input type="hidden" name="raw_response" value="{{ raw_response|e }}">
+        <input type="hidden" name="kb_data_json" value="{{ kb_data_json|e }}">
+        <button type="submit" id="accept-btn" class="btn btn-primary" style="background: #e74c3c;">
+            Accept &amp; Replace (<span id="selected-count">{{ new_actions|length }}</span> selected)
+        </button>
+    </form>
+    <a href="/emails/{{ email.id }}" class="btn" style="background: #95a5a6; color: white;">Cancel</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var allActionDicts = {{ action_dicts_json | safe }};
+
+function toggleAll(checked) {
+    document.querySelectorAll('.action-check').forEach(function(cb) {
+        cb.checked = checked;
+    });
+    updateSelected();
+}
+
+function updateSelected() {
+    var checks = document.querySelectorAll('.action-check');
+    var count = 0;
+    checks.forEach(function(cb) { if (cb.checked) count++; });
+    document.getElementById('selected-count').textContent = count;
+
+    var btn = document.getElementById('accept-btn');
+    btn.disabled = count === 0;
+    btn.style.opacity = count === 0 ? '0.5' : '1';
+
+    var selectAll = document.getElementById('select-all');
+    if (selectAll) {
+        selectAll.checked = count === checks.length;
+        selectAll.indeterminate = count > 0 && count < checks.length;
+    }
+}
+
+function prepareSubmit() {
+    var selected = [];
+    document.querySelectorAll('.action-check').forEach(function(cb) {
+        if (cb.checked) {
+            selected.push(allActionDicts[parseInt(cb.dataset.index)]);
+        }
+    });
+    if (selected.length === 0) return false;
+    document.getElementById('action-dicts-field').value = JSON.stringify(selected);
+    return true;
+}
+</script>
+{% endblock %}

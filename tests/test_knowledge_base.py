@@ -748,3 +748,12 @@ class TestTextExtractor:
         text, status = extract_text(content, "txt")
         assert "Hello" in text
         assert status == "success"
+
+    @pytest.mark.parametrize("file_type", ["md", "csv", "json", "html", "xml", "rtf", "log"])
+    def test_extract_text_based_formats(self, file_type):
+        """All text-based formats should extract via the txt handler."""
+        from intellibox.knowledge.extractor import extract_text
+        content = f"Sample {file_type} content".encode("utf-8")
+        text, status = extract_text(content, file_type)
+        assert f"Sample {file_type} content" in text
+        assert status == "success"

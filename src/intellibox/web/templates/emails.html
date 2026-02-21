@@ -17,7 +17,7 @@
 <!-- Upload Success/Error Banner -->
 {% if request.query_params.get('uploaded') %}
 <div style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem;">
-    Email file uploaded. It will be processed within a few seconds.
+    {{ request.query_params.get('uploaded') }} email file(s) uploaded. They will be processed within a few seconds.
 </div>
 {% endif %}
 {% if request.query_params.get('upload_error') %}
@@ -28,12 +28,26 @@
 
 <!-- Upload Email -->
 <div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-header" style="font-weight: 600;">Upload Email</div>
-    <form method="post" action="/emails/upload" enctype="multipart/form-data" style="padding: 1rem; display: flex; gap: 1rem; align-items: center;">
-        <input type="file" name="file" accept=".eml,.msg" required
-               style="flex: 1; padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
-        <button type="submit" class="btn btn-primary">Upload</button>
-    </form>
+    <div class="card-header" style="font-weight: 600;">Upload Emails</div>
+    <div style="padding: 1rem;">
+        <div id="email-drop-zone"
+             style="border: 2px dashed #ccc; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s;"
+             onclick="document.getElementById('email-file-input').click()">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #999;">📧</div>
+            <div style="font-weight: 600; color: #555; margin-bottom: 0.25rem;">Drag &amp; drop .eml or .msg files here</div>
+            <div style="font-size: 0.85rem; color: #999;">or click to browse &middot; multiple files OK &middot; max 25 MB each</div>
+        </div>
+        <input type="file" id="email-file-input" accept=".eml,.msg" multiple
+               style="display: none;" onchange="handleEmailFiles(this.files)">
+        <div id="email-file-list" style="margin-top: 0.75rem; display: none;">
+            <div style="font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 0.5rem;">Selected files:</div>
+            <ul id="email-file-names" style="margin: 0; padding-left: 1.5rem; font-size: 0.85rem; color: #666;"></ul>
+            <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                <button onclick="uploadEmailFiles()" class="btn btn-primary" id="email-upload-btn">Upload</button>
+                <button onclick="clearEmailFiles()" class="btn" style="background: #95a5a6; color: white;">Clear</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Search and Filters -->
@@ -198,3 +212,96 @@
 {% endif %}
 {% endblock %}
 
+{% block extra_js %}
+<script>
+var emailFiles = [];
+var dropZone = document.getElementById('email-drop-zone');
+
+['dragenter', 'dragover'].forEach(function(evt) {
+    dropZone.addEventListener(evt, function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = '#3498db';
+        dropZone.style.background = '#f0f7ff';
+    });
+});
+['dragleave', 'drop'].forEach(function(evt) {
+    dropZone.addEventListener(evt, function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ccc';
+        dropZone.style.background = '';
+    });
+});
+dropZone.addEventListener('drop', function(e) {
+    handleEmailFiles(e.dataTransfer.files);
+});
+
+function handleEmailFiles(fileList) {
+    emailFiles = [];
+    var list = document.getElementById('email-file-names');
+    list.innerHTML = '';
+    var validExts = ['.eml', '.msg'];
+    for (var i = 0; i < fileList.length; i++) {
+        var f = fileList[i];
+        var ext = '.' + f.name.split('.').pop().toLowerCase();
+        if (validExts.indexOf(ext) === -1) continue;
+        emailFiles.push(f);
+        var li = document.createElement('li');
+        li.textContent = f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)';
+        list.appendChild(li);
+    }
+    document.getElementById('email-file-list').style.display = emailFiles.length > 0 ? 'block' : 'none';
+    if (emailFiles.length === 0 && fileList.length > 0) {
+        alert('No valid .eml or .msg files selected.');
+    }
+}
+
+function clearEmailFiles() {
+    emailFiles = [];
+    document.getElementById('email-file-names').innerHTML = '';
+    document.getElementById('email-file-list').style.display = 'none';
+    document.getElementById('email-file-input').value = '';
+}
+
+function uploadEmailFiles() {
+    if (emailFiles.length === 0) return;
+    var btn = document.getElementById('email-upload-btn');
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+
+    var uploaded = 0;
+    var errors = [];
+
+    function next(i) {
+        if (i >= emailFiles.length) {
+            if (errors.length > 0) {
+                window.location = '/emails?upload_error=' + encodeURIComponent(errors.join('; '));
+            } else {
+                window.location = '/emails?uploaded=' + uploaded;
+            }
+            return;
+        }
+        var form = new FormData();
+        form.append('file', emailFiles[i]);
+        fetch('/emails/upload', { method: 'POST', body: form })
+            .then(function(resp) {
+                if (resp.redirected) {
+                    var url = new URL(resp.url);
+                    if (url.searchParams.get('upload_error')) {
+                        errors.push(emailFiles[i].name + ': ' + url.searchParams.get('upload_error'));
+                    } else {
+                        uploaded++;
+                    }
+                } else {
+                    uploaded++;
+                }
+                next(i + 1);
+            })
+            .catch(function() {
+                errors.push(emailFiles[i].name + ': upload failed');
+                next(i + 1);
+            });
+    }
+    next(0);
+}
+</script>
+{% endblock %}

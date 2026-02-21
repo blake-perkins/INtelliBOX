@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Re-process Email - INtelliBOX{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="/emails/{{ email.id }}" style="color: #3498db; text-decoration: none; font-weight: 600;">&larr; Back to Email</a>
+</div>
+
+<!-- Error Banner -->
+{% if request.query_params.get('error') %}
+<div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem;">
+    {{ request.query_params.get('error') }}
+</div>
+{% endif %}
+
+<!-- Email Summary -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="font-weight: 600;">Re-process with AI</div>
+    <div style="padding: 1rem;">
+        <div style="margin-bottom: 1rem;">
+            <div style="font-size: 1.1rem; font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem;">{{ email.subject }}</div>
+            <div style="font-size: 0.9rem; color: #666;">
+                From: {{ email.from_address }} &middot;
+                Received: {{ email.received_date.strftime('%b %d, %Y') }}
+            </div>
+        </div>
+
+        <!-- Action Summary -->
+        <div style="background: #f8f9fa; border-radius: 6px; padding: 1rem; margin-bottom: 0.5rem;">
+            {% if total_actions == 0 %}
+            <div style="color: #666;">This email has no actions. AI will extract actions from the email content.</div>
+            {% else %}
+            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                <div>
+                    <span style="font-size: 1.25rem; font-weight: 700; color: #e74c3c;">{{ unassigned_count }}</span>
+                    <span style="font-size: 0.85rem; color: #666;"> unassigned action{{ 's' if unassigned_count != 1 else '' }} will be <strong>replaced</strong></span>
+                </div>
+                {% if assigned_count > 0 %}
+                <div>
+                    <span style="font-size: 1.25rem; font-weight: 700; color: #27ae60;">{{ assigned_count }}</span>
+                    <span style="font-size: 0.85rem; color: #666;"> assigned action{{ 's' if assigned_count != 1 else '' }} will be <strong>preserved</strong></span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Email Content (collapsible) -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #f0f4f8; transition: background 0.15s;"
+         onmouseover="this.style.background='#e3eaf2'" onmouseout="this.style.background='#f0f4f8'"
+         onclick="var el=document.getElementById('email-body-section');var arr=this.querySelector('.toggle-arrow');var hint=this.querySelector('.expand-hint');if(el.style.display==='none'){el.style.display='block';arr.textContent='▾';if(hint)hint.style.display='none'}else{el.style.display='none';arr.textContent='▸';if(hint)hint.style.display=''}">
+        <span>Email Content <span class="expand-hint" style="font-weight: 400; font-size: 0.8rem; color: #999;">(click to expand)</span></span>
+        <span class="toggle-arrow" style="font-size: 1rem; color: #3498db; font-weight: 700;">▸</span>
+    </div>
+    <div id="email-body-section" style="display: none;">
+        <div style="padding: 1rem; background: #f8f9fa; white-space: pre-wrap; font-family: 'Courier New', monospace; line-height: 1.6; font-size: 0.85rem; max-height: 400px; overflow-y: auto; border-top: 1px solid #eee;">{{ email.body_text or 'No text body available' }}</div>
+    </div>
+</div>
+
+<!-- Knowledge Base Documents -->
+{% if kb_docs %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #f0f4f8; transition: background 0.15s;"
+         onmouseover="this.style.background='#e3eaf2'" onmouseout="this.style.background='#f0f4f8'"
+         onclick="var el=document.getElementById('kb-docs-section');var arr=this.querySelector('.toggle-arrow');var hint=this.querySelector('.expand-hint');if(el.style.display==='none'){el.style.display='block';arr.textContent='▾';if(hint)hint.style.display='none'}else{el.style.display='none';arr.textContent='▸';if(hint)hint.style.display=''}">
+        <span>Knowledge Base ({{ kb_docs|length }} document{{ 's' if kb_docs|length != 1 else '' }}) <span id="kb-selected-count" style="font-weight: 400; font-size: 0.8rem; color: #27ae60;"></span> <span class="expand-hint" style="font-weight: 400; font-size: 0.8rem; color: #999;">(click to select relevant docs)</span></span>
+        <span class="toggle-arrow" style="font-size: 1rem; color: #3498db; font-weight: 700;">▸</span>
+    </div>
+    <div id="kb-docs-section" style="display: none; border-top: 1px solid #eee;">
+        <div style="padding: 0.75rem 1rem; background: #f8f9fa; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="font-size: 0.8rem; color: #888;">
+                Select documents to include as additional context for AI processing.
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <label style="font-size: 0.8rem; color: #555; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap;">
+                    <input type="checkbox" id="kb-select-all" onchange="kbToggleAll(this.checked)">
+                    Select All
+                </label>
+            </div>
+        </div>
+        <div style="padding: 0.5rem 1rem;">
+            <input type="text" id="kb-search" placeholder="Search documents..." oninput="kbFilterDocs()"
+                   style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem; font-family: inherit;">
+        </div>
+        <div id="kb-docs-list" style="max-height: 300px; overflow-y: auto;">
+            {% for doc in kb_docs %}
+            <label class="kb-doc-row" data-search="{{ doc.filename|lower }} {{ (doc.description or '')|lower }} {{ doc.file_type|lower }}"
+                   style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem; cursor: pointer; transition: background 0.1s;"
+                   onmouseover="this.style.background='#f0f7ff'" onmouseout="this.style.background=''">
+                <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0;">
+                    <input type="checkbox" class="kb-doc-check" form="reprocess-form" name="kb_doc_ids" value="{{ doc.id }}" onchange="kbUpdateCount()">
+                    <div style="min-width: 0;">
+                        <span style="color: #3498db; font-weight: 600;">{{ doc.filename }}</span>
+                        {% if doc.description %}
+                        <span style="color: #999; margin-left: 0.5rem;">— {{ doc.description[:60] }}{% if doc.description|length > 60 %}...{% endif %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div style="color: #999; font-size: 0.8rem; white-space: nowrap; margin-left: 0.5rem;">
+                    {{ doc.file_type|upper }} &middot; {{ (doc.file_size / 1024)|int }} KB
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Reprocess Form -->
+<div class="card">
+    <div class="card-header" style="font-weight: 600;">Additional Context (Optional)</div>
+    <form id="reprocess-form" method="post" action="/emails/{{ email.id }}/reprocess" enctype="multipart/form-data" style="padding: 1rem; display: grid; gap: 1rem;">
+        <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Upload Documents</label>
+            <div id="context-drop-zone"
+                 style="border: 2px dashed #ccc; border-radius: 8px; padding: 1.25rem; text-align: center; cursor: pointer; transition: all 0.2s;"
+                 onclick="document.getElementById('context-file').click()">
+                <div style="font-size: 1.25rem; margin-bottom: 0.25rem; color: #999;">📄</div>
+                <div style="font-weight: 600; color: #555; font-size: 0.9rem;" id="context-drop-label">Drag &amp; drop files here or click to browse</div>
+                <div style="font-size: 0.8rem; color: #999;">PDF, DOCX, TXT, MD, CSV, and more — max 10 MB each</div>
+            </div>
+            <div id="context-file-list" style="margin-top: 0.5rem;"></div>
+            <input type="file" name="context_files" id="context-file" accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.xml,.rtf,.log" multiple
+                   style="display: none;">
+        </div>
+
+        <div id="kb-checkbox-wrapper" style="display: none;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem; color: #555;">
+                <input type="checkbox" name="add_to_kb" value="1">
+                Also add uploaded document(s) to the Knowledge Base
+            </label>
+            <div style="font-size: 0.8rem; color: #999; margin-top: 0.25rem; margin-left: 1.5rem;">
+                Permanently stores the document(s) so all future AI processing benefits from them.
+            </div>
+        </div>
+
+        <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #555;">Additional Notes</label>
+            <textarea name="context_notes" rows="3" placeholder="Optional: add notes or instructions for the AI..."
+                      style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; font-family: inherit; resize: vertical;"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Analyze</button>
+            <a href="/emails/{{ email.id }}" class="btn" style="background: #95a5a6; color: white;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Knowledge Base selection ──
+function kbFilterDocs() {
+    var query = document.getElementById('kb-search').value.toLowerCase();
+    document.querySelectorAll('.kb-doc-row').forEach(function(row) {
+        var searchText = row.getAttribute('data-search');
+        row.style.display = searchText.indexOf(query) !== -1 ? '' : 'none';
+    });
+    kbSyncSelectAll();
+}
+
+function kbToggleAll(checked) {
+    document.querySelectorAll('.kb-doc-row').forEach(function(row) {
+        if (row.style.display !== 'none') {
+            row.querySelector('.kb-doc-check').checked = checked;
+        }
+    });
+    kbUpdateCount();
+}
+
+function kbUpdateCount() {
+    var checks = document.querySelectorAll('.kb-doc-check');
+    var count = 0;
+    checks.forEach(function(cb) { if (cb.checked) count++; });
+    var el = document.getElementById('kb-selected-count');
+    el.textContent = count > 0 ? '— ' + count + ' selected' : '';
+    kbSyncSelectAll();
+}
+
+function kbSyncSelectAll() {
+    var selectAll = document.getElementById('kb-select-all');
+    if (!selectAll) return;
+    var visible = [];
+    document.querySelectorAll('.kb-doc-row').forEach(function(row) {
+        if (row.style.display !== 'none') {
+            visible.push(row.querySelector('.kb-doc-check'));
+        }
+    });
+    var checkedCount = visible.filter(function(cb) { return cb.checked; }).length;
+    selectAll.checked = visible.length > 0 && checkedCount === visible.length;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < visible.length;
+}
+
+// ── Context file upload ──
+var ctxDrop = document.getElementById('context-drop-zone');
+var ctxInput = document.getElementById('context-file');
+var fileStore = new DataTransfer();
+
+['dragenter', 'dragover'].forEach(function(evt) {
+    ctxDrop.addEventListener(evt, function(e) {
+        e.preventDefault();
+        ctxDrop.style.borderColor = '#3498db';
+        ctxDrop.style.background = '#f0f7ff';
+    });
+});
+['dragleave', 'drop'].forEach(function(evt) {
+    ctxDrop.addEventListener(evt, function(e) {
+        e.preventDefault();
+        ctxDrop.style.borderColor = '#ccc';
+        ctxDrop.style.background = '';
+    });
+});
+ctxDrop.addEventListener('drop', function(e) {
+    if (e.dataTransfer.files.length > 0) {
+        addContextFiles(e.dataTransfer.files);
+    }
+});
+
+ctxInput.addEventListener('change', function() {
+    if (this.files.length > 0) {
+        addContextFiles(this.files);
+    }
+});
+
+function addContextFiles(newFiles) {
+    var allowed = ['.pdf', '.docx', '.txt', '.md', '.csv', '.json', '.html', '.xml', '.rtf', '.log'];
+    for (var i = 0; i < newFiles.length; i++) {
+        var f = newFiles[i];
+        var ext = '.' + f.name.split('.').pop().toLowerCase();
+        if (allowed.indexOf(ext) === -1) continue;
+        if (f.size > 10 * 1024 * 1024) continue;
+        // Skip duplicates by name
+        var isDup = false;
+        for (var j = 0; j < fileStore.files.length; j++) {
+            if (fileStore.files[j].name === f.name) { isDup = true; break; }
+        }
+        if (!isDup) fileStore.items.add(f);
+    }
+    ctxInput.files = fileStore.files;
+    renderContextFileList();
+}
+
+function removeContextFile(index) {
+    var newDt = new DataTransfer();
+    for (var i = 0; i < fileStore.files.length; i++) {
+        if (i !== index) newDt.items.add(fileStore.files[i]);
+    }
+    fileStore = newDt;
+    ctxInput.files = fileStore.files;
+    renderContextFileList();
+}
+
+function renderContextFileList() {
+    var listEl = document.getElementById('context-file-list');
+    var label = document.getElementById('context-drop-label');
+    var kbWrapper = document.getElementById('kb-checkbox-wrapper');
+
+    if (fileStore.files.length === 0) {
+        listEl.innerHTML = '';
+        label.innerHTML = 'Drag &amp; drop files here or click to browse';
+        label.style.color = '#555';
+        kbWrapper.style.display = 'none';
+        return;
+    }
+
+    label.textContent = fileStore.files.length + ' file(s) selected';
+    label.style.color = '#27ae60';
+    kbWrapper.style.display = 'block';
+
+    var html = '';
+    for (var i = 0; i < fileStore.files.length; i++) {
+        var f = fileStore.files[i];
+        var size = (f.size / 1024).toFixed(1);
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0;border-bottom:1px solid #eee;">';
+        html += '<span style="font-size:0.85rem;color:#333;">' + f.name + ' <span style="color:#999;">(' + size + ' KB)</span></span>';
+        html += '<button type="button" onclick="removeContextFile(' + i + ')" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:1rem;padding:0 0.3rem;" title="Remove">&times;</button>';
+        html += '</div>';
+    }
+    listEl.innerHTML = html;
+}
+</script>
+{% endblock %}
