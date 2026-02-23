@@ -189,7 +189,7 @@
         <input type="hidden" name="raw_response" value="{{ raw_response|e }}">
         <input type="hidden" name="kb_data_json" value="{{ kb_data_json|e }}">
         <button type="submit" id="accept-btn" class="btn btn-primary" style="background: #e74c3c;">
-            Accept &amp; Replace (<span id="selected-count">{{ new_actions|length }}</span> selected)
+            {% if new_actions %}Accept &amp; Replace (<span id="selected-count">{{ new_actions|length }}</span> selected){% else %}Mark as Processed (no actions){% endif %}
         </button>
     </form>
     <a href="/emails/{{ email.id }}" class="btn" style="background: #95a5a6; color: white;">Cancel</a>
@@ -214,8 +214,10 @@ function updateSelected() {
     document.getElementById('selected-count').textContent = count;
 
     var btn = document.getElementById('accept-btn');
-    btn.disabled = count === 0;
-    btn.style.opacity = count === 0 ? '0.5' : '1';
+    var hasCheckboxes = checks.length > 0;
+    // Only disable when there ARE suggestions but none selected
+    btn.disabled = hasCheckboxes && count === 0;
+    btn.style.opacity = (hasCheckboxes && count === 0) ? '0.5' : '1';
 
     var selectAll = document.getElementById('select-all');
     if (selectAll) {
@@ -231,7 +233,6 @@ function prepareSubmit() {
             selected.push(allActionDicts[parseInt(cb.dataset.index)]);
         }
     });
-    if (selected.length === 0) return false;
     document.getElementById('action-dicts-field').value = JSON.stringify(selected);
     return true;
 }
