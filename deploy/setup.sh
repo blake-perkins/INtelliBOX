@@ -90,7 +90,7 @@ fi
 
 # Set up cron to update every 5 minutes
 CRON_LINE="*/5 * * * * curl -s 'https://www.duckdns.org/update?domains=${SUBDOMAIN}&token=${DUCKDNS_TOKEN}&ip=' > /dev/null 2>&1"
-( (crontab -l 2>/dev/null || true) | grep -v duckdns; echo "$CRON_LINE") | crontab -
+( (crontab -l 2>/dev/null || true) | (grep -v duckdns || true); echo "$CRON_LINE") | crontab -
 echo "DuckDNS cron installed"
 
 # ── Configure nginx ─────────────────────────────────────────────────────────
