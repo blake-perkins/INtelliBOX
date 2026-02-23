@@ -139,6 +139,16 @@ echo "=== Building INtelliBOX container ==="
 
 cd "$REPO_ROOT"
 
+# Log in to IronBank registry (required for base image)
+IRONBANK_USER=$(grep '^IRONBANK_USER=' deploy/.env.production | cut -d'=' -f2)
+IRONBANK_PAT=$(grep '^IRONBANK_PAT=' deploy/.env.production | cut -d'=' -f2)
+if [ -n "$IRONBANK_USER" ] && [ "$IRONBANK_USER" != "your-registry1-username" ]; then
+    echo "Logging in to registry1.dso.mil..."
+    echo "$IRONBANK_PAT" | podman login registry1.dso.mil --username "$IRONBANK_USER" --password-stdin
+else
+    echo "WARNING: No IronBank credentials found. Build may fail if base image is not cached."
+fi
+
 echo "Building container image (this may take a few minutes)..."
 podman build -t intellibox:prod -f Dockerfile .
 echo "Container image built successfully"
