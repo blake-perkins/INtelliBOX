@@ -19,7 +19,7 @@ if echo "$DATABASE_URL" | grep -q "^postgresql"; then
     PG_PORT=${PG_PORT:-5432}
 
     for i in $(seq 1 30); do
-        if pg_isready -h "$PG_HOST" -p "$PG_PORT" -q 2>/dev/null; then
+        if python -c "import socket; s=socket.create_connection(('$PG_HOST', $PG_PORT), timeout=2); s.close()" 2>/dev/null; then
             echo "PostgreSQL is ready"
             break
         fi

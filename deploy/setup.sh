@@ -149,29 +149,90 @@ podman run --rm --user root --entrypoint bash \
     intellibox:prod \
     -c "chown -R 1000:1000 /app/data"
 
-# Stop existing container if running
+# Stop existing containers/pods
 podman stop intellibox 2>/dev/null || true
 podman rm intellibox 2>/dev/null || true
+podman stop intellibox-db 2>/dev/null || true
+podman rm intellibox-db 2>/dev/null || true
+podman pod stop intellibox-pod 2>/dev/null || true
+podman pod rm intellibox-pod 2>/dev/null || true
 
-echo "=== Starting INtelliBOX container ==="
+# Detect database backend from .env.production
+DATABASE_URL=$(grep '^DATABASE_URL=' deploy/.env.production | cut -d'=' -f2-)
 
-podman run -d \
-    --name intellibox \
-    --restart=always \
-    --env-file deploy/.env.production \
-    -v /opt/intellibox/data:/app/data:Z \
-    -p 127.0.0.1:8000:8000 \
-    intellibox:prod
+if echo "$DATABASE_URL" | grep -q "^postgresql"; then
+    echo "=== Starting PostgreSQL + INtelliBOX (Podman pod) ==="
+
+    POSTGRES_PASSWORD=$(grep '^POSTGRES_PASSWORD=' deploy/.env.production | cut -d'=' -f2)
+    if [ -z "$POSTGRES_PASSWORD" ] || [ "$POSTGRES_PASSWORD" = "CHANGE_ME" ]; then
+        echo "ERROR: Set a real POSTGRES_PASSWORD in deploy/.env.production"
+        exit 1
+    fi
+
+    # Create persistent volume for PostgreSQL data
+    mkdir -p /opt/intellibox/pgdata
+
+    # Create a pod — containers in a pod share localhost networking
+    podman pod create \
+        --name intellibox-pod \
+        -p 127.0.0.1:8000:8000
+
+    # Start PostgreSQL container inside the pod
+    podman run -d \
+        --name intellibox-db \
+        --pod intellibox-pod \
+        --restart=always \
+        -e POSTGRES_DB=intellibox \
+        -e POSTGRES_USER=intellibox \
+        -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+        -v /opt/intellibox/pgdata:/var/lib/postgresql/data:Z \
+        docker.io/library/postgres:16-alpine
+
+    # Wait for PostgreSQL to accept connections
+    echo "Waiting for PostgreSQL..."
+    for i in $(seq 1 30); do
+        if podman exec intellibox-db pg_isready -U intellibox -q 2>/dev/null; then
+            echo "PostgreSQL ready after ${i}s"
+            break
+        fi
+        if [ "$i" -eq 30 ]; then
+            echo "ERROR: PostgreSQL did not start within 30s"
+            podman logs intellibox-db
+            exit 1
+        fi
+        sleep 1
+    done
+
+    # Start INtelliBOX container inside the same pod
+    podman run -d \
+        --name intellibox \
+        --pod intellibox-pod \
+        --restart=always \
+        --env-file deploy/.env.production \
+        -v /opt/intellibox/data:/app/data:Z \
+        intellibox:prod
+
+else
+    echo "=== Starting INtelliBOX (SQLite) ==="
+
+    podman run -d \
+        --name intellibox \
+        --restart=always \
+        --env-file deploy/.env.production \
+        -v /opt/intellibox/data:/app/data:Z \
+        -p 127.0.0.1:8000:8000 \
+        intellibox:prod
+fi
 
 # Wait for health
-echo "Waiting for container to start..."
-for i in $(seq 1 30); do
+echo "Waiting for application to start..."
+for i in $(seq 1 60); do
     if curl -sf http://127.0.0.1:8000/health > /dev/null 2>&1; then
-        echo "Container healthy after ${i}s"
+        echo "Application healthy after ${i}s"
         break
     fi
-    if [ "$i" -eq 30 ]; then
-        echo "WARNING: Container did not become healthy in 30s"
+    if [ "$i" -eq 60 ]; then
+        echo "WARNING: Application did not become healthy in 60s"
         echo "Check logs: podman logs intellibox"
     fi
     sleep 1
@@ -181,13 +242,25 @@ done
 
 echo "=== Configuring auto-start ==="
 
-# Generate systemd service for the container
+# Generate systemd services
 mkdir -p /etc/systemd/system
-podman generate systemd --name intellibox --new > /etc/systemd/system/intellibox.service
-systemctl daemon-reload
-systemctl enable intellibox.service
+if echo "$DATABASE_URL" | grep -q "^postgresql"; then
+    # Generate a systemd service for the whole pod
+    podman generate systemd --name intellibox-pod --new --files
+    mv pod-intellibox-pod.service /etc/systemd/system/
+    mv container-intellibox.service /etc/systemd/system/
+    mv container-intellibox-db.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable pod-intellibox-pod.service
+else
+    podman generate systemd --name intellibox --new > /etc/systemd/system/intellibox.service
+    systemctl daemon-reload
+    systemctl enable intellibox.service
+fi
 
 # ── Done ────────────────────────────────────────────────────────────────────
+
+AUTH_MODE=$(grep '^AUTH_MODE=' deploy/.env.production | cut -d'=' -f2)
 
 echo ""
 echo "============================================="
@@ -202,12 +275,29 @@ echo "    podman restart intellibox           # Restart the app"
 echo "    podman exec -it intellibox bash     # Shell into container"
 echo "    curl http://127.0.0.1:8000/health  # Health check"
 echo "    certbot renew --dry-run             # Test cert renewal"
-echo ""
-echo "  Data is stored at: /opt/intellibox/data/"
+
+if echo "$DATABASE_URL" | grep -q "^postgresql"; then
+    echo "    podman logs -f intellibox-db       # View PostgreSQL logs"
+    echo "    podman exec -it intellibox-db psql -U intellibox  # PostgreSQL shell"
+    echo ""
+    echo "  Data: /opt/intellibox/data/ (app), /opt/intellibox/pgdata/ (PostgreSQL)"
+else
+    echo ""
+    echo "  Data: /opt/intellibox/data/"
+fi
+
 echo "  nginx config: /etc/nginx/sites-available/intellibox"
 echo ""
 echo "  Next steps:"
 echo "    1. Visit https://$DOMAIN to verify the dashboard loads"
-echo "    2. Go to Emails page and upload a test .eml file"
-echo "    3. Check the dashboard for the email and AI-extracted actions"
+
+if [ "$AUTH_MODE" = "local" ]; then
+    echo "    2. Create an admin user:"
+    echo "       sudo podman exec -it intellibox intellibox user create \\"
+    echo "         --username admin --email admin@example.com --role admin"
+    echo "    3. Log in and upload a test .eml file"
+else
+    echo "    2. Go to Emails page and upload a test .eml file"
+    echo "    3. Check the dashboard for the email and AI-extracted actions"
+fi
 echo ""
