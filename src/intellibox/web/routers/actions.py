@@ -232,8 +232,13 @@ async def view_action(request: Request, action_id: int):
         roster = get_active_roster(session)
 
         # Get recent assignees as fallback when no roster
-        recent_assignees = session.query(Assignment.assigned_to).distinct().order_by(
-            desc(Assignment.assigned_at)
+        # Use subquery to avoid PG error: DISTINCT + ORDER BY on different columns
+        recent_sub = session.query(
+            Assignment.assigned_to,
+            func.max(Assignment.assigned_at).label("last_assigned"),
+        ).group_by(Assignment.assigned_to).subquery()
+        recent_assignees = session.query(recent_sub.c.assigned_to).order_by(
+            desc(recent_sub.c.last_assigned)
         ).limit(10).all()
         recent_assignee_list = [a[0] for a in recent_assignees if a[0]]
 
