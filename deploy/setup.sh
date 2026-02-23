@@ -81,9 +81,12 @@ apt-get install -y certbot python3-certbot-nginx
 
 echo "=== Setting up DuckDNS ==="
 
-# Update DNS now
-curl -s "https://www.duckdns.org/update?domains=${SUBDOMAIN}&token=${DUCKDNS_TOKEN}&ip=" | tee /tmp/duckdns.log
-echo ""
+# Update DNS now (non-fatal — pilot.sh already updated DNS before launching)
+DUCKDNS_RESULT=$(curl -sf "https://www.duckdns.org/update?domains=${SUBDOMAIN}&token=${DUCKDNS_TOKEN}&ip=" 2>/dev/null || echo "FAILED")
+echo "  DuckDNS response: $DUCKDNS_RESULT"
+if [ "$DUCKDNS_RESULT" != "OK" ]; then
+    echo "  WARNING: DuckDNS update failed. DNS may have been updated by pilot.sh already."
+fi
 
 # Set up cron to update every 5 minutes
 CRON_LINE="*/5 * * * * curl -s 'https://www.duckdns.org/update?domains=${SUBDOMAIN}&token=${DUCKDNS_TOKEN}&ip=' > /dev/null 2>&1"

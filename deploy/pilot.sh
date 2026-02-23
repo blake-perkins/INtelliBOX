@@ -126,7 +126,7 @@ echo "=== Finding latest Ubuntu 24.04 AMI ==="
 AMI_ID=$(aws ec2 describe-images \
     --region "$AWS_REGION" \
     --owners 099720109477 \
-    --filters "Name=name,Values=ubuntu/images/hvm-ssd-amd64/ubuntu-noble-24.04-amd64-server-*" \
+    --filters "Name=name,Values=ubuntu/images/hvm-ssd*/ubuntu-noble-24.04-amd64-server-*" \
               "Name=state,Values=available" \
     --query 'sort_by(Images, &CreationDate)[-1].ImageId' \
     --output text)
