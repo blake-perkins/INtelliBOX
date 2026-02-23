@@ -21,6 +21,9 @@ if [ ! -f .env.production ]; then
     exit 1
 fi
 
+# Strip Windows line endings (\r) — .env.production may be created on Windows
+sed -i 's/\r$//' .env.production
+
 # Source just the DOMAIN and DUCKDNS_TOKEN for setup
 DOMAIN=$(grep '^DOMAIN=' .env.production | cut -d'=' -f2)
 DUCKDNS_TOKEN=$(grep '^DUCKDNS_TOKEN=' .env.production | cut -d'=' -f2)

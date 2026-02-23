@@ -274,22 +274,32 @@ jobs:
           git reset --hard origin/main
           echo "HEAD: $(git rev-parse --short HEAD) — $(git log -1 --format='%s')"
 
-          # Stop systemd service and disable to prevent auto-restart
+          ENV_FILE=/home/ubuntu/INtelliBOX/deploy/.env.production
+
+          # Strip Windows line endings from .env.production
+          sudo sed -i 's/\r$//' "$ENV_FILE"
+
+          # Detect database backend
+          DATABASE_URL=$(grep '^DATABASE_URL=' "$ENV_FILE" | cut -d'=' -f2-)
+          USE_PG=false
+          if echo "$DATABASE_URL" | grep -q "^postgresql"; then
+              USE_PG=true
+          fi
+          echo "Database mode: $(if $USE_PG; then echo PostgreSQL; else echo SQLite; fi)"
+
+          # Stop systemd services and disable to prevent auto-restart
+          sudo systemctl disable --now pod-intellibox-pod.service 2>/dev/null || true
           sudo systemctl disable --now intellibox.service 2>/dev/null || true
 
-          # Stop and remove all intellibox containers
+          # Stop and remove all intellibox containers and pods
+          sudo podman pod stop intellibox-pod 2>/dev/null || true
+          sudo podman pod rm intellibox-pod 2>/dev/null || true
           sudo podman stop -a --time 10 2>/dev/null || true
           sudo podman rm -af 2>/dev/null || true
 
-          # Debug: show what's on port 8000
-          echo "=== Port 8000 status ==="
-          sudo ss -tlnp | grep ':8000 ' || echo "Port 8000 is free."
-
-          # Nuclear option: kill anything on port 8000
+          # Ensure port 8000 is free
           sudo fuser -k 8000/tcp 2>/dev/null || true
           sleep 2
-
-          # Verify port is free
           if sudo ss -tlnp | grep -q ':8000 '; then
               echo "ERROR: Port 8000 still in use after cleanup!"
               sudo ss -tlnp | grep ':8000 '
@@ -303,30 +313,79 @@ jobs:
           echo "=== Building container image ==="
           sudo podman build -t intellibox:prod -f Dockerfile .
 
-          echo "=== Starting container ==="
-          sudo podman run -d \
-              --name intellibox \
-              --restart=always \
-              --env-file /home/ubuntu/INtelliBOX/deploy/.env.production \
-              -v /opt/intellibox/data:/app/data:Z \
-              -p 127.0.0.1:8000:8000 \
-              intellibox:prod
+          if $USE_PG; then
+              echo "=== Starting PostgreSQL + INtelliBOX (Podman pod) ==="
+
+              POSTGRES_PASSWORD=$(grep '^POSTGRES_PASSWORD=' "$ENV_FILE" | cut -d'=' -f2)
+              mkdir -p /opt/intellibox/pgdata
+
+              sudo podman pod create --name intellibox-pod -p 127.0.0.1:8000:8000
+
+              sudo podman run -d \
+                  --name intellibox-db \
+                  --pod intellibox-pod \
+                  --restart=always \
+                  -e POSTGRES_DB=intellibox \
+                  -e POSTGRES_USER=intellibox \
+                  -e "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" \
+                  -v /opt/intellibox/pgdata:/var/lib/postgresql/data:Z \
+                  docker.io/library/postgres:16-alpine
+
+              echo "Waiting for PostgreSQL..."
+              for i in $(seq 1 30); do
+                  if sudo podman exec intellibox-db pg_isready -U intellibox -q 2>/dev/null; then
+                      echo "PostgreSQL ready after ${i}s"
+                      break
+                  fi
+                  if [ "$i" -eq 30 ]; then
+                      echo "ERROR: PostgreSQL did not start within 30s"
+                      sudo podman logs intellibox-db
+                      exit 1
+                  fi
+                  sleep 1
+              done
+
+              sudo podman run -d \
+                  --name intellibox \
+                  --pod intellibox-pod \
+                  --restart=always \
+                  --env-file "$ENV_FILE" \
+                  -v /opt/intellibox/data:/app/data:Z \
+                  intellibox:prod
+          else
+              echo "=== Starting INtelliBOX (SQLite) ==="
+
+              sudo podman run -d \
+                  --name intellibox \
+                  --restart=always \
+                  --env-file "$ENV_FILE" \
+                  -v /opt/intellibox/data:/app/data:Z \
+                  -p 127.0.0.1:8000:8000 \
+                  intellibox:prod
+          fi
 
           echo "=== Waiting for health check ==="
-          for i in $(seq 1 30); do
+          for i in $(seq 1 60); do
               if curl -sf --max-time 3 http://127.0.0.1:8000/health; then
                   echo ""
                   echo "Healthy after ${i}s"
                   curl -s http://127.0.0.1:8000/health
                   echo ""
-                  sudo podman generate systemd --name intellibox --new | sudo tee /etc/systemd/system/intellibox.service > /dev/null
-                  sudo systemctl daemon-reload
-                  sudo systemctl enable intellibox.service
+                  if $USE_PG; then
+                      sudo podman generate systemd --name intellibox-pod --new --files
+                      sudo mv pod-intellibox-pod.service container-intellibox.service container-intellibox-db.service /etc/systemd/system/ 2>/dev/null || true
+                      sudo systemctl daemon-reload
+                      sudo systemctl enable pod-intellibox-pod.service
+                  else
+                      sudo podman generate systemd --name intellibox --new | sudo tee /etc/systemd/system/intellibox.service > /dev/null
+                      sudo systemctl daemon-reload
+                      sudo systemctl enable intellibox.service
+                  fi
                   exit 0
               fi
               sleep 1
           done
-          echo "Health check failed after 30s"
+          echo "Health check failed after 60s"
           sudo podman logs --tail 30 intellibox
           exit 1
           DEPLOY_SCRIPT
