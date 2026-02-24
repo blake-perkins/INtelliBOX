@@ -303,13 +303,13 @@ Currently using direct push to `main` with CI gating. Future improvement:
 
 ## Phase 6 — Observability & Monitoring
 
-### 6.1 — Structured Logging
+### 6.1 — Structured Logging *(Completed 2026-02-23)*
 Replace plain-text formatter with JSON logging for production:
 ```json
 {"timestamp": "...", "level": "INFO", "logger": "intellibox.web.app", "message": "Action created", "action_id": 42}
 ```
-- [ ] Add `LOG_FORMAT=json` env var to toggle between human-readable (dev) and JSON (prod)
-- [ ] Update `src/intellibox/utils/logging.py` to support both formats
+- [x] Add `LOG_FORMAT=json` env var to toggle between human-readable (dev) and JSON (prod) *(2026-02-23)*
+- [x] Update `src/intellibox/utils/logging.py` to support both formats *(2026-02-23)*
 
 ### 6.2 — Log Aggregation
 Choose based on deployment target:
@@ -322,11 +322,11 @@ Choose based on deployment target:
 - [ ] Retention policy set (recommend 90 days)
 - [ ] Alert configured for `ERROR` level events
 
-### 6.3 — Error Tracking (Sentry)
+### 6.3 — Error Tracking (Sentry) *(Partially Complete 2026-02-23)*
 - [ ] Create Sentry project (free tier sufficient)
-- [ ] Add `sentry-sdk[fastapi]` to dependencies
-- [ ] Add `SENTRY_DSN` env var
-- [ ] Initialize in `app.py` startup
+- [x] Add `sentry-sdk[fastapi]` to dependencies *(2026-02-23)*
+- [x] Add `SENTRY_DSN` env var *(2026-02-23)*
+- [x] Initialize in `app.py` startup *(2026-02-23)*
 - [ ] Verify errors appear in Sentry dashboard
 - [ ] Configure Slack/email notification for new error types
 
@@ -503,10 +503,10 @@ Create `docs/RUNBOOK.md` covering:
 | 7 | Email upload via web UI | 4 hrs | **Done** |
 | 7 | Data export (CSV) | 1 day | **Done** (actions) |
 | 7 | API usage telemetry dashboard | 1 day | **Done** (admin-only, under Settings) |
+| 6 | Structured JSON logging | 2 hrs | **Done** (LOG_FORMAT=json) |
+| 6 | Sentry error tracking | 2 hrs | **Done** (code ready, needs Sentry project) |
 | 1 | CSRF protection | 4 hrs | Not started |
 | 2 | Service layer extraction | 2 days | Not started |
-| 6 | Sentry error tracking | 2 hrs | Not started |
-| 6 | Structured JSON logging | 2 hrs | Not started |
 | 3 | Coverage analysis + gap filling | 1 day | Not started |
 | 7 | Email notifications on assign | 4 hrs | Not started |
 | 8 | ADRs + Runbook | 1 day | Not started |
@@ -523,7 +523,7 @@ Create `docs/RUNBOOK.md` covering:
 | Phase 3 | In progress | 2026-02-23 | 17 SQLite + 8 PG modules + 165 BDD + 46 E2E + 16 smoke; coverage % TBD |
 | Phase 4 | **Mostly complete** | 2026-02-23 | PostgreSQL in production, full PG test suite, backups TBD |
 | Phase 5 | **Complete** | 2026-02-23 | 6-job CI/CD: lint, test, container, test-postgres, stress-postgres, deploy |
-| Phase 6 | Not started | — | Observability & monitoring |
+| Phase 6 | In progress | 2026-02-23 | Structured JSON logging done, Sentry integration done (needs project setup) |
 | Phase 7 | Mostly complete | 2026-02-23 | Audit log, reprocess, in_progress, email upload, CSV export, API usage telemetry done |
 | Phase 8 | Not started | — | Documentation |
 

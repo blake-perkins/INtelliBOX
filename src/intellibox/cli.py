@@ -469,7 +469,7 @@ def web(host: str, port: int, reload: bool):
         host=host,
         port=port,
         reload=reload,
-        log_level="info"
+        log_level=settings.log_level.lower()
     )
 
 

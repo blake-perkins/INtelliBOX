@@ -9,6 +9,22 @@ from typing import Optional
 from intellibox.config import settings
 
 
+def _build_formatter() -> logging.Formatter:
+    """Build the log formatter based on LOG_FORMAT setting."""
+    if settings.log_format.lower() == "json":
+        from pythonjsonlogger import jsonlogger
+
+        return jsonlogger.JsonFormatter(
+            fmt="%(asctime)s %(name)s %(levelname)s %(message)s",
+            datefmt="%Y-%m-%dT%H:%M:%S",
+            rename_fields={"asctime": "timestamp", "levelname": "level", "name": "logger"},
+        )
+    return logging.Formatter(
+        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+
 def setup_logging(
     name: Optional[str] = None,
     log_dir: str = "data/logs",
@@ -34,11 +50,7 @@ def setup_logging(
     if not logger.handlers:
         logger.setLevel(getattr(logging, settings.log_level.upper(), logging.INFO))
 
-        # Formatter
-        formatter = logging.Formatter(
-            fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
-        )
+        formatter = _build_formatter()
 
         # Console handler
         console_handler = logging.StreamHandler(sys.stdout)

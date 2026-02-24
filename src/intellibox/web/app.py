@@ -15,6 +15,24 @@ from intellibox.web.auth import AuthMiddleware
 from intellibox.web.deps import static_dir, templates  # noqa: F401 — templates re-exported for backward compat
 
 
+def _init_sentry():
+    """Initialize Sentry error tracking if SENTRY_DSN is configured."""
+    if not _settings.sentry_dsn:
+        return
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=_settings.sentry_dsn,
+        environment=_settings.sentry_environment,
+        traces_sample_rate=_settings.sentry_traces_sample_rate,
+        send_default_pii=False,
+        release=f"intellibox@{__version__}",
+    )
+
+
+_init_sentry()
+
+
 def _start_background_watcher():
     """Start the file watcher in a background daemon thread with supervised restarts."""
     from intellibox.ai.processor import process_email_with_ai

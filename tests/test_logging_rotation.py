@@ -1,5 +1,6 @@
-"""Tests for log rotation configuration."""
+"""Tests for log rotation configuration and structured logging."""
 
+import json as json_mod
 import logging
 import tempfile
 from logging.handlers import RotatingFileHandler
@@ -111,3 +112,84 @@ def test_unwritable_dir_does_not_crash():
     for h in result.handlers[:]:
         h.close()
         result.removeHandler(h)
+
+
+def test_json_format_produces_valid_json(monkeypatch):
+    """When LOG_FORMAT=json, log output is valid JSON with expected keys."""
+    monkeypatch.setattr("intellibox.config.settings.log_format", "json")
+
+    logger_name = "test_json_format"
+    logger = logging.getLogger(logger_name)
+    logger.handlers.clear()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        from intellibox.utils.logging import setup_logging
+        result = setup_logging(name=logger_name, log_dir=tmpdir)
+        result.info("test json message")
+
+        log_file = Path(tmpdir) / "intellibox.log"
+        content = log_file.read_text().strip()
+        for line in content.splitlines():
+            parsed = json_mod.loads(line)
+            assert parsed["message"] == "test json message"
+            assert "timestamp" in parsed
+            assert "level" in parsed
+            assert parsed["level"] == "INFO"
+
+        for h in result.handlers[:]:
+            h.close()
+            result.removeHandler(h)
+
+
+def test_text_format_unchanged(monkeypatch):
+    """When LOG_FORMAT=text (default), output matches the existing plain-text format."""
+    monkeypatch.setattr("intellibox.config.settings.log_format", "text")
+
+    logger_name = "test_text_format"
+    logger = logging.getLogger(logger_name)
+    logger.handlers.clear()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        from intellibox.utils.logging import setup_logging
+        result = setup_logging(name=logger_name, log_dir=tmpdir)
+        result.info("plain text check")
+
+        log_file = Path(tmpdir) / "intellibox.log"
+        content = log_file.read_text().strip()
+        assert " - test_text_format - INFO - plain text check" in content
+
+        for h in result.handlers[:]:
+            h.close()
+            result.removeHandler(h)
+
+
+def test_sentry_not_initialized_when_dsn_empty(monkeypatch):
+    """Sentry SDK should NOT be imported when SENTRY_DSN is empty."""
+    import sys
+
+    monkeypatch.setattr("intellibox.config.settings.sentry_dsn", "")
+
+    # Save and remove sentry_sdk from sys.modules if already imported
+    sentry_modules = [k for k in sys.modules if k.startswith("sentry_sdk")]
+    saved = {k: sys.modules.pop(k) for k in sentry_modules}
+
+    try:
+        from intellibox.web.app import _init_sentry
+        _init_sentry()
+        assert "sentry_sdk" not in sys.modules
+    finally:
+        sys.modules.update(saved)
+
+
+def test_sentry_initialized_when_dsn_set(monkeypatch):
+    """Sentry SDK should be initialized when SENTRY_DSN is set."""
+    monkeypatch.setattr("intellibox.config.settings.sentry_dsn", "https://examplePublicKey@o0.ingest.sentry.io/0")
+    monkeypatch.setattr("intellibox.config.settings.sentry_environment", "test")
+    monkeypatch.setattr("intellibox.config.settings.sentry_traces_sample_rate", 0.0)
+
+    from intellibox.web.app import _init_sentry
+    _init_sentry()
+
+    import sentry_sdk
+    client = sentry_sdk.get_client()
+    assert client.dsn is not None

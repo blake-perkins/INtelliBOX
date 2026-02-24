@@ -84,6 +84,12 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
+    log_format: str = "text"  # "text" (default) or "json"
+
+    # Monitoring (Sentry — leave SENTRY_DSN empty to disable)
+    sentry_dsn: str = ""
+    sentry_environment: str = "production"
+    sentry_traces_sample_rate: float = 0.0
 
     # Team members (comma-separated list for assignment dropdown)
     team_members: str = ""
