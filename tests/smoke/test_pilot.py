@@ -26,19 +26,40 @@ FIXTURES_DIR = os.path.join(
 
 _user = os.environ.get("PILOT_USER")
 _password = os.environ.get("PILOT_PASSWORD")
-AUTH = (_user, _password) if _user and _password else None
 
 pytestmark = pytest.mark.smoke
 
+# ── Authenticated session ─────────────────────────────────────────────────
+# Uses form-based login to obtain a session cookie, matching AUTH_MODE=local.
+
+_session = requests.Session()
+_logged_in = False
+
+
+def _ensure_logged_in():
+    global _logged_in
+    if _logged_in or not _user or not _password:
+        return
+    r = _session.post(
+        f"{BASE_URL}/auth/login",
+        data={"username": _user, "password": _password, "next": "/"},
+        allow_redirects=False,
+        timeout=15,
+    )
+    # Successful login returns 303 redirect with a session cookie
+    assert r.status_code == 303, f"Login failed: status {r.status_code}"
+    assert "intellibox_session" in _session.cookies, "No session cookie after login"
+    _logged_in = True
+
 
 def get(path, **kwargs):
-    kwargs.setdefault("auth", AUTH)
-    return requests.get(f"{BASE_URL}{path}", timeout=15, **kwargs)
+    _ensure_logged_in()
+    return _session.get(f"{BASE_URL}{path}", timeout=15, **kwargs)
 
 
 def post(path, **kwargs):
-    kwargs.setdefault("auth", AUTH)
-    return requests.post(f"{BASE_URL}{path}", timeout=30, **kwargs)
+    _ensure_logged_in()
+    return _session.post(f"{BASE_URL}{path}", timeout=30, **kwargs)
 
 
 # ── Pages ──────────────────────────────────────────────────────────────
