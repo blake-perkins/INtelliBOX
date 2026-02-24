@@ -11,25 +11,20 @@ Requires a running PostgreSQL instance:
 """
 
 import html as html_mod
-import json
 import os
 import re
 
 # Auth must be disabled BEFORE importing the app — override .env which may set AUTH_MODE=local
 os.environ["AUTH_MODE"] = "disabled"
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import text
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import text  # noqa: E402
 
-from intellibox.models import Action, Assignment, AuditLog, Base, Email
-
-# ── Session injection: point the app at the PG database ──────────────────────
-
-from tests.pg_conftest import PgSessionLocal, pg_engine, pg_override_get_session
-
-import intellibox.database as database_module
-import intellibox.settings_service as settings_service_module
+import intellibox.database as database_module  # noqa: E402
+import intellibox.settings_service as settings_service_module  # noqa: E402
+from intellibox.models import Action, Assignment, AuditLog, Base  # noqa: E402
+from tests.pg_conftest import PgSessionLocal, pg_engine, pg_override_get_session  # noqa: E402
 
 database_module.get_session = pg_override_get_session
 settings_service_module.get_session = pg_override_get_session
