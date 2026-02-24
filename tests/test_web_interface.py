@@ -7,7 +7,6 @@ for end users.
 
 import tempfile
 from contextlib import contextmanager
-from datetime import datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 
 from intellibox.database import Base
 from intellibox.models import Action, Assignment, Email, RosterMember
+from tests.pg_web_helpers import populate_test_data
 
 # Create test database with unique temp file
 test_db_fd, test_db_path = tempfile.mkstemp(suffix='_web_interface.db', prefix='test_intellibox_')
@@ -56,115 +56,13 @@ client = TestClient(app)
 @pytest.fixture(scope="function")
 def setup_database():
     """Create tables and populate with test data before each test."""
-    # Drop all tables first to ensure clean state
     Base.metadata.drop_all(bind=test_engine)
-
-    # Create tables
     Base.metadata.create_all(bind=test_engine)
 
-    # Create test data
-    session = TestSessionLocal()
-
-    # Create test emails
-    email1 = Email(
-        message_id="test1@example.com",
-        subject="Test RFI - Budget Data Request",
-        from_address="boss@example.com",
-        from_name="Boss Man",
-        to_addresses='["team@example.com"]',
-        received_date=datetime.utcnow() - timedelta(days=1),
-        body_text="Please provide the budget data by Friday.",
-        processed=True,
-        processed_at=datetime.utcnow()
-    )
-
-    email2 = Email(
-        message_id="test2@example.com",
-        subject="URGENT: Production Issue",
-        from_address="alerts@monitoring.com",
-        from_name="Alert System",
-        to_addresses='["team@example.com"]',
-        received_date=datetime.utcnow() - timedelta(hours=2),
-        body_text="Critical error in production. Investigate immediately.",
-        processed=True,
-        processed_at=datetime.utcnow()
-    )
-
-    email3 = Email(
-        message_id="test3@example.com",
-        subject="Meeting Notes",
-        from_address="colleague@example.com",
-        from_name="Colleague",
-        to_addresses='["team@example.com"]',
-        received_date=datetime.utcnow() - timedelta(days=3),
-        body_text="Here are the notes from yesterday's meeting.",
-        processed=True,
-        processed_at=datetime.utcnow()
-    )
-
-    session.add_all([email1, email2, email3])
-    session.commit()
-
-    # Create test actions
-    action1 = Action(
-        email_id=email1.id,
-        title="Provide budget data",
-        description="Compile and send budget data to boss",
-        priority="high",
-        due_date=datetime.utcnow() + timedelta(days=3),
-        category="RFI",
-        confidence_score=0.95
-    )
-
-    action2 = Action(
-        email_id=email2.id,
-        title="Investigate production error",
-        description="Check logs and identify root cause",
-        priority="high",
-        due_date=datetime.utcnow() + timedelta(hours=4),
-        category="incident",
-        confidence_score=0.98
-    )
-
-    action3 = Action(
-        email_id=email3.id,
-        title="Review meeting notes",
-        description="Read and follow up on action items from meeting",
-        priority="medium",
-        due_date=datetime.utcnow() + timedelta(days=7),
-        category="follow-up",
-        confidence_score=0.75
-    )
-
-    action4 = Action(
-        email_id=email1.id,
-        title="Schedule follow-up meeting",
-        description="Set up meeting to discuss budget",
-        priority="low",
-        due_date=None,
-        category="meeting",
-        confidence_score=0.60
-    )
-
-    session.add_all([action1, action2, action3, action4])
-    session.commit()
-
-    # Create one assignment (action1 is assigned)
-    assignment1 = Assignment(
-        action_id=action1.id,
-        assigned_to="john@example.com",
-        status="assigned",
-        notes="Working on it"
-    )
-
-    session.add(assignment1)
-    session.commit()
-
-    session.close()
+    populate_test_data(TestSessionLocal, include_roster=False)
 
     yield
 
-    # Cleanup
     Base.metadata.drop_all(bind=test_engine)
 
 

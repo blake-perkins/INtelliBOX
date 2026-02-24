@@ -11,6 +11,7 @@ For stress tests (requires stress profile):
     python run_pg_tests.py --stress
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -38,6 +39,7 @@ PG_TEST_MODULES = [
     "tests/test_pg_migrations.py",
     "tests/test_pg_pool.py",
     "tests/test_pg_maintenance.py",
+    "tests/test_pg_web_routes.py",
     "tests/pg_integrity/",
     "tests/pg_contamination/",
     "tests/pg_migration/",
@@ -62,12 +64,16 @@ def run_test_module(module_path):
     print(f"{BOLD}Running: {module_path}{RESET}")
     print(f"{BLUE}{'=' * 70}{RESET}\n")
 
-    # Skip coverage for PG tests — they test the database, not code coverage
+    # Build environment: disable auth (web route tests need this) and skip coverage
+    env = os.environ.copy()
+    env.setdefault("AUTH_MODE", "disabled")
+
     result = subprocess.run(
         [sys.executable, "-m", "pytest", module_path, "-v", "--tb=short", "-q",
          "--no-cov", "-m", "not e2e and not smoke"],
         capture_output=False,
         text=True,
+        env=env,
     )
 
     return result.returncode == 0
@@ -75,7 +81,6 @@ def run_test_module(module_path):
 
 def check_pg_available():
     """Check if PostgreSQL test instance is reachable."""
-    import os
     pg_url = os.environ.get(
         "PG_TEST_DATABASE_URL",
         "postgresql+psycopg://intellibox_test:test_password@localhost:5433/intellibox_test",
