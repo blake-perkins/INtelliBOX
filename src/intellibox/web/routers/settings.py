@@ -84,7 +84,7 @@ async def save_settings(
     SettingsService.set_setting('priority_high_keywords', keywords)
     SettingsService.set_setting('ai_confidence_threshold', round(float(confidence_threshold), 2))
     SettingsService.set_setting('timezone', timezone)
-    SettingsService.set_setting('program_name', program_name.strip())
+    SettingsService.set_setting('program_name', program_name.strip()[:16])
 
     # Redirect with success flag
     return RedirectResponse(url="/settings?success=true", status_code=303)
