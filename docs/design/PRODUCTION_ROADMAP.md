@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The codebase is clean, well-structured, and functionally complete. Test suite: 16 pytest modules (SQLite) + 8 PG-specific modules (46 web route tests) + 165 BDD scenarios + 46 Playwright E2E tests + 16 smoke tests, all passing. The application is deployed to production on an EC2 instance with IronBank UBI 9 containers, PostgreSQL, nginx reverse proxy, TLS, and session-based auth (`AUTH_MODE=local`). CI/CD pipeline (6 jobs) auto-deploys on push to `main` after all tests and security scans pass.
+The codebase is clean, well-structured, and functionally complete. Test suite: 17 pytest modules (SQLite) + 8 PG-specific modules (46 web route tests) + 165 BDD scenarios + 46 Playwright E2E tests + 16 smoke tests, all passing. The application is deployed to production on an EC2 instance with IronBank UBI 9 containers, PostgreSQL, nginx reverse proxy, TLS, and session-based auth (`AUTH_MODE=local`). CI/CD pipeline (6 jobs) auto-deploys on push to `main` after all tests and security scans pass.
 
 **Overall readiness: ~92/100 — production-deployed with PostgreSQL, auth, TLS, comprehensive test coverage, and automated CI/CD.**
 
@@ -100,6 +100,7 @@ src/intellibox/web/
 │   ├── analytics.py    # GET /analytics
 │   ├── auth.py         # GET/POST /login, /logout, /auth/*
 │   ├── audit.py        # GET /audit
+│   ├── api_usage.py    # GET /api-usage (admin-only telemetry dashboard)
 │   ├── api.py          # GET /api/*, GET /health
 │   └── test_routes.py  # Test data setup routes
 ```
@@ -149,7 +150,7 @@ The `create_action()` bug (accessing `.id` after session close) is a pattern ris
 
 ## Phase 3 — Comprehensive Testing Strategy
 
-Current: 16 SQLite pytest modules + 8 PG-specific modules + 165 BDD scenarios + 46 E2E tests + 16 smoke tests, all passing.
+Current: 17 SQLite pytest modules + 8 PG-specific modules + 165 BDD scenarios + 46 E2E tests + 16 smoke tests, all passing.
 
 ### 3.1 — Coverage Analysis
 - [ ] Run `pytest tests/ --cov=src/intellibox --cov-report=html` and open the report
@@ -230,7 +231,7 @@ Before production, run a basic load test with `locust` or `wrk`:
 - [x] Add `psycopg[binary]` to dependencies *(using psycopg3, not psycopg2)*
 - [x] Dual-database support: SQLite for local dev, PostgreSQL for production
 - [x] Production runs PostgreSQL via `DATABASE_URL` in `.env.production`
-- [x] Alembic migrations (001–008) tested against both SQLite and PostgreSQL
+- [x] Alembic migrations (001–012) tested against both SQLite and PostgreSQL
 - [x] Full PG test suite: functional, migrations, pool, maintenance, web routes, integrity, contamination, migration, performance
 - [x] CI jobs: `test-postgres` (port 5433) and `stress-postgres` (port 5434, main only)
 
@@ -404,27 +405,38 @@ Select multiple actions and:
 - [x] Audit log entries for reprocess operations
 - [x] Tests in PG web route suite
 
-### 7.8 — API Documentation
+### 7.8 — API Usage Telemetry Dashboard *(Completed 2026-02-23)*
+- [x] `APIResponse` dataclass wrapping OpenAI response content + metadata (tokens, latency, retries)
+- [x] `APIUsageLog` model + Alembic migration 012 to persist every API call's telemetry
+- [x] `_call_api()` returns `APIResponse` instead of raw string; all 4 AI methods log usage
+- [x] Fire-and-forget `log_api_usage()` / `log_api_error()` helpers (best-effort, own session)
+- [x] Admin-only `/api-usage` dashboard: summary cards, daily activity chart, call type breakdown, recent calls table
+- [x] Cost estimation using GPT-4o-mini pricing ($0.15/1M input, $0.60/1M output)
+- [x] Accessible under Settings > API Usage tab (not a standalone nav item)
+- [x] `cleanup_api_usage_log()` in database maintenance (180-day retention)
+- [x] 12 tests: dashboard rendering, usage logging, error logging, cleanup
+
+### 7.9 — API Documentation
 FastAPI auto-generates OpenAPI docs at `/docs`. Decide:
 - [ ] Decision: expose docs or disable in production?
   - Expose: document, secure behind auth, announce to integrators
   - Disable: `FastAPI(docs_url=None, redoc_url=None)` in production config
 - [ ] Write `API.md` documenting all endpoints regardless of UI decision
 
-### 7.9 — Data Export *(Partially Complete 2026-02-20)*
+### 7.10 — Data Export *(Partially Complete 2026-02-20)*
 - [x] `GET /actions/export.csv` → download filtered actions as CSV *(completed 2026-02-20)*
 - [x] Export button on actions page respects active filters
 - [x] Tests: content-type, attachment header, filter accuracy, empty DB
 - [ ] "Download Report" button on report page → PDF or CSV
 
-### 7.10 — Multi-Program Support *(Future / Optional)*
+### 7.11 — Multi-Program Support *(Future / Optional)*
 If the tool is used across multiple programs/contracts:
 - [ ] Design `Program` model (separate namespaces for actions, rosters, settings)
 - [ ] Alembic migration
 - [ ] UI for switching between programs
 - [ ] (This is a significant architectural change — scope carefully)
 
-### 7.11 — Email Upload via Web UI *(Completed 2026-02-22)*
+### 7.12 — Email Upload via Web UI *(Completed 2026-02-22)*
 - [x] `POST /emails/upload` accepts `.eml` and `.msg` files
 - [x] Parses and processes uploaded emails through AI pipeline
 - [x] Smoke test verifies upload works on pilot
@@ -490,6 +502,7 @@ Create `docs/RUNBOOK.md` covering:
 | 7 | `in_progress` status feature | 4 hrs | **Done** |
 | 7 | Email upload via web UI | 4 hrs | **Done** |
 | 7 | Data export (CSV) | 1 day | **Done** (actions) |
+| 7 | API usage telemetry dashboard | 1 day | **Done** (admin-only, under Settings) |
 | 1 | CSRF protection | 4 hrs | Not started |
 | 2 | Service layer extraction | 2 days | Not started |
 | 6 | Sentry error tracking | 2 hrs | Not started |
@@ -507,11 +520,11 @@ Create `docs/RUNBOOK.md` covering:
 | Phase 0 | Mostly complete | 2026-02-18 | Deployment target decided (EC2), secrets rotated |
 | Phase 1 | Mostly complete | 2026-02-23 | Session auth + OIDC, TLS, security scanning; CSRF TBD |
 | Phase 2 | Mostly complete | 2026-02-20 | Router split done, in_progress bug fixed, service layer TBD |
-| Phase 3 | In progress | 2026-02-23 | 16 SQLite + 8 PG modules + 165 BDD + 46 E2E + 16 smoke; coverage % TBD |
+| Phase 3 | In progress | 2026-02-23 | 17 SQLite + 8 PG modules + 165 BDD + 46 E2E + 16 smoke; coverage % TBD |
 | Phase 4 | **Mostly complete** | 2026-02-23 | PostgreSQL in production, full PG test suite, backups TBD |
 | Phase 5 | **Complete** | 2026-02-23 | 6-job CI/CD: lint, test, container, test-postgres, stress-postgres, deploy |
 | Phase 6 | Not started | — | Observability & monitoring |
-| Phase 7 | Mostly complete | 2026-02-23 | Audit log, reprocess, in_progress, email upload, CSV export done |
+| Phase 7 | Mostly complete | 2026-02-23 | Audit log, reprocess, in_progress, email upload, CSV export, API usage telemetry done |
 | Phase 8 | Not started | — | Documentation |
 
 ---
