@@ -13,6 +13,8 @@ from intellibox.ai.prompts import (
     STRUCTURED_PROGRAM_NEWS_PROMPT,
     SYSTEM_PROMPT,
 )
+from intellibox.ai.types import APIResponse
+from intellibox.ai.usage_logger import log_api_error, log_api_usage
 from intellibox.config import settings
 from intellibox.knowledge import get_knowledge_context
 from intellibox.models import Action, Email
@@ -85,7 +87,7 @@ class AIClient:
         messages: List[Dict],
         temperature: float = 0.3,
         max_tokens: int = 1500,
-    ) -> str:
+    ) -> APIResponse:
         """Call the OpenAI API with automatic retry and exponential backoff.
 
         Args:
@@ -94,13 +96,14 @@ class AIClient:
             max_tokens: Maximum tokens in response
 
         Returns:
-            Raw response content string
+            APIResponse with content and usage metadata
 
         Raises:
             The original exception after max_retries exhausted
         """
         for attempt in range(self.max_retries + 1):
             try:
+                start_time = time.time()
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
@@ -108,7 +111,17 @@ class AIClient:
                     max_tokens=max_tokens,
                     timeout=self.timeout,
                 )
-                return response.choices[0].message.content
+                elapsed_ms = int((time.time() - start_time) * 1000)
+                usage = response.usage
+                return APIResponse(
+                    content=response.choices[0].message.content,
+                    model=response.model or self.model,
+                    prompt_tokens=usage.prompt_tokens if usage else 0,
+                    completion_tokens=usage.completion_tokens if usage else 0,
+                    total_tokens=usage.total_tokens if usage else 0,
+                    latency_ms=elapsed_ms,
+                    retry_count=attempt,
+                )
             except _RETRYABLE_EXCEPTIONS as e:
                 if attempt < self.max_retries:
                     wait = 2 ** attempt  # 1, 2, 4, 8, ...
@@ -169,7 +182,7 @@ class AIClient:
         logger.info(f"Calling GPT-4 API for email ID {email.id}")
 
         system_prompt = self._build_system_prompt()
-        raw_response = self._call_api(
+        api_response = self._call_api(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
@@ -177,6 +190,8 @@ class AIClient:
             temperature=0.3,
             max_tokens=1500,
         )
+        raw_response = api_response.content
+        log_api_usage("extract_actions", api_response, email_id=email.id)
 
         logger.debug(f"GPT-4 response: {raw_response[:200]}...")
 
@@ -299,20 +314,23 @@ class AIClient:
             logger.info(f"Generating program news from {len(emails)} emails")
 
             system_prompt = self._build_system_prompt()
-            summary = self._call_api(
+            api_response = self._call_api(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.5,
                 max_tokens=500,
-            ).strip()
+            )
+            summary = api_response.content.strip()
+            log_api_usage("generate_program_news", api_response)
 
             logger.info("Program news summary generated")
             return summary
 
         except Exception as e:
             logger.error(f"Failed to generate program news: {e}")
+            log_api_error("generate_program_news", e, model=self.model)
             return "Error generating program news summary."
 
     def generate_structured_program_news(self, emails: List[Email], days: int = 7) -> Dict:
@@ -357,14 +375,16 @@ class AIClient:
             logger.info(f"Generating structured program news from {len(emails)} emails")
 
             system_prompt = self._build_system_prompt()
-            raw_response = self._call_api(
+            api_response = self._call_api(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,
                 max_tokens=800,
-            ).strip()
+            )
+            raw_response = api_response.content.strip()
+            log_api_usage("generate_structured_program_news", api_response)
 
             logger.debug(f"Structured program news response: {raw_response[:200]}...")
 
@@ -391,6 +411,7 @@ class AIClient:
 
         except Exception as e:
             logger.error(f"Failed to generate structured program news: {e}")
+            log_api_error("generate_structured_program_news", e, model=self.model)
             return {
                 "critical_updates": [],
                 "trending_topics": [],
@@ -464,14 +485,16 @@ class AIClient:
             logger.info(f"Generating KB-aware insights ({stats.get('total_actions', 0)} actions, {days}d)")
 
             system_prompt = self._build_system_prompt()
-            raw_response = self._call_api(
+            api_response = self._call_api(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,
                 max_tokens=2000,
-            ).strip()
+            )
+            raw_response = api_response.content.strip()
+            log_api_usage("generate_report_insights", api_response)
 
             logger.debug(f"Report insights response: {raw_response[:200]}...")
 
@@ -488,6 +511,7 @@ class AIClient:
 
         except Exception as e:
             logger.error(f"Failed to generate report insights: {e}")
+            log_api_error("generate_report_insights", e, model=self.model)
             return {**_empty, "executive_summary": {**_empty["executive_summary"], "headline": f"Error: {str(e)[:80]}"}}
 
 

@@ -83,6 +83,7 @@ from intellibox.web.routers import (  # noqa: E402
     actions,
     analytics,
     api,
+    api_usage,
     audit,
     auth,
     dashboard,
@@ -103,6 +104,7 @@ app.include_router(knowledge_base.router)
 app.include_router(roster.router)
 app.include_router(analytics.router)
 app.include_router(audit.router)
+app.include_router(api_usage.router)
 app.include_router(api.router)
 
 # Test-only routes (gated by TESTING env var)

@@ -212,6 +212,23 @@ def cleanup_audit_log(session: Session, retention_days: int = 365) -> int:
     return deleted
 
 
+def cleanup_api_usage_log(session: Session, retention_days: int = 180) -> int:
+    """Delete APIUsageLog entries older than *retention_days*.
+
+    Returns:
+        Number of rows deleted.
+    """
+    from intellibox.models import APIUsageLog
+
+    cutoff = utcnow() - timedelta(days=retention_days)
+    deleted = (
+        session.query(APIUsageLog)
+        .filter(APIUsageLog.created_at < cutoff)
+        .delete(synchronize_session="fetch")
+    )
+    return deleted
+
+
 def _is_sqlite_engine(eng) -> bool:
     """Check if the given engine is backed by SQLite."""
     return str(eng.url).startswith("sqlite")
@@ -252,6 +269,7 @@ def run_maintenance(session: Session, target_engine=None) -> Dict:
     logs_deleted = cleanup_processing_logs(session)
     sessions_deleted = cleanup_expired_sessions(session)
     audit_deleted = cleanup_audit_log(session)
+    api_usage_deleted = cleanup_api_usage_log(session)
     session.commit()
 
     analyze_status = "ok"
@@ -271,6 +289,7 @@ def run_maintenance(session: Session, target_engine=None) -> Dict:
         "logs_deleted": logs_deleted,
         "sessions_deleted": sessions_deleted,
         "audit_deleted": audit_deleted,
+        "api_usage_deleted": api_usage_deleted,
         "analyze": analyze_status,
         "vacuum": vacuum_status,
     }

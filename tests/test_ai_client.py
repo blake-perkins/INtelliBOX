@@ -86,6 +86,8 @@ class TestAPIRetryLogic:
         mock_completion = MagicMock()
         mock_completion.choices = [MagicMock()]
         mock_completion.choices[0].message.content = '{"actions": []}'
+        mock_completion.model = "gpt-4"
+        mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         client.client.chat.completions.create = MagicMock(
             side_effect=[rate_limit_exc, rate_limit_exc, mock_completion]
@@ -98,7 +100,8 @@ class TestAPIRetryLogic:
                 max_tokens=100,
             )
 
-        assert result == '{"actions": []}'
+        assert result.content == '{"actions": []}'
+        assert result.retry_count == 2
         assert client.client.chat.completions.create.call_count == 3
 
     def test_retries_on_api_connection_error(self):
@@ -114,6 +117,8 @@ class TestAPIRetryLogic:
         mock_completion = MagicMock()
         mock_completion.choices = [MagicMock()]
         mock_completion.choices[0].message.content = '{"result": "ok"}'
+        mock_completion.model = "gpt-4"
+        mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         client.client.chat.completions.create = MagicMock(
             side_effect=[conn_exc, mock_completion]
@@ -126,7 +131,8 @@ class TestAPIRetryLogic:
                 max_tokens=100,
             )
 
-        assert result == '{"result": "ok"}'
+        assert result.content == '{"result": "ok"}'
+        assert result.retry_count == 1
         assert client.client.chat.completions.create.call_count == 2
 
     def test_gives_up_after_max_retries(self):
@@ -205,6 +211,8 @@ class TestAPIRetryLogic:
         mock_completion = MagicMock()
         mock_completion.choices = [MagicMock()]
         mock_completion.choices[0].message.content = '{"status": "ok"}'
+        mock_completion.model = "gpt-4"
+        mock_completion.usage = MagicMock(prompt_tokens=20, completion_tokens=10, total_tokens=30)
 
         client.client.chat.completions.create = MagicMock(
             return_value=mock_completion
@@ -218,7 +226,11 @@ class TestAPIRetryLogic:
                 max_tokens=100,
             )
 
-        assert result == '{"status": "ok"}'
+        assert result.content == '{"status": "ok"}'
+        assert result.prompt_tokens == 20
+        assert result.completion_tokens == 10
+        assert result.total_tokens == 30
+        assert result.retry_count == 0
         assert client.client.chat.completions.create.call_count == 1
         assert len(sleep_calls) == 0
 
@@ -293,6 +305,8 @@ class TestRetryTimingAccuracy:
         mock_completion = MagicMock()
         mock_completion.choices = [MagicMock()]
         mock_completion.choices[0].message.content = '{"ok": true}'
+        mock_completion.model = "gpt-4"
+        mock_completion.usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         client.client.chat.completions.create = MagicMock(
             side_effect=[rate_err, conn_err, api_err, mock_completion]
@@ -305,7 +319,8 @@ class TestRetryTimingAccuracy:
                 temperature=0.3, max_tokens=100,
             )
 
-        assert result == '{"ok": true}'
+        assert result.content == '{"ok": true}'
+        assert result.retry_count == 3
         assert client.client.chat.completions.create.call_count == 4
         assert len(sleep_calls) == 3  # 3 retries before success
 

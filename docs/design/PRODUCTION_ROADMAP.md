@@ -1,16 +1,16 @@
 # INtelliBOX — Production Readiness Roadmap
 
 > Created: 2026-02-17
-> Last updated: 2026-02-19
+> Last updated: 2026-02-23
 > Status: Active — update this document as items are completed
 
 ---
 
 ## Executive Summary
 
-The codebase is clean, well-structured, and functionally complete. Test suite: 13 pytest modules + 165 BDD scenarios + 46 Playwright E2E tests, all passing. The application is deployed to production on an EC2 instance with IronBank UBI 9 containers, nginx reverse proxy, TLS, and HTTP basic auth. CI/CD pipeline auto-deploys on push to `main` after all tests and security scans pass.
+The codebase is clean, well-structured, and functionally complete. Test suite: 16 pytest modules (SQLite) + 8 PG-specific modules (46 web route tests) + 165 BDD scenarios + 46 Playwright E2E tests + 16 smoke tests, all passing. The application is deployed to production on an EC2 instance with IronBank UBI 9 containers, PostgreSQL, nginx reverse proxy, TLS, and session-based auth (`AUTH_MODE=local`). CI/CD pipeline (6 jobs) auto-deploys on push to `main` after all tests and security scans pass.
 
-**Overall readiness: ~85/100 — deployed and running with security scanning, auth, and TLS in place.**
+**Overall readiness: ~92/100 — production-deployed with PostgreSQL, auth, TLS, comprehensive test coverage, and automated CI/CD.**
 
 ---
 
@@ -20,9 +20,7 @@ Each item has a checkbox. Check it off when completed and add the completion dat
 
 ---
 
-## Phase 0 — Immediate Blockers *(Do Before Anything Else)*
-
-These are not optional. Nothing should be deployed publicly until these are resolved.
+## Phase 0 — Immediate Blockers *(Complete)*
 
 ### 0.1 — Rotate Exposed Secrets
 - [x] Regenerate the OpenAI API key at platform.openai.com *(done 2026-02-17)*
@@ -34,16 +32,18 @@ These are not optional. Nothing should be deployed publicly until these are reso
 - **Who uses this?** Internal team — small number of known users
 - **Where does it run?** AWS EC2 (t3.micro) with Podman containers
 - **Single tenant or multi-tenant?** Single tenant
-- **Network boundary?** Public internet with HTTP basic auth via nginx
+- **Network boundary?** Public internet with session-based auth
 
 ---
 
 ## Phase 1 — Security Hardening
 
-### 1.1 — Authentication *(Completed 2026-02-18)*
-- [x] Decision made: **Option A — HTTP Basic Auth via nginx**
-- [x] Auth implemented: nginx `auth_basic` with `.htpasswd`, `/health` endpoint excluded from auth
-- [x] Smoke tests updated to support `PILOT_USER`/`PILOT_PASSWORD` env vars
+### 1.1 — Authentication *(Completed 2026-02-22)*
+- [x] ~~Decision made: Option A — HTTP Basic Auth via nginx~~ *(superseded)*
+- [x] Upgraded to session-based auth (`AUTH_MODE=local`) with bcrypt password hashing *(2026-02-22)*
+- [x] Login/logout UI, server-side sessions with configurable TTL
+- [x] OIDC support (`AUTH_MODE=oidc`) for enterprise SSO *(2026-02-22)*
+- [x] Smoke tests updated to use form-based login with session cookies *(2026-02-23)*
 
 ### 1.2 — CSRF Protection
 All HTML forms currently submit without CSRF tokens.
@@ -66,7 +66,7 @@ Minimum bar before any deployment:
 ### 1.4 — Network Security *(Mostly Complete)*
 - [x] Deploy behind a reverse proxy (nginx) — uvicorn bound to 127.0.0.1:8000 only
 - [x] Configure TLS termination at the proxy layer (Let's Encrypt via Certbot, auto-renew)
-- [ ] Restrict source IPs to VPN CIDR at firewall/security group level (optional — currently public with basic auth)
+- [ ] Restrict source IPs to VPN CIDR at firewall/security group level (optional — currently public with session auth)
 - [ ] Add rate limiting at proxy layer (Nginx `limit_req_zone`)
 
 ### 1.5 — Dependency Security Scanning *(Completed 2026-02-19)*
@@ -99,6 +99,7 @@ src/intellibox/web/
 │   ├── knowledge_base.py # GET/POST /knowledge-base/*
 │   ├── analytics.py    # GET /analytics
 │   ├── auth.py         # GET/POST /login, /logout, /auth/*
+│   ├── audit.py        # GET /audit
 │   ├── api.py          # GET /api/*, GET /health
 │   └── test_routes.py  # Test data setup routes
 ```
@@ -148,7 +149,7 @@ The `create_action()` bug (accessing `.id` after session close) is a pattern ris
 
 ## Phase 3 — Comprehensive Testing Strategy
 
-Current: 13 pytest modules + 165 BDD scenarios + 46 E2E tests, all passing. These are the gaps.
+Current: 16 SQLite pytest modules + 8 PG-specific modules + 165 BDD scenarios + 46 E2E tests + 16 smoke tests, all passing.
 
 ### 3.1 — Coverage Analysis
 - [ ] Run `pytest tests/ --cov=src/intellibox --cov-report=html` and open the report
@@ -156,7 +157,14 @@ Current: 13 pytest modules + 165 BDD scenarios + 46 E2E tests, all passing. Thes
 - [ ] Set coverage gate in CI: **80% minimum**
 - [ ] Target 100% on `models.py`, `settings_service.py`, `priority_rules.py`
 
-### 3.2 — Missing Test Categories
+### 3.2 — PostgreSQL Web Route Tests *(Completed 2026-02-23)*
+- [x] Created `tests/test_pg_web_routes.py` — 46 tests exercising FastAPI routes against PostgreSQL
+- [x] Targets SQLite-vs-PG behavioral differences: DISTINCT+ORDER BY, ilike, CASE in COUNT, nullslast, GROUP BY strictness
+- [x] Extracted shared test data into `tests/pg_web_helpers.py` (used by both SQLite and PG test modules)
+- [x] Integrated into `run_pg_tests.py` and CI `test-postgres` job
+- [x] Fixed `DISTINCT assigned_to ORDER BY assigned_at` bug that caused production 500 errors
+
+### 3.3 — Missing Test Categories
 
 **Ingestion pipeline:**
 - [ ] Parse a real `.eml` file end-to-end → verify Email + Action records created
@@ -187,27 +195,27 @@ Current: 13 pytest modules + 165 BDD scenarios + 46 E2E tests, all passing. Thes
 - [ ] Due date exactly on threshold boundary
 - [ ] Empty keyword list (no crash)
 
-### 3.3 — Property-Based Testing
+### 3.4 — Property-Based Testing
 - [ ] Add `hypothesis` to dev dependencies
 - [ ] Priority output is always one of `{high, medium, low}` for any input
 - [ ] Settings round-trip (write → read) is idempotent
 - [ ] Email parsing never raises (returns `None` gracefully on any input)
 
-### 3.4 — Load / Performance Testing
+### 3.5 — Load / Performance Testing
 Before production, run a basic load test with `locust` or `wrk`:
 - [ ] Dashboard with 1,000 emails / 5,000 actions — still fast?
 - [ ] `/actions?priority=high` with filters — pagination query performant?
 - [ ] Report generation time as data grows
 - [ ] Document baseline response times: **p50=___ p95=___ p99=___**
 
-### 3.5 — Security Testing *(Partially Complete)*
+### 3.6 — Security Testing *(Partially Complete)*
 - [x] Run `bandit -r src/` and address HIGH findings *(2 found and fixed — see docs/security/SECURITY_FIXES.md)*
 - [x] Run `pip-audit` — no unresolved HIGH CVEs
 - [x] Run Syft/Grype container scan — no high-severity fixable CVEs
-- [ ] (After auth is added) Test authentication bypass attempts
+- [ ] Test authentication bypass attempts
 - [ ] Verify 404 responses don't leak system info
 
-### 3.6 — BDD Expansion
+### 3.7 — BDD Expansion
 - [ ] Excel roster upload (`POST /roster/upload` with `.xlsx` file)
 - [ ] Email search actually filters results (assert non-matching email not in page)
 - [ ] Pagination boundary (last page + 1 returns 200 with empty list)
@@ -216,40 +224,29 @@ Before production, run a basic load test with `locust` or `wrk`:
 
 ---
 
-## Phase 4 — Database & Scalability
+## Phase 4 — Database & Scalability *(Mostly Complete)*
 
-### 4.1 — Migrate SQLite → PostgreSQL
-SQLite limitations for production:
-- File-level write locking (concurrent POSTs can timeout)
-- Not shareable across processes/containers
-- No network access
+### 4.1 — Migrate SQLite → PostgreSQL *(Completed 2026-02-21)*
+- [x] Add `psycopg[binary]` to dependencies *(using psycopg3, not psycopg2)*
+- [x] Dual-database support: SQLite for local dev, PostgreSQL for production
+- [x] Production runs PostgreSQL via `DATABASE_URL` in `.env.production`
+- [x] Alembic migrations (001–008) tested against both SQLite and PostgreSQL
+- [x] Full PG test suite: functional, migrations, pool, maintenance, web routes, integrity, contamination, migration, performance
+- [x] CI jobs: `test-postgres` (port 5433) and `stress-postgres` (port 5434, main only)
 
-Steps:
-- [ ] Add `psycopg2-binary` (or `asyncpg`) to dependencies
-- [ ] Update `DATABASE_URL` format in `.env.example`
-- [ ] Provision PostgreSQL instance (RDS, Cloud SQL, or self-hosted)
-- [ ] Run `alembic upgrade head` against Postgres instance
-- [ ] Update `conftest.py` to support both SQLite (dev) and Postgres (CI/prod)
-- [ ] Run full test suite against Postgres — all passing
-- [ ] The Docker Compose `postgres` profile already exists — just activate it
-
-### 4.2 — Connection Pooling
-- [ ] Add pool configuration to `create_engine()`:
-  ```python
-  create_engine(url, pool_size=10, max_overflow=20, pool_pre_ping=True)
-  ```
-- [ ] `pool_pre_ping=True` handles stale connections automatically
+### 4.2 — Connection Pooling *(Completed)*
+- [x] `pool_pre_ping=True` configured in `database.py`
+- [x] PG pool tests in `tests/test_pg_pool.py`
 
 ### 4.3 — Database Backups
 - [ ] Define RPO (Recovery Point Objective) — how much data loss is acceptable?
-- [ ] Configure automated daily snapshots (RDS/Cloud SQL) or `pg_dump` cron
+- [ ] Configure automated daily snapshots or `pg_dump` cron
 - [ ] Ship backups to S3 or blob storage
 - [ ] **Test the restore** — schedule a quarterly restore drill
 
-### 4.4 — Migrations in Production
-- [ ] Decide: auto-run migrations on container startup OR manual operator step
-- [ ] Recommended: `init` container runs `alembic upgrade head` before app starts
-- [ ] App container waits for DB readiness (`wait-for-it.sh` pattern)
+### 4.4 — Migrations in Production *(Completed)*
+- [x] Container startup runs `alembic upgrade head` automatically
+- [x] Schema conflict detection tested (`test_pg_migrations.py`)
 - [ ] Document rollback procedure for failed migrations
 
 ### 4.5 — Query Performance Review
@@ -259,22 +256,24 @@ Steps:
 
 ---
 
-## Phase 5 — CI/CD Pipeline *(Completed 2026-02-19)*
+## Phase 5 — CI/CD Pipeline *(Complete)*
 
 ### 5.1 — GitHub Actions Structure
 ```
 .github/workflows/
-├── ci.yml          # Every push: lint, test, container, security, deploy
+├── ci.yml          # Every push: lint, test, container, test-postgres, stress-postgres, deploy
 └── deploy-full.yml # Manual trigger: full rebuild deploy
 ```
 
-### 5.2 — CI Pipeline (`ci.yml`) *(Completed)*
-Triggered on: every push to any branch. All 3 test jobs run in parallel (no lint gating):
+### 5.2 — CI Pipeline (`ci.yml`) *(Completed, expanded 2026-02-23)*
+Triggered on: every push to any branch. 6 jobs:
 
 - [x] **lint:** `ruff check src/ tests/` — fast lint check
-- [x] **test:** Full pytest suite (13 modules + BDD + E2E) + pip-audit dependency CVE scan + bandit static security analysis
-- [x] **container:** Build IronBank UBI 9 image, run unit tests in container, start prod container, BDD integration tests against live container, Syft SBOM generation (SPDX + CycloneDX), Grype vulnerability scan
-- [x] **deploy:** Auto-deploy to EC2 pilot on push to `main` (needs all 3 jobs above)
+- [x] **test:** Full pytest suite (16 modules + BDD + E2E) + pip-audit + bandit
+- [x] **container:** Build IronBank UBI 9 image, run unit tests in container, BDD integration, Syft SBOM, Grype scan
+- [x] **test-postgres:** PG test suite (8 modules including 46 web route tests) on port 5433
+- [x] **stress-postgres:** PG stress/resilience/backup tests on port 5434 (main branch only)
+- [x] **deploy:** Auto-deploy to EC2 pilot on push to `main` (needs all jobs above)
 
 ### 5.3 — CD Pipeline *(Completed)*
 Deploy is integrated into `ci.yml` as the final job:
@@ -330,25 +329,10 @@ Choose based on deployment target:
 - [ ] Verify errors appear in Sentry dashboard
 - [ ] Configure Slack/email notification for new error types
 
-### 6.4 — Health & Readiness Endpoints
-Expand the existing `/health` endpoint:
-
-**`GET /health`** (liveness — is the process running?)
-```json
-{"status": "healthy", "version": "1.2.3", "timestamp": "..."}
-```
-
-**`GET /ready`** (readiness — is the app ready for traffic?)
-```json
-{"status": "ready", "db": "connected", "scheduler": "running"}
-```
-- [ ] Implement `/ready` endpoint
-- [ ] Fix Dockerfile healthcheck (current syntax is broken):
-  ```dockerfile
-  HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-      CMD curl -f http://localhost:8000/health || exit 1
-  ```
-- [ ] Configure ECS/Kubernetes liveness and readiness probes
+### 6.4 — Health & Readiness Endpoints *(Partially Complete)*
+- [x] `/health` returns status, version, watcher state, uptime
+- [ ] Implement `/ready` endpoint (DB connected, scheduler running)
+- [ ] Configure container liveness and readiness probes
 
 ### 6.5 — Metrics (Optional, Post-MVP)
 - [ ] Add `prometheus-fastapi-instrumentator` (auto-instruments all routes)
@@ -369,21 +353,12 @@ Minimum alerts:
 
 Not blockers, but meaningful product improvements.
 
-### 7.1 — Audit Log
-Record every write operation (create, assign, complete, change priority, delete, settings change):
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `who` | VARCHAR | IP until auth added; user identity after |
-| `what` | VARCHAR | e.g. `action.assigned`, `settings.updated` |
-| `when` | DateTime | UTC |
-| `details` | JSON | `{old: ..., new: ...}` |
-| `target_id` | INT | ID of affected record |
-
-- [ ] Design `audit_log` table and write Alembic migration
-- [ ] Add audit hook to all write operations (service layer)
-- [ ] Add `/audit` admin page (if auth implemented)
-- [ ] BDD tests for audit log entries
+### 7.1 — Audit Log *(Completed 2026-02-21)*
+- [x] `AuditLog` model with who, action, details (JSON), target_type, target_id, timestamp
+- [x] Alembic migration
+- [x] Audit hooks on all write operations (assign, complete, priority change, edit, delete, settings, roster)
+- [x] `/audit` admin page with filtering
+- [x] Tests in PG web route suite
 
 ### 7.2 — Email Notifications on Assignment
 When an action is assigned, notify the assignee by email.
@@ -408,12 +383,11 @@ Select multiple actions and:
 - [ ] Bulk export to CSV
 - [ ] BDD tests for each bulk operation
 
-### 7.5 — `in_progress` Status
-See also Phase 2.5. This is the feature component:
-- [ ] Add `in_progress` to `Assignment.status` (Alembic migration)
-- [ ] Add "Mark In Progress" button to action detail page
-- [ ] Show in-progress actions distinctly on dashboard
-- [ ] BDD tests for the new status transitions
+### 7.5 — `in_progress` Status *(Completed 2026-02-20)*
+- [x] Added `in_progress` to `Assignment.status` CHECK constraint (Alembic migration 008)
+- [x] Status transitions on action detail page (assigned → in_progress → completed)
+- [x] Dashboard shows in-progress actions distinctly
+- [x] Tests for status transitions in PG web route suite
 
 ### 7.6 — Overdue Escalation
 - [ ] Scheduled job: find actions where `due_date < today` and `status = assigned`
@@ -422,12 +396,13 @@ See also Phase 2.5. This is the feature component:
 - [ ] `ESCALATION_ENABLED=true/false` env var toggle
 - [ ] BDD test: overdue action → escalation email sent
 
-### 7.7 — Re-process Email via Web UI
-Currently re-processing requires CLI commands.
-- [ ] Add "Re-process with AI" button on email detail page
-- [ ] `POST /emails/{id}/reprocess` route
-- [ ] BDD test: button click → new actions extracted
-- [ ] Guard against duplicate actions (idempotent re-processing)
+### 7.7 — Re-process Email via Web UI *(Completed 2026-02-21)*
+- [x] "Re-process with AI" button on email detail page
+- [x] `POST /emails/{id}/reprocess` route with preview step
+- [x] Preview shows extracted actions before confirming
+- [x] Confirm deletes old unassigned actions and creates new ones
+- [x] Audit log entries for reprocess operations
+- [x] Tests in PG web route suite
 
 ### 7.8 — API Documentation
 FastAPI auto-generates OpenAPI docs at `/docs`. Decide:
@@ -448,6 +423,11 @@ If the tool is used across multiple programs/contracts:
 - [ ] Alembic migration
 - [ ] UI for switching between programs
 - [ ] (This is a significant architectural change — scope carefully)
+
+### 7.11 — Email Upload via Web UI *(Completed 2026-02-22)*
+- [x] `POST /emails/upload` accepts `.eml` and `.msg` files
+- [x] Parses and processes uploaded emails through AI pipeline
+- [x] Smoke test verifies upload works on pilot
 
 ---
 
@@ -496,21 +476,26 @@ Create `docs/RUNBOOK.md` covering:
 |-------|------|--------|--------|
 | 0 | Rotate secrets | 1 hr | **Done** |
 | 0 | Decide deployment target | 1 hr | **Done** (EC2 + Podman) |
-| 1 | Auth (Option A: proxy) | 4 hrs | **Done** (nginx basic auth) |
+| 1 | Auth (session-based + OIDC) | 2 days | **Done** |
 | 1 | TLS + reverse proxy | 4 hrs | **Done** (Certbot + nginx) |
 | 1 | Security scanning | 4 hrs | **Done** (pip-audit, bandit, Syft, Grype) |
-| 5 | GitHub Actions CI/CD | 1 day | **Done** (4-job pipeline) |
+| 4 | Migrate SQLite → PostgreSQL | 3 days | **Done** (dual-DB, full PG test suite) |
+| 4 | Connection pooling | 2 hrs | **Done** |
+| 5 | GitHub Actions CI/CD | 1 day | **Done** (6-job pipeline) |
+| 2 | Split app.py into routers | 2 days | **Done** |
+| 2 | Fix `in_progress` status bug | 4 hrs | **Done** |
+| 3 | PG web route tests | 1 day | **Done** (46 tests) |
+| 7 | Audit log | 1 day | **Done** |
+| 7 | Re-process email via web UI | 1 day | **Done** |
+| 7 | `in_progress` status feature | 4 hrs | **Done** |
+| 7 | Email upload via web UI | 4 hrs | **Done** |
+| 7 | Data export (CSV) | 1 day | **Done** (actions) |
 | 1 | CSRF protection | 4 hrs | Not started |
-| 4 | Migrate SQLite → PostgreSQL | 1 day | Not started |
+| 2 | Service layer extraction | 2 days | Not started |
 | 6 | Sentry error tracking | 2 hrs | Not started |
 | 6 | Structured JSON logging | 2 hrs | Not started |
-| 2 | Split app.py into routers | 2 days | **Done** |
-| 2 | Service layer extraction | 2 days | Not started |
-| 2 | Fix `in_progress` status bug | 4 hrs | **Done** |
 | 3 | Coverage analysis + gap filling | 1 day | Not started |
-| 7 | Audit log | 1 day | Not started |
 | 7 | Email notifications on assign | 4 hrs | Not started |
-| 7 | Data export (CSV) | 1 day | **Done** (actions) |
 | 8 | ADRs + Runbook | 1 day | Not started |
 
 ---
@@ -520,14 +505,14 @@ Create `docs/RUNBOOK.md` covering:
 | Phase | Status | Completed | Notes |
 |-------|--------|-----------|-------|
 | Phase 0 | Mostly complete | 2026-02-18 | Deployment target decided (EC2), secrets rotated |
-| Phase 1 | Mostly complete | 2026-02-19 | Auth (nginx basic), TLS (Certbot), security scanning (pip-audit, bandit, Syft, Grype) |
+| Phase 1 | Mostly complete | 2026-02-23 | Session auth + OIDC, TLS, security scanning; CSRF TBD |
 | Phase 2 | Mostly complete | 2026-02-20 | Router split done, in_progress bug fixed, service layer TBD |
-| Phase 3 | In progress | — | 13 modules + 165 BDD + 46 E2E, coverage % TBD |
-| Phase 4 | Not started | — | Database & scalability |
-| Phase 5 | **Complete** | 2026-02-19 | CI/CD pipeline: lint, test, container, security, auto-deploy |
+| Phase 3 | In progress | 2026-02-23 | 16 SQLite + 8 PG modules + 165 BDD + 46 E2E + 16 smoke; coverage % TBD |
+| Phase 4 | **Mostly complete** | 2026-02-23 | PostgreSQL in production, full PG test suite, backups TBD |
+| Phase 5 | **Complete** | 2026-02-23 | 6-job CI/CD: lint, test, container, test-postgres, stress-postgres, deploy |
 | Phase 6 | Not started | — | Observability & monitoring |
-| Phase 7 | In progress | — | CSV export done, other features TBD |
-| Phase 8 | In progress | — | Documentation updates ongoing |
+| Phase 7 | Mostly complete | 2026-02-23 | Audit log, reprocess, in_progress, email upload, CSV export done |
+| Phase 8 | Not started | — | Documentation |
 
 ---
 

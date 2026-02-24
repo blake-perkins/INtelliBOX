@@ -201,6 +201,38 @@ class AuditLog(Base):
         )
 
 
+class APIUsageLog(Base):
+    """Log of every OpenAI API call with token usage and latency."""
+
+    __tablename__ = "api_usage_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    call_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="success")
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    email_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("emails.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=utcnow,
+        nullable=False,
+        index=True,
+    )
+
+    def __repr__(self) -> str:
+        return f"<APIUsageLog(id={self.id}, type='{self.call_type}', tokens={self.total_tokens})>"
+
+
 class ProgramNewsCache(Base):
     """Cached program news summary to avoid excessive AI API calls."""
 

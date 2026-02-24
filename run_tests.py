@@ -51,6 +51,7 @@ FAST_MODULES = [
 # Tier 2: Slower integration tests (web routes, auth with bcrypt)
 SLOW_MODULES = [
     "tests/test_web_interface.py",
+    "tests/test_api_usage.py",
     "tests/test_audit.py",
     "tests/test_auth.py",
     "tests/test_oidc.py",

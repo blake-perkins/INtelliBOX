@@ -80,7 +80,7 @@
 
         .nav-links {
             display: flex;
-            gap: 1.25rem;
+            gap: 1rem;
             list-style: none;
         }
 
@@ -329,9 +329,9 @@
                 <img src="/static/logo.png" alt="INtelliBOX Logo" class="navbar-logo">
                 {% set pname = get_program_name() %}
                 {% if pname %}
-                <span style="display: flex; flex-direction: column; justify-content: center; border-left: 1px solid rgba(255,255,255,0.3); margin-left: 0.5rem; padding-left: 0.75rem; gap: 0.1rem;">
+                <span style="display: flex; flex-direction: column; justify-content: center; border-left: 1px solid rgba(255,255,255,0.3); margin-left: 0.5rem; padding-left: 0.75rem; gap: 0.1rem; max-width: 140px;">
                     <span style="font-size: 0.65rem; color: rgba(255,255,255,0.55); letter-spacing: 0.08em; text-transform: uppercase; line-height: 1;">project</span>
-                    <span style="font-size: 1rem; font-weight: 700; color: white; letter-spacing: 0.01em; line-height: 1.2; white-space: nowrap;">{{ pname }}</span>
+                    <span style="font-size: 1rem; font-weight: 700; color: white; letter-spacing: 0.01em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ pname }}</span>
                 </span>
                 {% endif %}
             </a>
