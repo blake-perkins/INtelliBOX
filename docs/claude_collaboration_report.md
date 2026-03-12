@@ -193,6 +193,14 @@ Development continued at a more sustainable pace (~5–10 commits/day), adding e
 
 ---
 
+## Fixing a CI Failure from a Phone
+
+One notable moment: late on Feb 19, the CI pipeline failed on a lint error — an unused `joinedload` import left behind after a refactor. Rather than waiting until the next morning, the developer opened Claude Code on their phone (via `claude.ai/code`) at 12:43 AM and had Claude create a pull request ([PR #2](https://github.com/blake-perkins/INtelliBOX/pull/2)) to fix the one-line issue. The fix was a single line removal. The pipeline went green, and the problem was resolved before the next work day — all from a phone screen, in under a minute.
+
+This illustrates how the AI-assisted workflow extends beyond the desktop. Claude Code is accessible from any device with a browser, making it possible to triage and fix issues on the go without needing a full development environment.
+
+---
+
 ## The Tooling Troubleshooting Story
 
 Not everything was smooth. An entire conversation session was dedicated to getting the basic development environment working. The Claude Code VS Code extension on Windows had issues executing bash commands — every command silently failed with exit code 1.
