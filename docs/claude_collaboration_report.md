@@ -40,6 +40,14 @@ Before any code was written, the following tools and accounts were needed:
 
 The Claude Code extension runs inside VS Code and provides an interactive chat panel where you describe what you want built. Claude reads your codebase, writes code, runs commands, and iterates based on your feedback — all within the editor.
 
+### Permission Modes
+
+Claude Code has a permission system that controls what actions the AI can take autonomously. Initially, the project operated in **default permission mode** — every bash command Claude wanted to run required manual approval. This is visible in the settings file, which accumulated 50+ individually approved commands like `Bash("./venv/Scripts/pytest.exe:*")` and `Bash("./venv/Scripts/intellibox.exe web:*")` as each new tool was used.
+
+This got tedious quickly. After the first day of development, the VS Code setting `allowDangerouslySkipPermissions` was enabled, switching to **bypass mode** — allowing Claude to run any command without prompting. This dramatically increased development velocity, as Claude could freely run tests, install packages, start servers, and commit code without the developer needing to approve each action. The broad `Bash(*)` wildcard in the settings file marks where this transition happened.
+
+The trade-off is trust: bypass mode requires confidence that the AI won't take destructive actions. In practice, Claude Code is designed to confirm before doing anything risky (deleting files, force-pushing, etc.), so the bypass primarily eliminates friction on routine operations like running tests and reading files.
+
 ---
 
 ## Getting Started — The First Prompts
