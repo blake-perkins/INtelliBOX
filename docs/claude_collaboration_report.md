@@ -299,6 +299,72 @@ Claude could write deployment scripts, CI/CD pipelines, and infrastructure-as-co
 
 ---
 
+## Context Windows and Persistent Memory
+
+### The Context Limit
+
+Claude has a finite context window — the amount of conversation it can "see" at once. The main INtelliBOX development session was 208MB of conversation (roughly 8,700 user messages), far exceeding what fits in a single context window. When the limit is reached, Claude automatically compresses earlier messages to make room for new ones. This means very long sessions gradually lose fine-grained detail from earlier exchanges, though the recent context remains sharp.
+
+The MatlabToCpp crossover session hit this limit 4+ times in a single sitting, each time compressing earlier context to continue working. The practical effect: Claude might not remember a specific decision made hours earlier in a marathon session, but it can always re-read the code to catch up.
+
+### CLAUDE.md — The Project Contract
+
+To compensate for context limits, Claude Code uses a `CLAUDE.md` file at the project root as standing instructions. This file acts as a contract between the developer and the AI — it describes:
+- Project structure and architecture
+- How to run tests (and how *not* to — e.g., "never run bare `pytest tests/`")
+- CLI commands and development workflow
+- Conventions for AI assistants ("read existing files before proposing edits", "keep changes minimal")
+
+Every new conversation starts by reading this file. It evolved as the project grew — when significant workflow changes were introduced (new test commands, new deployment steps), the file was updated so future sessions would know about them. This is the primary mechanism for maintaining continuity across separate conversations.
+
+### Auto-Memory
+
+Claude Code also maintains a persistent `MEMORY.md` file that captures key lessons learned across sessions. Unlike `CLAUDE.md` (which is checked into the repo and focused on project conventions), the memory file captures debugging insights, architectural gotchas, and environment-specific knowledge. For example:
+
+- "SQLAlchemy's `engine.raw_connection()` returns a proxy — setting `.autocommit = True` on it does NOT propagate to the underlying psycopg3 driver"
+- "The stale system Python often holds port 8000 — check with `Get-NetTCPConnection`, kill the PID"
+- "Template changes take effect immediately; Python changes require a server restart"
+
+These are hard-won lessons from debugging sessions that would otherwise be lost when a conversation ends. The memory file ensures the same mistake isn't made twice.
+
+---
+
+## The Iterative Failure Pattern
+
+The report's timeline presents development as a clean sequence of features, but the git history tells a more honest story. Claude doesn't always get it right on the first try — but iteration is fast.
+
+### Example: The Deployment Port Conflict Saga
+
+When deploying to EC2, the application kept failing because port 8000 was already in use. Four consecutive commits attempted to solve this:
+
+| Commit | Approach |
+|--------|----------|
+| `c787608` | Fix deploy port conflict |
+| `9bfcfdc` | Stop systemd service before container removal |
+| `e8df029` | Add active port-free check before starting container |
+| `a71de15` | Aggressive port cleanup |
+
+Each fix addressed a different aspect of the problem — the container wasn't stopping cleanly, the systemd service was holding the port, the cleanup wasn't waiting long enough. It took four tries to get deployment reliable.
+
+### Example: The CI Pipeline Gauntlet
+
+Adding PostgreSQL support triggered a cascade of CI failures:
+
+| Run | Result | Issue |
+|-----|--------|-------|
+| `0528538` | Failure | Grype scan, psycopg3 API differences, cascade deletes, test isolation |
+| `720c9f7` | Failure | VACUUM requires AUTOCOMMIT isolation level in PostgreSQL |
+| `ca10a54` | Failure | pg_backup tests hardcoded port instead of parsing from URL |
+| `a911c6e` | Success | All issues resolved |
+
+Similarly, the pilot deployment had 4 consecutive failures (`e23f18e` → `9d98bfc` → `cc97d97` → `77c004c`) before succeeding — each fixing a different shell scripting issue (pipefail, grep in cron, IronBank login).
+
+### What This Means
+
+The AI-assisted workflow isn't "describe it once and get perfect code." It's more like pair programming with a very fast typist — Claude proposes solutions, they get tested against reality (CI, deployment, browser testing), failures surface new issues, and Claude iterates. The speed advantage is that each iteration cycle takes minutes instead of hours, so even 4 attempts at a fix can happen in under an hour.
+
+---
+
 ## By the Numbers
 
 | Metric | Value |
