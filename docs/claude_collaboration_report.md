@@ -58,18 +58,31 @@ Claude responded by asking clarifying questions about the use case, email source
 
 ### Prompt 3: The Problem Description
 
-> *"I work on a very fast paced, high visibility software team of about 100 people. Every day, we get new Requests For Information and data calls from our customer, internal team leads, external stakeholders, and executives. It can get overwhelming because things come in faster than we can manage them. We currently use Outlook for email.*
+> *"I work on a very fast paced, high visibility software team of about 100 people. Every day, we get new Requests For Information and data calls from our customer, internal team leads, external stakeholders (such as directors, executives, managers, etc.). All of these come in the form of dozens and dozens of emails. It's practically impossible to keep up with them and I need a solution.*
 >
-> *My thought is to have an email account called 'ProgramTracker@example.com' so that I can Cc any important emails on it. This account would kick off some type of script/pipeline to store the relevant critical data in a database. Nightly, a report would be created..."*
+> *My thought is to have an email account called 'ProgramTracker@example.com' so that I can Cc any important emails on it. This account would kick off some type of script/pipeline to store the relevant critical data in a database. Nightly, a report would be created that we could view in our morning scrum to see if there are any actions that need to be taken. Once those actions are assigned, they should not show up in the report anymore"*
 
-### Prompt 4: Technical Constraints
+### Prompt 4: Technical Constraints & Requirements
 
-The user specified the tech stack:
-- **Python** as the language
-- **SQLite** for local development, with plans to move to AWS
-- **Web dashboard** for viewing and managing actions
-- **OpenAI / GPT-4** for AI-powered action extraction
-- **Outlook** as the email source (`.eml` and `.msg` file formats)
+> *"1. Email Access*
+>
+> *I don't currently have anything set up. Come up with a solution for me just so I can test.*
+>
+> *2. Technology Stack*
+>
+> *Let's use Python for the language. Use SQLite. Hosting for now will be on my local machine, but I want to be able to host it in AWS for deployment.*
+>
+> *3. Report Format*
+>
+> *Let's start with an email summary, but I'd like the option for a Web dashboard. The report should have a couple sections. First section should be actions and should give me a source including sender, subject, and the ability to view the original email contents. The second section should have a 'program news' that basically summarizes everything that's been going on over the past X amount of days.*
+>
+> *4. Assignment Workflow*
+>
+> *If we're using the WebUI, I'd like to be able to click checkboxes and submit it. If using email, I'd like to send a response back to the ProgramTracker@example.com*
+>
+> *5. Parsing Intelligence*
+>
+> *I would like the AI to auto-detect important items and possible actions."*
 
 ### Prompt 5: Approval
 
