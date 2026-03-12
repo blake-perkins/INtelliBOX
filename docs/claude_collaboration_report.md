@@ -16,11 +16,14 @@ The entire application — from empty repository to fully deployed, containerize
 4. [Day 2: Polish & Production Hardening (Feb 17)](#day-2-polish--production-hardening-feb-17)
 5. [Day 3: CI/CD & Deployment (Feb 18)](#day-3-cicd--deployment-feb-18)
 6. [Days 4–8: Enterprise Features (Feb 19–23)](#days-48-enterprise-features-feb-1923)
-7. [The Tooling Troubleshooting Story](#the-tooling-troubleshooting-story)
-8. [The MatlabToCpp Crossover](#the-matlabtocpp-crossover)
-9. [Prompt Patterns That Worked](#prompt-patterns-that-worked)
-10. [What Claude Couldn't Do](#what-claude-couldnt-do)
-11. [By the Numbers](#by-the-numbers)
+7. [Fixing a CI Failure from a Phone](#fixing-a-ci-failure-from-a-phone)
+8. [The Tooling Troubleshooting Story](#the-tooling-troubleshooting-story)
+9. [The MatlabToCpp Crossover](#the-matlabtocpp-crossover)
+10. [Prompt Patterns That Worked](#prompt-patterns-that-worked)
+11. [What Claude Couldn't Do](#what-claude-couldnt-do)
+12. [Context Windows and Persistent Memory](#context-windows-and-persistent-memory)
+13. [The Iterative Failure Pattern](#the-iterative-failure-pattern)
+14. [By the Numbers](#by-the-numbers)
 
 ---
 
